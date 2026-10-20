@@ -15,12 +15,13 @@ export interface ConsentState {
 
 export function readConsent(): ConsentState | null {
   if (typeof document === "undefined") return null;
-  const raw = document.cookie
-    .split("; ")
-    .find((c) => c.startsWith(`${CONSENT_COOKIE}=`))
-    ?.slice(CONSENT_COOKIE.length + 1);
-  if (!raw) return null;
   try {
+    // document.cookie kan een fout geven in afgeschermde omgevingen (bijv. een iframe).
+    const raw = document.cookie
+      .split("; ")
+      .find((c) => c.startsWith(`${CONSENT_COOKIE}=`))
+      ?.slice(CONSENT_COOKIE.length + 1);
+    if (!raw) return null;
     const parsed = JSON.parse(decodeURIComponent(raw)) as ConsentState;
     return parsed.v === CONSENT_VERSION ? parsed : null;
   } catch {
@@ -31,8 +32,12 @@ export function readConsent(): ConsentState | null {
 export function writeConsent(choice: { analytics: boolean; marketing: boolean }): ConsentState {
   const state: ConsentState = { v: CONSENT_VERSION, ...choice, date: new Date().toISOString() };
   const secure = location.protocol === "https:" ? "; Secure" : "";
-  // 12 maanden geldig; daarna vragen we opnieuw om toestemming.
-  document.cookie = `${CONSENT_COOKIE}=${encodeURIComponent(JSON.stringify(state))}; Max-Age=${60 * 60 * 24 * 365}; Path=/; SameSite=Lax${secure}`;
+  try {
+    // 12 maanden geldig; daarna vragen we opnieuw om toestemming.
+    document.cookie = `${CONSENT_COOKIE}=${encodeURIComponent(JSON.stringify(state))}; Max-Age=${60 * 60 * 24 * 365}; Path=/; SameSite=Lax${secure}`;
+  } catch {
+    /* cookies geblokkeerd: de keuze geldt dan alleen voor dit bezoek */
+  }
   window.dispatchEvent(new CustomEvent<ConsentState>(CONSENT_EVENT, { detail: state }));
   return state;
 }
