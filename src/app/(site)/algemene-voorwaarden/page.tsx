@@ -111,8 +111,11 @@ export default function AlgemeneVoorwaardenPage() {
           Levering vindt plaats via je persoonlijke omgeving &quot;Mijn schema&apos;s&quot; en een e-mail met een link.
         </li>
         <li>
-          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Je kunt via een
-          check-in je voortgang doorgeven; het volgende schema wordt daarop afgestemd.
+          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Elk vervolgschema
+          maken we op basis van een check-in, waarin je je voortgang doorgeeft. De check-in opent een paar dagen voor het
+          einde van een periode; je ontvangt dan een uitnodiging per e-mail en zo nodig herinneringen. Het nieuwe schema
+          maken we zodra je de check-in hebt ingevuld. Zolang je de check-in niet hebt ingevuld, maken we geen nieuw schema;
+          het abonnement en de maandelijkse betaling lopen dan gewoon door en je houdt toegang tot je laatste schema.
         </li>
         <li>
           Een schema is leefstijladvies en geen medisch advies, geen diagnose en geen behandeling. Zie ook artikel 12 en

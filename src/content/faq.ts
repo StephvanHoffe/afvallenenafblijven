@@ -17,7 +17,7 @@ const guarantee = site.guarantee.enabled
 export const faq: FaqItem[] = [
   {
     q: "Hoe snel ontvang ik mijn schema?",
-    a: "Direct na je betaling gaan we aan de slag. Meestal staat je schema binnen 10 minuten voor je klaar: je ziet het meteen op je scherm en je ontvangt een e-mail met een persoonlijke link. Je kunt het schema ook als PDF opslaan of printen.",
+    a: "Direct na je betaling gaan we aan de slag. Meestal staat je schema binnen 10 minuten voor je klaar: je ziet het meteen op je scherm en je ontvangt een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
   },
   {
     q: "Hoe persoonlijk is het schema?",
@@ -25,7 +25,7 @@ export const faq: FaqItem[] = [
   },
   {
     q: "Hoe werkt een abonnement van 3, 6 of 12 maanden?",
-    a: "Je betaalt altijd per maand via automatische incasso. Kies je een minimale looptijd van 3, 6 of 12 maanden, dan krijg je een lagere maandprijs. Elke 4 weken krijg je een nieuw schema, afgestemd op je voortgang. Na de minimale looptijd loopt je abonnement door tegen dezelfde maandprijs, en kun je het op elk moment opzeggen met een opzegtermijn van maximaal een maand.",
+    a: "Je betaalt altijd per maand via automatische incasso. Kies je een minimale looptijd van 3, 6 of 12 maanden, dan krijg je een lagere maandprijs. Elke 4 weken krijg je een nieuw schema: aan het einde van elke periode vul je een korte check-in in, en daarop maken we je volgende schema. Na de minimale looptijd loopt je abonnement door tegen dezelfde maandprijs, en kun je het op elk moment opzeggen met een opzegtermijn van maximaal een maand.",
   },
   {
     q: "Kan ik makkelijk opzeggen?",
@@ -50,7 +50,11 @@ export const faq: FaqItem[] = [
   ...guarantee,
   {
     q: "Wat als ik niet afval?",
-    a: "Na elke 4 weken vul je een korte check-in in met je gewicht en hoe het ging (honger, energie, haalbaarheid). Je volgende schema wordt daarop bijgestuurd. In elk voedingsschema staat bovendien uitgelegd hoe je zelf kleine aanpassingen doet als je gewicht niet of juist te snel daalt.",
+    a: "Aan het einde van elke periode vul je een korte check-in in met je gewicht en hoe het ging (honger, energie, slaap, haalbaarheid). Je volgende schema stellen we daarop bij: valt je gewicht minder snel dan gepland terwijl je het schema goed volgde, dan verlagen we je calorieën iets; gaat het te snel of heb je veel honger, dan juist iets omhoog. In elk voedingsschema staat bovendien hoe je tussentijds zelf kleine aanpassingen doet.",
+  },
+  {
+    q: "Is de check-in verplicht?",
+    a: "Ja, en dat is juist de kracht ervan. Je nieuwe schema maken we pas als je de check-in hebt ingevuld, zodat het echt past bij je voortgang in plaats van een standaard vervolg. De check-in opent een paar dagen voor het einde van je periode; je krijgt dan een e-mail en zo nodig een herinnering. Invullen kost ongeveer 2 minuten. Direct daarna maken we je nieuwe schema.",
   },
   {
     q: "Wat betekent 'afblijven'?",

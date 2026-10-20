@@ -13,18 +13,21 @@ import {
   sexOptions,
   type Intake,
 } from "@/lib/intake";
+import type { CheckinData } from "@/lib/checkin";
+import { formatNumber } from "@/lib/format";
 
 /** Context van een vorige periode, zodat elk nieuw schema voortbouwt op het vorige. */
 export interface ProgressContext {
   periodNumber: number;
   previousSummary?: string;
-  checkin?: {
-    weightKg?: number;
-    energy?: string;
-    hunger?: string;
-    difficulty?: string;
-    comments?: string;
-  };
+  /** De (verplichte) check-in waarmee deze periode is aangevraagd. */
+  checkin?: CheckinData;
+  /** Gewichtsverloop over de vorige periode. */
+  weight?: { fromKg: number; toKg: number; weeks: number; expectedKgPerWeek?: number };
+  /** Bijstelling van het caloriedoel die we op basis van de check-in hebben berekend. */
+  calorieChange?: { kcal: number; reason: string };
+  /** Klachten die bij eerdere check-ins zijn gemeld. */
+  earlierInjuries?: string[];
 }
 
 const WEEKDAYS = "Maandag, Dinsdag, Woensdag, Donderdag, Vrijdag, Zaterdag, Zondag";
@@ -43,6 +46,13 @@ Werkwijze en kwaliteitseisen:
 - Schrijf in helder, warm en motiverend Nederlands. Spreek de klant aan met "je" en gebruik de voornaam in de introductie. Geen medische claims, geen beloftes over gegarandeerde resultaten, en geen supplementen als vereiste.
 - Wees voorzichtig bij medische aandoeningen of medicatie: houd het schema behoudend, vermijd extreme aanpassingen en verwijs voor medische vragen naar de huisarts of diëtist.
 
+Vervolgschema's (na een check-in):
+- Elk vervolgschema is gebaseerd op de verplichte check-in van de klant. Behoud wat werkte en de gerechten die de klant lekker vond (die mogen terugkomen), vervang wat de klant niet meer wil en breng genoeg nieuwe variatie aan.
+- Kon de klant het schema slecht volgen, maak het dan eenvoudiger: kortere bereidingstijd, minder verschillende ingrediënten, meer herhaling en restjes slim hergebruiken.
+- Had de klant vaak honger, kies dan voor meer volume binnen hetzelfde caloriedoel: meer groente, peulvruchten, soep, eiwitrijke tussendoortjes en volkoren producten.
+- Een bijstelling van het caloriedoel is al berekend en verwerkt in de dagdoelen; noem die in "changes".
+- Vul "changes" met 2-5 concrete punten, gericht aan de klant: wat er is aangepast en waarom, gekoppeld aan de check-in. Bij het eerste schema is "changes" een lege lijst.
+
 Lever de dagen ${WEEKDAYS}, met per dag precies het gevraagde aantal eetmomenten.`;
 
 export const TRAINING_SYSTEM_PROMPT = `Je bent een ervaren, gecertificeerde personal trainer en krachttrainingscoach in Nederland die persoonlijke trainingsschema's maakt voor klanten van "Afvallen & Afblijven". Klanten betalen voor dit schema en verwachten de kwaliteit van een goede personal trainer: veilig, effectief, goed uitgelegd en precies passend bij hun niveau, materiaal en agenda.
@@ -57,6 +67,13 @@ Werkwijze en kwaliteitseisen:
 - Houd rekening met blessures en klachten: vermijd belastende oefeningen voor die lichaamsdelen, kies veilige alternatieven en adviseer bij pijn te stoppen en een fysiotherapeut te raadplegen.
 - Geef concreet advies over stappen en cardio dat past bij het doel, en praktische tips voor herstel (slaap, rust, eiwit).
 - Schrijf in helder, warm en motiverend Nederlands. Spreek de klant aan met "je" en gebruik de voornaam in de introductie. Gebruik gangbare (Nederlandse of internationaal bekende) oefeningnamen. Geen medische claims of gegarandeerde resultaten.
+
+Vervolgschema's (na een check-in):
+- Elk vervolgschema is gebaseerd op de verplichte check-in van de klant en op het vorige schema. Houd de basisoefeningen grotendeels gelijk, zodat vooruitgang meetbaar blijft, en wissel 1-3 oefeningen voor variatie.
+- Gingen de trainingen goed en voelden ze "precies goed" of "te licht": bouw op met een zwaardere variant, een smallere herhalingsrange met meer gewicht, een extra set of kortere rust.
+- Voelden ze "te zwaar", of deed de klant weinig trainingen: verlaag het volume, maak de trainingen korter of eenvoudiger en houd het haalbaar.
+- Nieuwe klachten of blessures: vermijd belastende oefeningen voor dat lichaamsdeel, kies veilige alternatieven en verwijs bij aanhoudende pijn naar een fysiotherapeut.
+- Vul "changes" met 2-5 concrete punten, gericht aan de klant: wat er is aangepast en waarom, gekoppeld aan de check-in. Bij het eerste schema is "changes" een lege lijst.
 
 Het weekoverzicht bevat precies de dagen ${WEEKDAYS}.`;
 
@@ -86,28 +103,61 @@ function personBlock(name: string, intake: Intake): string {
     .join("\n");
 }
 
-function progressBlock(progress: ProgressContext): string {
+function progressBlock(progress: ProgressContext, kind: "voeding" | "training"): string {
   if (progress.periodNumber <= 1) {
-    return "Dit is het eerste schema van deze klant.";
+    return 'Dit is het eerste schema van deze klant. Laat "changes" leeg.';
   }
   const lines = [
-    `Dit is schema nummer ${progress.periodNumber}. Bouw voort op het vorige schema: houd vast wat werkte, breng variatie aan en pas aan op basis van de check-in.`,
+    `Dit is schema nummer ${progress.periodNumber}. Bouw voort op het vorige schema en pas het aan op basis van de check-in hieronder.`,
   ];
   if (progress.previousSummary) lines.push(`Samenvatting vorig schema:\n${progress.previousSummary}`);
+  const w = progress.weight;
+  if (w) {
+    const change = w.toKg - w.fromKg;
+    lines.push(
+      `Gewichtsverloop: van ${formatNumber(w.fromKg, 1)} kg naar ${formatNumber(w.toKg, 1)} kg in ${formatNumber(w.weeks, 1)} weken (${change <= 0 ? "-" : "+"}${formatNumber(Math.abs(change), 1)} kg)${
+        w.expectedKgPerWeek !== undefined ? `; verwacht was ${formatNumber(w.expectedKgPerWeek * w.weeks, 1)} kg` : ""
+      }.`,
+    );
+  }
+  if (kind === "voeding") {
+    lines.push(
+      progress.calorieChange
+        ? `Bijstelling caloriedoel: ${progress.calorieChange.kcal > 0 ? "+" : ""}${progress.calorieChange.kcal} kcal per dag (al verwerkt in de dagdoelen). Reden: ${progress.calorieChange.reason}`
+        : "Het caloriedoel is niet extra bijgesteld (alleen herberekend op het nieuwe gewicht).",
+    );
+  }
   const c = progress.checkin;
   if (c) {
+    const item = (label: string, value: string | number | undefined) => (value === undefined || value === "" ? null : `- ${label}: ${value}`);
     lines.push(
       [
         "Check-in van de klant:",
-        c.weightKg ? `- Huidig gewicht: ${c.weightKg} kg` : null,
-        c.energy ? `- Energie: ${c.energy}` : null,
-        c.hunger ? `- Honger: ${c.hunger}` : null,
-        c.difficulty ? `- Zwaarte/haalbaarheid: ${c.difficulty}` : null,
-        c.comments ? `- Opmerkingen: ${c.comments}` : null,
+        item("Huidig gewicht", c.weightKg ? `${formatNumber(c.weightKg, 1)} kg` : undefined),
+        item("Taille-omtrek", c.waistCm ? `${c.waistCm} cm` : undefined),
+        item("Energie", c.energy),
+        item("Slaap", c.sleep),
+        ...(kind === "voeding"
+          ? [
+              item("Schema kunnen volgen", c.nutritionAdherence),
+              item("Honger", c.hunger),
+              item("Vond lekker / wil terugzien", c.likedMeals),
+              item("Wil niet meer / minder lekker", c.dislikedMeals),
+            ]
+          : [
+              item("Trainingen gedaan", c.trainingAdherence),
+              item("Zwaarte van de trainingen", c.difficulty),
+              item("Trainingsdagen per week vanaf nu", c.trainingDays),
+              item("Nieuwe klachten of blessures", c.injuries),
+            ]),
+        item("Opmerkingen", c.comments),
       ]
         .filter(Boolean)
         .join("\n"),
     );
+  }
+  if (kind === "training" && progress.earlierInjuries?.length) {
+    lines.push(`Klachten gemeld bij eerdere check-ins (houd hier nog rekening mee): ${progress.earlierInjuries.join("; ")}`);
   }
   return lines.join("\n\n");
 }
@@ -146,7 +196,7 @@ Vezels: minimaal ${targets.fiberG} g
 Water: ongeveer ${targets.waterL} liter
 
 ## Voortgang
-${progressBlock(progress)}
+${progressBlock(progress, "voeding")}
 ${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}`;
 }
 
@@ -165,6 +215,6 @@ Blessures of klachten: ${intake.injuries ?? "geen opgegeven"}
 ${intake.product === "bundel" ? "De klant volgt ook een voedingsschema van ons; verwijs voor voeding naar dat schema." : ""}
 
 ## Voortgang
-${progressBlock(progress)}
+${progressBlock(progress, "training")}
 ${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}`;
 }

@@ -44,5 +44,14 @@ async function PlanContent({ params }: Pick<PageProps<"/schema/[id]">, "params">
     );
   }
 
-  return <PlanDocument content={plan.content} customerName={customer.name} generatedAt={plan.generated_at} />;
+  return (
+    <PlanDocument
+      content={plan.content}
+      customerName={customer.name}
+      generatedAt={plan.generated_at}
+      pdfHref={`/schema/${plan.id}/pdf`}
+      shoppingPdfHref={plan.content.type === "voeding" ? `/schema/${plan.id}/pdf?deel=boodschappen` : undefined}
+      storageKey={`afb-boodschappen-${plan.id}`}
+    />
+  );
 }

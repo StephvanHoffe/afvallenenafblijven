@@ -5,19 +5,23 @@ import {
   CalendarDays,
   CircleCheck,
   ClipboardList,
+  Download,
   Dumbbell,
   Loader2,
   LogOut,
   Salad,
+  Sparkles,
   TriangleAlert,
 } from "lucide-react";
 import { CheckinForm } from "@/app/(site)/account/CheckinForm";
+import { PlanStatusRefresher } from "@/components/account/PlanStatusRefresher";
 import { cancelSubscription, logout, openBillingPortal, undoCancellation } from "@/app/(site)/account/actions";
 import { DemoButton } from "@/components/account/DemoButton";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { durations, products, type DurationId, type PlanType, type ProductId } from "@/config/pricing";
 import { formatDate } from "@/lib/format";
 import { site } from "@/config/site";
+import type { CheckinWindow } from "@/lib/checkin";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
 
 export interface DashboardOrder {
@@ -31,7 +35,9 @@ export interface DashboardOrder {
   /** Heeft een lopend Stripe-abonnement dat de klant kan beheren. */
   manageable: boolean;
   commitmentEndsAt: Date | null;
-  nextPlanAt: Date | null;
+  /** De verplichte check-in voor de volgende periode (null als die er niet is). */
+  checkin: CheckinWindow | null;
+  lastWeightKg: number | null;
 }
 
 export interface DashboardPlan {
@@ -42,13 +48,14 @@ export interface DashboardPlan {
   generatedAt: Date | null;
   failed: boolean;
   href: string;
+  pdfHref: string;
 }
 
 interface Props {
   name: string;
   orders: DashboardOrder[];
   plans: DashboardPlan[];
-  notice?: "opgezegd" | "opzeggen" | null;
+  notice?: "opgezegd" | "opzeggen" | "checkin" | null;
   /** Voorbeeldweergave: knoppen doen niets en tonen een uitleg. */
   demo?: boolean;
 }
@@ -89,6 +96,37 @@ function Pill({ tone, children }: { tone: "ok" | "warn" | "muted"; children: Rea
   );
 }
 
+/** Wat er bij het volgende schema staat, afhankelijk van de check-in. */
+function nextPlanText(checkin: CheckinWindow | null): { title: string; text: string } {
+  if (!checkin) return { title: "Geen nieuw schema gepland", text: "Je abonnement loopt af of is niet actief." };
+  switch (checkin.status) {
+    case "upcoming":
+      return {
+        title: `Na je check-in (vanaf ${formatDate(checkin.opensAt)})`,
+        text: `Je schema voor periode ${checkin.seq} maken we zodra je je check-in hebt ingevuld.`,
+      };
+    case "open":
+    case "overdue":
+      return { title: "Wacht op je check-in", text: `Vul je check-in in, dan maken we direct je schema voor periode ${checkin.seq}.` };
+    default:
+      return { title: "Wordt nu gemaakt", text: "Je check-in is binnen. Binnen een paar minuten staat je nieuwe schema klaar." };
+  }
+}
+
+function checkinTile(checkin: CheckinWindow | null): string {
+  if (!checkin) return "Niet nodig";
+  switch (checkin.status) {
+    case "upcoming":
+      return `Opent op ${formatDate(checkin.opensAt)}`;
+    case "open":
+      return "Staat voor je klaar";
+    case "overdue":
+      return "Nog niet ingevuld";
+    default:
+      return "Ontvangen";
+  }
+}
+
 export function AccountDashboard({ name, orders, plans, notice = null, demo = false }: Props) {
   const activeSubs = orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due"));
   const mainSub = activeSubs[0] ?? null;
@@ -96,9 +134,17 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
   const current = plans.filter((p) => p.seq === latestSeq);
   const earlier = plans.filter((p) => p.seq !== latestSeq);
   const wantsCancel = notice === "opzeggen";
+  const withCheckin = activeSubs.filter((o) => o.checkin);
+  const openCheckin = withCheckin.find((o) => o.checkin?.status === "open" || o.checkin?.status === "overdue") ?? null;
+  // Wordt er nog aan een schema gewerkt (of wordt het opnieuw geprobeerd), dan ververst de pagina zichzelf.
+  const busy = current.some((p) => p.status !== "ready" && !p.failed);
+  const anyReady = current.some((p) => p.status === "ready");
+  const allPdfHref = demo ? "/voorbeeld/pdf/alles" : `/account/pdf?periode=${latestSeq}`;
+  const next = nextPlanText(mainSub?.checkin ?? null);
 
   return (
     <div className="space-y-10">
+      {busy && !demo && <PlanStatusRefresher />}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow mb-2">Mijn schema&apos;s</p>
@@ -118,6 +164,15 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
         )}
       </div>
 
+      {notice === "checkin" && (
+        <div role="status" className="rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-6">
+          <h2 className="text-lg font-bold">Dank je, je check-in is binnen!</h2>
+          <p className="mt-1 text-[0.9375rem]">
+            We maken nu je nieuwe schema, afgestemd op je antwoorden. Dat duurt een paar minuten; deze pagina ververst vanzelf
+            en je krijgt een e-mail zodra het klaar is.
+          </p>
+        </div>
+      )}
       {notice === "opgezegd" && (
         <div role="status" className="rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-6">
           <h2 className="text-lg font-bold">Je abonnement is opgezegd</h2>
@@ -133,6 +188,26 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
             Klik op &quot;Bevestig opzeggen&quot; bij je abonnement hieronder. Je houdt toegang tot je schema&apos;s en
             ontvangt een bevestiging per e-mail.
           </p>
+        </div>
+      )}
+
+      {openCheckin?.checkin && notice !== "checkin" && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-6">
+          <div className="flex gap-3">
+            <Sparkles className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
+            <div>
+              <h2 className="text-lg font-extrabold">
+                {openCheckin.checkin.status === "overdue" ? "Je nieuwe schema wacht op je check-in" : "Tijd voor je check-in!"}
+              </h2>
+              <p className="mt-1 text-[0.9375rem]">
+                Vul hem in (2 minuten), dan maken we direct je schema voor periode {openCheckin.checkin.seq}, afgestemd op
+                hoe het ging.
+              </p>
+            </div>
+          </div>
+          <a href="#check-in" className="btn-primary !py-2.5 text-sm">
+            Check-in invullen <ArrowRight className="size-4" aria-hidden />
+          </a>
         </div>
       )}
 
@@ -164,21 +239,18 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
           <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
             <CalendarDays className="size-4" aria-hidden /> Volgend schema
           </p>
-          <p className="mt-1 text-lg font-extrabold">
-            {mainSub?.nextPlanAt && !mainSub.cancelAt ? formatDate(mainSub.nextPlanAt) : "Geen nieuw schema gepland"}
-          </p>
-          <p className="text-sm text-muted">Abonnees krijgen elke 4 weken een nieuw, bijgestuurd schema.</p>
+          <p className="mt-1 text-lg font-extrabold">{mainSub ? next.title : "Geen nieuw schema gepland"}</p>
+          <p className="text-sm text-muted">{mainSub ? next.text : "Met een abonnement krijg je elke 4 weken een nieuw schema."}</p>
         </div>
         <div className="card p-5">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
             <ClipboardList className="size-4" aria-hidden /> Check-in
           </p>
-          <p className="mt-1 text-lg font-extrabold">
-            {activeSubs.length > 0 ? "Vul hem in vóór je volgende schema" : "Niet nodig"}
-          </p>
-          {activeSubs.length > 0 && (
+          <p className="mt-1 text-lg font-extrabold">{checkinTile(mainSub?.checkin ?? null)}</p>
+          {mainSub?.checkin && (
             <a href="#check-in" className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-700">
-              Naar de check-in <ArrowRight className="size-4" aria-hidden />
+              {mainSub.checkin.status === "open" || mainSub.checkin.status === "overdue" ? "Nu invullen" : "Meer over de check-in"}{" "}
+              <ArrowRight className="size-4" aria-hidden />
             </a>
           )}
         </div>
@@ -186,7 +258,14 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
 
       {/* Huidige schema's */}
       <section>
-        <h2 className="heading-md mb-4">{latestSeq > 1 ? `Je schema's van periode ${latestSeq}` : "Je schema's"}</h2>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="heading-md">{latestSeq > 1 ? `Je schema's van periode ${latestSeq}` : "Je schema's"}</h2>
+          {anyReady && (
+            <a href={allPdfHref} className="btn-secondary !px-4 !py-2.5 text-sm">
+              <Download className="size-4" aria-hidden /> {current.length > 1 ? "Alles downloaden (PDF)" : "Download als PDF"}
+            </a>
+          )}
+        </div>
         {current.length === 0 ? (
           <p className="card p-6 text-muted">Je hebt nog geen schema&apos;s.</p>
         ) : (
@@ -212,9 +291,19 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
                       </p>
                     </div>
                     {p.status === "ready" ? (
-                      <Link href={p.href} className="btn-primary !px-5 !py-2.5 text-sm">
-                        Open schema <ArrowRight className="size-4" aria-hidden />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={p.pdfHref}
+                          className="grid size-10 place-items-center rounded-full border border-line bg-white hover:border-brand-300"
+                          aria-label={`${info.title} downloaden als PDF`}
+                          title="Download als PDF"
+                        >
+                          <Download className="size-4" aria-hidden />
+                        </a>
+                        <Link href={p.href} className="btn-primary !px-5 !py-2.5 text-sm">
+                          Open schema <ArrowRight className="size-4" aria-hidden />
+                        </Link>
+                      </div>
                     ) : p.failed ? (
                       <TriangleAlert className="size-6 text-accent-500" aria-label="Mislukt" />
                     ) : (
@@ -227,6 +316,37 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
           </div>
         )}
       </section>
+
+      {withCheckin.map((o) => (
+        <section key={o.id} id={o === withCheckin[0] ? "check-in" : undefined} className="card scroll-mt-24 p-6 sm:p-8">
+          <h2 className="heading-md">Check-in voor periode {o.checkin!.seq}</h2>
+          {withCheckin.length > 1 && <p className="mt-1 text-sm font-semibold text-muted">{products[o.product].name}</p>}
+          {o.checkin!.status === "upcoming" ? (
+            <div className="mt-3 space-y-2 text-[0.9375rem] text-muted">
+              <p>
+                Je check-in opent op <strong className="text-ink">{formatDate(o.checkin!.opensAt)}</strong>, een paar dagen voor
+                het einde van je huidige periode. Je krijgt dan een e-mail.
+              </p>
+              <p>
+                Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten,
+                zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.
+              </p>
+            </div>
+          ) : o.checkin!.status === "submitted" ? (
+            <p className="mt-3 text-[0.9375rem] text-muted">Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.</p>
+          ) : (
+            <>
+              <p className="mt-2 mb-6 text-muted">
+                {o.checkin!.status === "overdue"
+                  ? "Je huidige periode is voorbij. Vul je check-in in, dan maken we direct je nieuwe schema."
+                  : `Je huidige periode loopt tot ${formatDate(o.checkin!.dueAt)}. Vul je check-in in, dan maken we direct je nieuwe schema.`}{" "}
+                Het kost je ongeveer 2 minuten.
+              </p>
+              <CheckinForm orderId={o.id} seq={o.checkin!.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo={demo} />
+            </>
+          )}
+        </section>
+      ))}
 
       {earlier.length > 0 && (
         <section>
@@ -241,9 +361,14 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
                   <p className="text-sm text-muted">{p.generatedAt ? formatDate(p.generatedAt) : "—"}</p>
                 </div>
                 {p.status === "ready" && (
-                  <Link href={p.href} className="text-sm font-bold text-brand-700 underline underline-offset-2">
-                    Bekijk
-                  </Link>
+                  <div className="flex items-center gap-4 text-sm font-bold">
+                    <a href={p.pdfHref} className="inline-flex items-center gap-1 text-muted hover:text-ink">
+                      <Download className="size-4" aria-hidden /> PDF
+                    </a>
+                    <Link href={p.href} className="text-brand-700 underline underline-offset-2">
+                      Bekijk
+                    </Link>
+                  </div>
                 )}
               </li>
             ))}
@@ -336,17 +461,6 @@ export function AccountDashboard({ name, orders, plans, notice = null, demo = fa
           .
         </p>
       </section>
-
-      {activeSubs.length > 0 && (
-        <section id="check-in" className="card scroll-mt-24 p-6 sm:p-8">
-          <h2 className="heading-md">Check-in</h2>
-          <p className="mt-2 mb-6 text-muted">
-            Vul dit in vóór je volgende schema. Zo stemmen we je nieuwe schema af op je voortgang: meer of minder eten,
-            zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.
-          </p>
-          <CheckinForm demo={demo} />
-        </section>
-      )}
 
       <section className="rounded-[var(--radius-card)] bg-sand p-6">
         <h2 className="text-lg font-bold">Hulp nodig?</h2>

@@ -57,8 +57,15 @@ export const site = {
     label: "Lanceringsactie",
   },
 
-  /** Hoe vaak abonnees een nieuw schema ontvangen. */
+  /** Lengte van een periode: abonnees krijgen elke 28 dagen een nieuw schema, na hun check-in. */
   planIntervalDays: 28,
+
+  checkin: {
+    /** Zoveel dagen voor het einde van een periode opent de check-in. */
+    opensDaysBefore: 3,
+    /** Uitnodiging en herinneringen: dagen na het openen van de check-in (0 = uitnodiging). */
+    reminderDays: [0, 3, 7, 14],
+  },
 
   social: {
     instagram: "",

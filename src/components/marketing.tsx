@@ -73,7 +73,7 @@ export function Steps() {
     },
     {
       title: "Ontvang je schema",
-      text: "Binnen enkele minuten staat je persoonlijke schema klaar. Elke 4 weken krijg je een nieuw, bijgestuurd schema.",
+      text: "Binnen enkele minuten staat je persoonlijke schema klaar. Na elke 4 weken een korte check-in, en je krijgt een nieuw, bijgestuurd schema.",
       icon: CalendarDays,
     },
   ];
@@ -116,7 +116,7 @@ export function Benefits() {
     {
       icon: RefreshCw,
       title: "Elke 4 weken vernieuwd",
-      text: "Met een korte check-in sturen we je schema bij, zodat je blijft vooruitgaan en het niet saai wordt.",
+      text: "Na een korte check-in maken we je nieuwe schema, afgestemd op je voortgang, zodat je blijft vooruitgaan en het niet saai wordt.",
     },
     {
       icon: HeartPulse,

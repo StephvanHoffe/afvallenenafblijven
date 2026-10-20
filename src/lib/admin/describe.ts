@@ -13,6 +13,7 @@ import {
   type Intake,
 } from "@/lib/intake";
 import { products } from "@/config/pricing";
+import type { CheckinData } from "@/lib/checkin";
 
 /** Intake-antwoorden als leesbare rijen voor het beheer. */
 export function describeIntake(i: Intake): [string, string][] {
@@ -43,6 +44,27 @@ export function describeIntake(i: Intake): [string, string][] {
     ["Medicatie", i.medication ?? "–"],
     ["Arts geraadpleegd", i.doctorApproval ? "ja" : "nee"],
   ];
+}
+
+/** Check-in-antwoorden als leesbare regels voor het beheer (alleen ingevulde velden). */
+export function describeCheckin(c: CheckinData): [string, string][] {
+  const rows: [string, string | number | undefined][] = [
+    ["Gewicht", c.weightKg ? `${String(c.weightKg).replace(".", ",")} kg` : undefined],
+    ["Taille", c.waistCm ? `${c.waistCm} cm` : undefined],
+    ["Energie", c.energy],
+    ["Slaap", c.sleep],
+    ["Voeding gevolgd", c.nutritionAdherence],
+    ["Honger", c.hunger],
+    ["Lekker", c.likedMeals],
+    ["Anders / niet meer", c.dislikedMeals],
+    ["Trainingen gedaan", c.trainingAdherence],
+    ["Zwaarte", c.difficulty],
+    ["Trainingsdagen", c.trainingDays ? `${c.trainingDays}x per week` : undefined],
+    ["Klachten", c.injuries],
+    ["Nieuw doel", c.goal ? (goalOptions[c.goal]?.label ?? c.goal) : undefined],
+    ["Opmerkingen", c.comments],
+  ];
+  return rows.filter((r): r is [string, string | number] => r[1] !== undefined && r[1] !== "").map(([k, v]) => [k, String(v)]);
 }
 
 export function stripeDashboardUrl(kind: "customers" | "subscriptions", id: string): string {

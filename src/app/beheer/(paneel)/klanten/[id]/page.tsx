@@ -10,12 +10,14 @@ import {
   resendPlanEmail,
   retryPlan,
   sendCustomerLoginLink,
+  startPeriodWithoutCheckin,
 } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { NeedsDatabase, Notice, OrderStatusBadge, Panel, PlanStatusBadge, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
-import { describeIntake, stripeDashboardUrl } from "@/lib/admin/describe";
+import { describeCheckin, describeIntake, stripeDashboardUrl } from "@/lib/admin/describe";
+import type { CheckinWindow } from "@/lib/checkin";
 import { euro, formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Klant" };
@@ -29,6 +31,19 @@ export default function KlantPage({ params, searchParams }: PageProps<"/beheer/k
 }
 
 const small = "btn-secondary !px-3.5 !py-2 text-sm";
+
+function checkinLabel(c: CheckinWindow): string {
+  switch (c.status) {
+    case "upcoming":
+      return `Check-in periode ${c.seq} opent ${formatDate(c.opensAt)}`;
+    case "open":
+      return `Check-in periode ${c.seq} staat open (periode eindigt ${formatDate(c.dueAt)})`;
+    case "overdue":
+      return `Check-in periode ${c.seq} verlopen sinds ${formatDate(c.dueAt)}`;
+    default:
+      return `Check-in periode ${c.seq} ontvangen`;
+  }
+}
 
 async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klanten/[id]">) {
   if (!isDemoMode()) await connection();
@@ -96,6 +111,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                       <td className={table.td}>
                         <OrderStatusBadge status={o.status} cancelAt={o.cancelAt} />
                         {o.cancelAt && <span className="block text-xs text-muted">tot {formatDate(o.cancelAt)}</span>}
+                        {o.checkin && <span className="mt-1 block text-xs text-muted">{checkinLabel(o.checkin)}</span>}
                       </td>
                       <td className={`${table.td} text-right ${table.num}`}>{o.monthlyCents ? euro(o.monthlyCents) : euro(o.amountCents)}</td>
                       <td className={`${table.td} ${table.num}`}>{formatDate(o.createdAt)}</td>
@@ -110,6 +126,22 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                               <input type="hidden" name="terug" value={here} />
                               <p className="mb-2">Stopt aan het einde van de minimale looptijd of lopende maand. De klant krijgt een bevestiging.</p>
                               <SubmitButton className="btn-primary w-full !py-2 text-xs">Bevestig opzeggen</SubmitButton>
+                            </form>
+                          </details>
+                        )}
+                        {o.checkin && o.checkin.status !== "submitted" && (
+                          <details className="ml-3 inline-block text-left">
+                            <summary className="cursor-pointer list-none text-sm font-bold text-brand-700 [&::-webkit-details-marker]:hidden">
+                              Nieuwe periode
+                            </summary>
+                            <form action={startPeriodWithoutCheckin} className="mt-2 w-60 rounded-xl bg-sand p-3 text-xs">
+                              <input type="hidden" name="bestelling" value={o.id} />
+                              <input type="hidden" name="terug" value={here} />
+                              <p className="mb-2">
+                                Maakt nu de schema&apos;s voor periode {o.checkin.seq} zonder check-in, op basis van de laatst bekende
+                                gegevens. Alleen gebruiken als de klant zijn gegevens op een andere manier heeft doorgegeven.
+                              </p>
+                              <SubmitButton className="btn-primary w-full !py-2 text-xs">Start periode {o.checkin.seq}</SubmitButton>
                             </form>
                           </details>
                         )}
@@ -189,19 +221,17 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
               <ul className="divide-y divide-line">
                 {checkins.map((ci) => (
                   <li key={ci.createdAt.toISOString()} className="px-5 py-3 text-sm">
-                    <p className="font-semibold">{formatDate(ci.createdAt)}</p>
-                    <p className="text-muted">
-                      {[
-                        ci.data.weightKg ? `${ci.data.weightKg} kg` : null,
-                        ci.data.energy ? `energie: ${ci.data.energy}` : null,
-                        ci.data.hunger ? `honger: ${ci.data.hunger}` : null,
-                        ci.data.difficulty ? `haalbaarheid: ${ci.data.difficulty}` : null,
-                        ci.data.goal ? `nieuw doel: ${ci.data.goal}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
+                    <p className="font-semibold">
+                      {ci.forSeq ? `Voor periode ${ci.forSeq}` : "Check-in"} · {formatDate(ci.createdAt)}
                     </p>
-                    {ci.data.comments && <p className="mt-1">&ldquo;{ci.data.comments}&rdquo;</p>}
+                    <dl className="mt-1.5 grid grid-cols-[9rem_minmax(0,1fr)] gap-x-3 gap-y-0.5">
+                      {describeCheckin(ci.data).map(([k, v]) => (
+                        <div key={k} className="contents">
+                          <dt className="text-muted">{k}</dt>
+                          <dd className="break-words">{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   </li>
                 ))}
               </ul>

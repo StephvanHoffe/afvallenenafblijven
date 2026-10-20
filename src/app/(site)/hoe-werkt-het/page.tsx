@@ -31,8 +31,8 @@ const details = [
     alt: "Gegrilde kip met groente en citroen",
   },
   {
-    title: "4. Elke 4 weken een nieuw schema",
-    text: "Heb je een abonnement? Dan vul je na 4 weken een korte check-in in: je gewicht, energie, honger en hoe haalbaar het was. Je volgende schema bouwt daarop voort, met nieuwe gerechten en een volgende stap in je training. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
+    title: "4. Check-in en je nieuwe schema",
+    text: "Heb je een abonnement? Aan het einde van elke periode van 4 weken vul je een korte check-in in: je gewicht, hoe goed het lukte, je honger, energie en slaap, en hoe de trainingen voelden. Op basis daarvan maken we direct je nieuwe schema: met bijgestelde calorieën, nieuwe gerechten en een volgende stap in je training. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
     image: "/images/coach-bench.jpg",
     alt: "Sporter traint met hulp van een begeleider",
   },

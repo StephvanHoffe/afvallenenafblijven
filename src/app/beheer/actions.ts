@@ -8,7 +8,7 @@ import { loginUrl } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminNotificationEmail, cancellationEmail, loginEmail, plansReadyEmail, sendMail } from "@/lib/email";
 import { syncSubscription } from "@/lib/fulfillment";
-import { processPlan } from "@/lib/plans";
+import { processOrderPlans, processPlan, startNextPeriod } from "@/lib/plans";
 import { getCustomer, getOrder, plansForOrder } from "@/lib/repo";
 import { cancelSubscription } from "@/lib/stripe";
 
@@ -109,6 +109,22 @@ export async function adminCancelSubscription(formData: FormData): Promise<void>
     }),
   );
   back(formData, "opgezegd");
+}
+
+/**
+ * Start de volgende periode zonder check-in, bijvoorbeeld als de klant zijn
+ * gegevens per e-mail heeft doorgegeven. Het schema bouwt dan voort op de
+ * vorige gegevens.
+ */
+export async function startPeriodWithoutCheckin(formData: FormData): Promise<void> {
+  await guard(formData);
+  const order = await getOrder(String(formData.get("bestelling") ?? ""));
+  if (!order || order.status !== "active" || order.duration === "eenmalig") back(formData, "niet-gevonden");
+  const plans = await plansForOrder(order.id);
+  const next = plans.reduce((m, p) => Math.max(m, p.seq), 0) + 1;
+  if (!(await startNextPeriod(order, next))) back(formData, "niet-gevonden");
+  after(() => processOrderPlans(order.id));
+  back(formData, "periode-gestart");
 }
 
 /** Verwijdert een klant en alle bijbehorende gegevens (AVG-verzoek). */

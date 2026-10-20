@@ -33,7 +33,7 @@ const comparison: { label: string; voeding: boolean; training: boolean }[] = [
   { label: "Rekening met blessures en niveau", voeding: false, training: true },
   { label: "Elke 4 weken een nieuw schema", voeding: true, training: true },
   { label: "Check-in en bijsturen", voeding: true, training: true },
-  { label: "Online opslaan, printen en als PDF", voeding: true, training: true },
+  { label: "Downloaden als PDF, met logboek of boodschappenlijst", voeding: true, training: true },
 ];
 
 export default async function PrijzenPage() {

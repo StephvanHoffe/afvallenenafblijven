@@ -146,6 +146,10 @@ body {
   .avoid-break {
     break-inside: avoid;
   }
+  /* Bij printen alle tabbladen en recepten tonen */
+  .tab-panel[hidden] {
+    display: block !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

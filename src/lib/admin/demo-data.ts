@@ -2,6 +2,7 @@ import "server-only";
 import { monthlyPrice, products, type DurationId, type ProductId } from "@/config/pricing";
 import { sampleNutritionPlan, sampleTargets, sampleTrainingPlan } from "@/content/sample-plans";
 import type { Intake } from "@/lib/intake";
+import { checkinWindow, type CheckinData } from "@/lib/checkin";
 import type { OrderStatus } from "@/lib/repo";
 import type {
   AdminCustomerRow,
@@ -65,7 +66,9 @@ for (let i = 0; i < 48; i++) {
   });
 
   const ageDays = Math.floor((TODAY - createdAt.getTime()) / DAY);
-  const periods = subscription && status !== "canceled" ? Math.floor(ageDays / 28) + 1 : 1;
+  // Sommige abonnees hebben hun check-in nog niet ingevuld; die lopen een periode achter.
+  const due = subscription && status !== "canceled" ? Math.floor(ageDays / 28) + 1 : 1;
+  const periods = due > 1 && i % 7 === 3 ? due - 1 : due;
   let planCount = 0;
   for (let seq = 1; seq <= periods; seq++) {
     for (const type of products[product].includes) {
@@ -161,6 +164,37 @@ const demoIntake: Intake = {
 
 const within30 = (d: Date) => TODAY - d.getTime() < 30 * DAY;
 
+function demoCheckinData(seq: number): CheckinData {
+  return {
+    weightKg: 78 - seq * 1.2,
+    waistCm: 92 - seq * 2,
+    energy: seq % 2 ? "Goed" : "Gemiddeld",
+    sleep: "Matig",
+    nutritionAdherence: "Meestal (70-90%)",
+    hunger: "Soms",
+    likedMeals: "De kwarkbowl en de kip-teriyaki",
+    dislikedMeals: "Liever geen zalm op maandag",
+    trainingAdherence: "De meeste",
+    difficulty: "Precies goed",
+    injuries: seq === 2 ? "Knie zeurt soms na het wandelen" : undefined,
+  };
+}
+
+function orderCheckin(o: AdminOrderRow) {
+  const own = plans.filter((p) => p.orderId === o.id);
+  const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);
+  const lastStart = own.filter((p) => p.seq === lastSeq).reduce<Date | null>((min, p) => (!min || p.createdAt < min ? p.createdAt : min), null);
+  return checkinWindow({
+    duration: o.duration,
+    status: o.status,
+    cancelAt: o.cancelAt,
+    lastSeq,
+    lastPeriodStart: lastStart,
+    submittedForNext: false,
+    now: TODAY,
+  });
+}
+
 export const demoAdminData: AdminData = {
   demo: true,
 
@@ -178,7 +212,10 @@ export const demoAdminData: AdminData = {
       const k = `${o.product}-${o.duration}`;
       mix.set(k, { product: o.product, duration: o.duration, count: (mix.get(k)?.count ?? 0) + 1 });
     }
+    const windows = orders.map(orderCheckin);
     return {
+      checkinsOpen: windows.filter((w) => w?.status === "open" || w?.status === "overdue").length,
+      checkinsOverdue: windows.filter((w) => w?.status === "overdue").length,
       activeSubscriptions: active.length,
       mrrCents: active.reduce((s, o) => s + o.monthlyCents, 0),
       pendingCancellations: active.filter((o) => o.cancelAt).length,
@@ -203,20 +240,23 @@ export const demoAdminData: AdminData = {
   async customer(customerId) {
     const customer = customers.find((c) => c.id === customerId);
     if (!customer) return null;
-    const created = customer.createdAt.getTime();
+    const own = orders.filter((o) => o.customerId === customerId);
+    const ownPlans = plans.filter((p) => p.customerId === customerId);
+    const lastSeq = ownPlans.reduce((m, p) => Math.max(m, p.seq), 0);
     return {
       customer,
-      orders: orders.filter((o) => o.customerId === customerId),
-      plans: plans.filter((p) => p.customerId === customerId),
+      orders: own.map((o) => ({ ...o, checkin: orderCheckin(o) })),
+      plans: ownPlans,
       intake: {
-        data: { ...demoIntake, product: orders.find((o) => o.customerId === customerId)?.product ?? "bundel" },
+        data: { ...demoIntake, product: own[0]?.product ?? "bundel" },
         consents: { healthData: true, terms: true, immediateDelivery: true, marketing: customer.marketing },
         createdAt: customer.createdAt,
       },
-      checkins:
-        TODAY - created > 28 * DAY
-          ? [{ data: { weightKg: 75.6, energy: "Goed", hunger: "Soms", difficulty: "Precies goed" }, createdAt: new Date(created + 26 * DAY) }]
-          : [],
+      checkins: Array.from({ length: Math.max(lastSeq - 1, 0) }, (_, k) => {
+        const seq = lastSeq - k;
+        const start = ownPlans.find((p) => p.seq === seq)?.createdAt ?? customer.createdAt;
+        return { data: demoCheckinData(seq), forSeq: seq, createdAt: new Date(start.getTime() - 60 * 1000) };
+      }),
     };
   },
 

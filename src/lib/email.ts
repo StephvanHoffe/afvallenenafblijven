@@ -93,13 +93,55 @@ ${button(input.link, "Bekijk mijn schema")}
 <li>Lees eerst de introductie en de kernafspraken.</li>
 <li>Doe je boodschappen met de boodschappenlijst (handig: download het schema als PDF).</li>
 <li>Weeg jezelf 1x per week, op dezelfde dag en hetzelfde tijdstip.</li>
-<li>Vul na 4 weken de check-in in, dan stemmen we je volgende schema daarop af.</li>
+<li>Na 4 weken vul je een korte check-in in. Daarmee maken we je volgende schema, afgestemd op je voortgang. We sturen je een herinnering.</li>
 </ul>
 <p>Deze link is persoonlijk; deel hem niet met anderen. Is de link verlopen? Via ${site.url}/inloggen vraag je eenvoudig een nieuwe aan.</p>
 <p>Veel succes! Je kunt dit.</p>
 <p>Team ${escapeHtml(site.name)}</p>`,
   );
   const text = `Hoi ${input.name},\n\n${intro}\n\nBekijk je schema: ${input.link}\n\nDeze link is persoonlijk. Nieuwe link nodig? Ga naar ${site.url}/inloggen\n\nTeam ${site.name}`;
+  return { to: input.to, subject, html, text };
+}
+
+/**
+ * Uitnodiging (reminder 0) en herinneringen voor de verplichte check-in. Het
+ * volgende schema maken we pas als de check-in is ingevuld.
+ */
+export function checkinEmail(input: {
+  to: string;
+  name: string;
+  link: string;
+  /** De periode waarvoor de check-in het schema maakt. */
+  seq: number;
+  dueAt: Date;
+  reminder: number;
+}): Mail {
+  const due = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(input.dueAt);
+  const subject =
+    input.reminder === 0
+      ? `Tijd voor je check-in, ${input.name}`
+      : input.reminder === 1
+        ? "Herinnering: je nieuwe schema wacht op je check-in"
+        : "Je nieuwe schema staat nog voor je klaar";
+  const intro =
+    input.reminder === 0
+      ? `Je huidige periode loopt bijna af (${due}). Vul je check-in in: het kost je 2 minuten. Daarna maken we direct je schema voor periode ${input.seq}, afgestemd op hoe het ging.`
+      : `We hebben je check-in nog niet ontvangen. Je schema voor periode ${input.seq} maken we pas als je hem hebt ingevuld, zodat het echt bij je voortgang past. Het kost je 2 minuten.`;
+  const html = layout(
+    subject,
+    `<p>Hoi ${escapeHtml(input.name)},</p>
+<p>${escapeHtml(intro)}</p>
+${button(input.link, "Check-in invullen")}
+<p><strong>Wat we je vragen:</strong></p>
+<ul style="padding-left:20px;">
+<li>Je huidige gewicht (weeg je bij voorkeur 's ochtends, voor het ontbijt).</li>
+<li>Hoe goed je het schema kon volgen, en hoe je honger, energie en slaap waren.</li>
+<li>Wat je lekker vond, wat je anders wilt en of je nieuwe klachten hebt.</li>
+</ul>
+<p>Binnen een paar minuten na je check-in staat je nieuwe schema klaar en krijg je een e-mail.</p>
+<p>Team ${escapeHtml(site.name)}</p>`,
+  );
+  const text = `Hoi ${input.name},\n\n${intro}\n\nCheck-in invullen: ${input.link}\n\nTeam ${site.name}`;
   return { to: input.to, subject, html, text };
 }
 

@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
+import type { CheckinData } from "@/lib/checkin";
+
+export type { CheckinData };
 
 export type OrderStatus = "active" | "past_due" | "canceled" | "completed";
 export type PlanStatus = "pending" | "generating" | "ready" | "failed";
@@ -38,6 +41,8 @@ export interface Order {
   cancel_at: Date | null;
   amount_cents: number;
   monthly_cents: number;
+  checkin_reminded_seq: number | null;
+  checkin_reminders: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -239,6 +244,16 @@ export async function plansForCustomer(customerId: string): Promise<Plan[]> {
     from plans where customer_id = ${customerId} order by created_at desc, type`;
 }
 
+/** Klare schema's (met inhoud) van een klant voor één periode; zonder periode de laatste. */
+export async function readyPlansForPeriod(customerId: string, seq?: number): Promise<Plan[]> {
+  const sql = await db();
+  return sql<Plan[]>`
+    select * from plans
+    where customer_id = ${customerId} and status = 'ready'
+      and seq = ${seq ?? sql`(select max(seq) from plans where customer_id = ${customerId} and status = 'ready')`}
+    order by type`;
+}
+
 export async function previousReadyPlan(orderId: string, type: PlanType, seq: number): Promise<Plan | null> {
   const sql = await db();
   const [row] = await sql<Plan[]>`
@@ -268,46 +283,65 @@ export async function markPlansEmailed(planIds: string[]): Promise<string[]> {
 }
 
 /**
- * Abonnementen die toe zijn aan een nieuw schema: actief (of opgezegd maar
- * nog binnen de betaalde periode) en het laatste schema is ouder dan het
- * interval.
+ * Lopende abonnementen met hun laatste periode, voor de check-in: wanneer
+ * begon de laatste periode en is de check-in voor de volgende al ingevuld?
  */
-export async function dueSubscriptionOrders(intervalDays: number): Promise<(Order & { last_seq: number })[]> {
+export async function subscriptionCheckinOrders(): Promise<
+  (Order & { last_seq: number; last_start: Date; next_checkin: boolean })[]
+> {
   const sql = await db();
-  return sql<(Order & { last_seq: number })[]>`
-    select o.*, p.last_seq from orders o
+  return sql<(Order & { last_seq: number; last_start: Date; next_checkin: boolean })[]>`
+    select o.*, p.last_seq, p.last_start,
+      exists (select 1 from checkins ci where ci.order_id = o.id and ci.for_seq = p.last_seq + 1) as next_checkin
+    from orders o
     join lateral (
-      select max(seq) as last_seq, max(created_at) as last_created from plans where order_id = o.id
+      select seq as last_seq, min(created_at) as last_start from plans
+      where order_id = o.id group by seq order by seq desc limit 1
     ) p on true
-    where o.duration <> 'eenmalig'
-      and o.status = 'active'
-      and (o.cancel_at is null or o.cancel_at > now() + interval '3 days')
-      and p.last_created < now() - make_interval(days => ${intervalDays})`;
+    where o.duration <> 'eenmalig' and o.status = 'active'`;
+}
+
+export async function markCheckinReminder(orderId: string, seq: number, count: number): Promise<void> {
+  const sql = await db();
+  await sql`update orders set checkin_reminded_seq = ${seq}, checkin_reminders = ${count} where id = ${orderId}`;
 }
 
 // ---------- Check-ins ----------
 
-export interface CheckinData {
-  goal?: Intake["goal"];
-  weightKg?: number;
-  energy?: string;
-  hunger?: string;
-  difficulty?: string;
-  comments?: string;
+export interface CheckinRow {
+  data: CheckinData;
+  order_id: string | null;
+  for_seq: number | null;
+  created_at: Date;
 }
 
-export async function addCheckin(customerId: string, data: CheckinData): Promise<void> {
+/**
+ * Slaat de check-in voor een periode op. Geeft false als er voor die periode
+ * al een check-in was (bijv. dubbel verstuurd formulier).
+ */
+export async function addCheckin(customerId: string, orderId: string, forSeq: number, data: CheckinData): Promise<boolean> {
   const sql = await db();
-  await sql`insert into checkins (customer_id, data) values (${customerId}, ${sql.json(data as never)})`;
+  const rows = await sql`
+    insert into checkins (customer_id, order_id, for_seq, data)
+    values (${customerId}, ${orderId}, ${forSeq}, ${sql.json(data as never)})
+    on conflict (order_id, for_seq) do nothing
+    returning id`;
+  return rows.length > 0;
 }
 
-export async function latestCheckin(customerId: string, since?: Date): Promise<CheckinData | null> {
+/** Alle check-ins van een abonnement, oudste eerst. */
+export async function checkinsForOrder(orderId: string): Promise<CheckinRow[]> {
   const sql = await db();
-  const [row] = await sql<{ data: CheckinData }[]>`
-    select data from checkins where customer_id = ${customerId}
-    ${since ? sql`and created_at > ${since}` : sql``}
-    order by created_at desc limit 1`;
-  return row?.data ?? null;
+  return sql<CheckinRow[]>`
+    select data, order_id, for_seq, created_at from checkins
+    where order_id = ${orderId} order by for_seq asc, created_at asc`;
+}
+
+export async function checkinsForCustomer(customerId: string): Promise<CheckinRow[]> {
+  const sql = await db();
+  return sql<CheckinRow[]>`
+    select data, order_id, for_seq, created_at from checkins
+    where customer_id = ${customerId} order by created_at desc`;
 }
 
 // ---------- Herroepingen ----------

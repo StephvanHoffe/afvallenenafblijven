@@ -113,6 +113,12 @@ create table if not exists withdrawals (
 alter table orders add column if not exists monthly_cents integer not null default 0;
 alter table withdrawals add column if not exists handled_at timestamptz;
 create index if not exists orders_status_idx on orders(status);
+-- Check-in per abonnement en periode (verplicht voor elk vervolgschema)
+alter table checkins add column if not exists order_id uuid references orders(id) on delete cascade;
+alter table checkins add column if not exists for_seq integer;
+create unique index if not exists checkins_order_seq_idx on checkins(order_id, for_seq);
+alter table orders add column if not exists checkin_reminded_seq integer;
+alter table orders add column if not exists checkin_reminders integer not null default 0;
 create index if not exists intakes_created_idx on intakes(created_at);
 `;
 

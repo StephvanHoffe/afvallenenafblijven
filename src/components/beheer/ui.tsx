@@ -84,6 +84,7 @@ export function planName(product: ProductId, duration: DurationId): string {
 const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   demo: { tone: "warn", text: "Demo-modus: acties worden niet uitgevoerd." },
   "opnieuw-gestart": { tone: "ok", text: "Het schema wordt opnieuw gemaakt. Ververs de pagina over een paar minuten." },
+  "periode-gestart": { tone: "ok", text: "De nieuwe periode is gestart. De schema's worden nu gemaakt; de klant krijgt een e-mail zodra ze klaar zijn." },
   "mail-verstuurd": { tone: "ok", text: "De e-mail met de schema's is opnieuw verstuurd." },
   "inloglink-verstuurd": { tone: "ok", text: "De klant heeft een nieuwe inloglink ontvangen." },
   opgezegd: { tone: "ok", text: "Het abonnement is opgezegd. De klant heeft een bevestiging ontvangen." },

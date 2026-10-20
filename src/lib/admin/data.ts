@@ -5,7 +5,8 @@ import { demoAdminData } from "@/lib/admin/demo-data";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
-import type { CheckinData, OrderStatus, PlanStatus } from "@/lib/repo";
+import { checkinWindow, type CheckinWindow } from "@/lib/checkin";
+import { subscriptionCheckinOrders, type CheckinData, type OrderStatus, type PlanStatus } from "@/lib/repo";
 
 export interface AdminOrderRow {
   id: string;
@@ -21,6 +22,8 @@ export interface AdminOrderRow {
   monthlyCents: number;
   createdAt: Date;
   stripeSubscriptionId: string | null;
+  /** Alleen gevuld in de klantdetails: de check-in voor de volgende periode. */
+  checkin?: CheckinWindow | null;
 }
 
 export interface AdminCustomerRow {
@@ -60,7 +63,7 @@ export interface AdminCustomerDetail {
   orders: AdminOrderRow[];
   plans: AdminPlanRow[];
   intake: { data: Intake; consents: Record<string, unknown>; createdAt: Date } | null;
-  checkins: { data: CheckinData; createdAt: Date }[];
+  checkins: { data: CheckinData; forSeq: number | null; createdAt: Date }[];
 }
 
 export interface AdminWithdrawalRow {
@@ -84,6 +87,9 @@ export interface AdminOverview {
   plansFailed: number;
   plansInProgress: number;
   openWithdrawals: number;
+  /** Abonnees bij wie de check-in openstaat, en daarvan de verlopen. */
+  checkinsOpen: number;
+  checkinsOverdue: number;
   ordersPerDay: { date: string; count: number }[];
   productMix: { product: ProductId; duration: DurationId; count: number }[];
   recentOrders: AdminOrderRow[];
@@ -228,7 +234,21 @@ const dbAdminData: AdminData = {
       select o.*, c.name as customer_name, c.email as customer_email
       from orders o join customers c on c.id = o.customer_id
       order by o.created_at desc limit 8`;
+    const now = Date.now();
+    const windows = (await subscriptionCheckinOrders()).map((o) =>
+      checkinWindow({
+        duration: o.duration,
+        status: o.status,
+        cancelAt: o.cancel_at,
+        lastSeq: o.last_seq,
+        lastPeriodStart: o.last_start,
+        submittedForNext: o.next_checkin,
+        now,
+      }),
+    );
     return {
+      checkinsOpen: windows.filter((w) => w?.status === "open" || w?.status === "overdue").length,
+      checkinsOverdue: windows.filter((w) => w?.status === "overdue").length,
       activeSubscriptions: subs.active,
       mrrCents: subs.mrr,
       pendingCancellations: subs.pending_cancel,
@@ -280,14 +300,33 @@ const dbAdminData: AdminData = {
       where p.customer_id = ${id} order by p.created_at desc, p.type`;
     const [intake] = await sql<{ data: Intake; consents: Record<string, unknown>; created_at: Date }[]>`
       select data, consents, created_at from intakes where customer_id = ${id} order by created_at desc limit 1`;
-    const checkins = await sql<{ data: CheckinData; created_at: Date }[]>`
-      select data, created_at from checkins where customer_id = ${id} order by created_at desc`;
+    const checkins = await sql<{ data: CheckinData; order_id: string | null; for_seq: number | null; created_at: Date }[]>`
+      select data, order_id, for_seq, created_at from checkins where customer_id = ${id} order by created_at desc`;
+    const now = Date.now();
     return {
       customer: toCustomer(c),
-      orders: orders.map(toOrder),
+      orders: orders.map((o) => {
+        const own = plans.filter((p) => p.order_id === o.id);
+        const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);
+        const lastStart = own
+          .filter((p) => p.seq === lastSeq)
+          .reduce<Date | null>((min, p) => (!min || p.created_at < min ? p.created_at : min), null);
+        return {
+          ...toOrder(o),
+          checkin: checkinWindow({
+            duration: o.duration,
+            status: o.status,
+            cancelAt: o.cancel_at,
+            lastSeq,
+            lastPeriodStart: lastStart,
+            submittedForNext: checkins.some((ci) => ci.order_id === o.id && ci.for_seq === lastSeq + 1),
+            now,
+          }),
+        };
+      }),
       plans: plans.map(toPlan),
       intake: intake ? { data: intake.data, consents: intake.consents, createdAt: intake.created_at } : null,
-      checkins: checkins.map((r) => ({ data: r.data, createdAt: r.created_at })),
+      checkins: checkins.map((r) => ({ data: r.data, forSeq: r.for_seq, createdAt: r.created_at })),
     };
   },
 

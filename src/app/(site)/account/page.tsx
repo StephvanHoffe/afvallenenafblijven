@@ -6,12 +6,15 @@ import { AccountDashboard } from "@/components/account/AccountDashboard";
 import { toDashboard } from "@/lib/account-view";
 import { currentCustomer } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
-import { ordersForCustomer, plansForCustomer } from "@/lib/repo";
+import { checkinsForCustomer, ordersForCustomer, plansForCustomer } from "@/lib/repo";
 
 export const metadata: Metadata = {
   title: "Mijn schema's",
   robots: { index: false },
 };
+
+// Na een check-in wordt het nieuwe schema op de achtergrond gemaakt; dat kan enkele minuten duren.
+export const maxDuration = 300;
 
 export default function AccountPage({ searchParams }: PageProps<"/account">) {
   return (
@@ -32,10 +35,18 @@ async function AccountContent({ searchParams }: Pick<PageProps<"/account">, "sea
   const customer = await currentCustomer();
   if (!customer) return <NotLoggedIn />;
 
-  const [orders, plans, sp] = await Promise.all([ordersForCustomer(customer.id), plansForCustomer(customer.id), searchParams]);
-  const { dashboardOrders, dashboardPlans } = toDashboard(orders, plans);
-  const notice = sp.opgezegd === "1" ? "opgezegd" : sp.opzeggen === "1" ? "opzeggen" : null;
-  return <AccountDashboard name={customer.name} orders={dashboardOrders} plans={dashboardPlans} notice={notice} />;
+  const [orders, plans, checkins, sp] = await Promise.all([
+    ordersForCustomer(customer.id),
+    plansForCustomer(customer.id),
+    checkinsForCustomer(customer.id),
+    searchParams,
+  ]);
+  const { dashboardOrders, dashboardPlans } = toDashboard(orders, plans, checkins);
+  const notice =
+    sp.opgezegd === "1" ? "opgezegd" : sp.opzeggen === "1" ? "opzeggen" : sp.checkin === "ontvangen" ? "checkin" : null;
+  return (
+    <AccountDashboard name={customer.name} orders={dashboardOrders} plans={dashboardPlans} notice={notice} />
+  );
 }
 
 function NotLoggedIn({ note }: { note?: string }) {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Info } from "lucide-react";
+import { ArrowRight, Download, Info } from "lucide-react";
 import { CtaBanner } from "@/components/marketing";
 import { NutritionPlanView } from "@/components/plan/NutritionPlanView";
 import { TrainingPlanView } from "@/components/plan/TrainingPlanView";
@@ -37,6 +37,12 @@ export default function VoorbeeldPage() {
               Trainingsschema
             </a>
           </nav>
+          <p className="no-print mt-4 text-sm">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- PDF-download, geen pagina */}
+            <a href="/voorbeeld/pdf/voorbeeld" className="inline-flex items-center gap-1.5 font-bold text-brand-700 underline underline-offset-2">
+              <Download className="size-4" aria-hidden /> Download het voorbeeld als PDF
+            </a>
+          </p>
         </div>
       </section>
 

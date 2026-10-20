@@ -114,8 +114,10 @@ export async function generateNutritionPlan(
   name: string,
   intake: Intake,
   progress: ProgressContext,
+  /** Dagdoelen na bijstelling op basis van de check-in; standaard berekend uit de intake. */
+  adjusted?: { targets: NutritionTargets; adjustmentKcal: number },
 ): Promise<Extract<PlanContent, { type: "voeding" }>> {
-  const targets = nutritionTargets(intake);
+  const targets = adjusted?.targets ?? nutritionTargets(intake);
   let plan = await generateStructured(
     nutritionPlanSchema,
     NUTRITION_SYSTEM_PROMPT,
@@ -135,7 +137,7 @@ export async function generateNutritionPlan(
       throw new PlanGenerationError(`Voedingsschema voldoet niet: ${problems.join(" ")}`);
     }
   }
-  return { type: "voeding", plan, targets };
+  return { type: "voeding", plan, targets, ...(adjusted?.adjustmentKcal ? { adjustmentKcal: adjusted.adjustmentKcal } : {}) };
 }
 
 export async function generateTrainingPlan(

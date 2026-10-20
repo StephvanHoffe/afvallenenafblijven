@@ -28,6 +28,11 @@ const meal = z.object({
 export const nutritionPlanSchema = z.object({
   title: z.string(),
   intro: z.string().describe("Persoonlijke introductie van 2-4 zinnen, gericht aan de klant (je/jij)"),
+  changes: z
+    .array(z.string())
+    .describe(
+      "Wat er is aangepast ten opzichte van het vorige schema en waarom, op basis van de check-in (2-5 korte punten, gericht aan de klant). Lege lijst bij het eerste schema.",
+    ),
   principles: z.array(z.string()).describe("4-6 kernafspraken die dit schema laten werken"),
   days: z.array(
     z.object({
@@ -53,7 +58,7 @@ export const nutritionPlanSchema = z.object({
   eatingOutTips: z.array(z.string()),
   adjustmentGuide: z
     .string()
-    .describe("Hoe de klant na 2 weken bijstuurt als het gewicht niet of te snel daalt, of bij honger"),
+    .describe("Hoe de klant tussentijds (na 2 weken) zelf bijstuurt als het gewicht niet of te snel daalt, of bij honger"),
 });
 
 export type NutritionPlan = z.infer<typeof nutritionPlanSchema>;
@@ -72,6 +77,11 @@ const exercise = z.object({
 export const trainingPlanSchema = z.object({
   title: z.string(),
   intro: z.string().describe("Persoonlijke introductie van 2-4 zinnen, gericht aan de klant (je/jij)"),
+  changes: z
+    .array(z.string())
+    .describe(
+      "Wat er is aangepast ten opzichte van het vorige schema en waarom, op basis van de check-in (2-5 korte punten, gericht aan de klant). Lege lijst bij het eerste schema.",
+    ),
   weekSchedule: z
     .array(z.object({ day: z.string(), activity: z.string() }))
     .describe("Maandag t/m Zondag: welke training, of rust/actief herstel"),
@@ -106,5 +116,11 @@ export const trainingPlanSchema = z.object({
 export type TrainingPlan = z.infer<typeof trainingPlanSchema>;
 
 export type PlanContent =
-  | { type: "voeding"; plan: NutritionPlan; targets: NutritionTargets }
+  | {
+      type: "voeding";
+      plan: NutritionPlan;
+      targets: NutritionTargets;
+      /** Totale bijstelling van het caloriedoel na check-ins (kcal per dag). */
+      adjustmentKcal?: number;
+    }
   | { type: "training"; plan: TrainingPlan };

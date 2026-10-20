@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, ShoppingCart } from "lucide-react";
 import { NutritionPlanView } from "@/components/plan/NutritionPlanView";
 import { TrainingPlanView } from "@/components/plan/TrainingPlanView";
-import { PrintButton } from "@/components/plan/PrintButton";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { formatDate } from "@/lib/format";
 import { site } from "@/config/site";
 
-/** Een volledig schema zoals de klant het ziet: terug-link, printknop, inhoud en disclaimer. */
+/** Een volledig schema zoals de klant het ziet: terug-link, downloads, inhoud en disclaimer. */
 export function PlanDocument({
   content,
   customerName,
@@ -15,6 +14,9 @@ export function PlanDocument({
   backHref = "/account",
   backLabel = "Mijn schema's",
   preview = false,
+  pdfHref,
+  shoppingPdfHref,
+  storageKey,
 }: {
   content: PlanContent;
   customerName: string;
@@ -22,6 +24,11 @@ export function PlanDocument({
   backHref?: string;
   backLabel?: string;
   preview?: boolean;
+  /** Download van het hele schema als PDF. */
+  pdfHref?: string;
+  /** Download van alleen de boodschappenlijst (voedingsschema). */
+  shoppingPdfHref?: string;
+  storageKey?: string;
 }) {
   return (
     <div>
@@ -29,14 +36,31 @@ export function PlanDocument({
         <Link href={backHref} className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
           <ArrowLeft className="size-4" aria-hidden /> {backLabel}
         </Link>
-        <PrintButton />
+        <div className="flex flex-wrap gap-2">
+          {shoppingPdfHref && (
+            <a href={shoppingPdfHref} className="btn-secondary !px-4 !py-2.5 text-sm">
+              <ShoppingCart className="size-4" aria-hidden /> Boodschappenlijst (PDF)
+            </a>
+          )}
+          {pdfHref && (
+            <a href={pdfHref} className="btn-primary !px-4 !py-2.5 text-sm">
+              <Download className="size-4" aria-hidden /> Download als PDF
+            </a>
+          )}
+        </div>
       </div>
       <p className="mb-4 text-sm text-muted">
         Persoonlijk schema voor {customerName}
         {generatedAt ? `, gemaakt op ${formatDate(generatedAt)}` : ""} · {site.name}
       </p>
       {content.type === "voeding" ? (
-        <NutritionPlanView plan={content.plan} targets={content.targets} preview={preview} />
+        <NutritionPlanView
+          plan={content.plan}
+          targets={content.targets}
+          preview={preview}
+          storageKey={storageKey}
+          shoppingPdfHref={shoppingPdfHref}
+        />
       ) : (
         <TrainingPlanView plan={content.plan} preview={preview} />
       )}

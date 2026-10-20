@@ -90,6 +90,8 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
             backHref="/beheer/schemas"
             backLabel="Schema's"
             preview={isDemoMode()}
+            pdfHref={`/beheer/schemas/${plan.id}/pdf`}
+            shoppingPdfHref={plan.content.type === "voeding" ? `/beheer/schemas/${plan.id}/pdf?deel=boodschappen` : undefined}
           />
         </div>
       ) : (

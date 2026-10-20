@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { DemoBanner } from "@/components/account/DemoBanner";
 import { PlanDocument } from "@/components/plan/PlanDocument";
-import { sampleNutritionPlan, sampleTargets } from "@/content/sample-plans";
-import { demoCustomerName } from "@/content/demo-account";
+import { sampleNutritionPlanPeriod2, sampleTargets } from "@/content/sample-plans";
+import { demoCustomerName, demoPlanDate } from "@/content/demo-account";
 
 export const metadata: Metadata = {
   title: "Voorbeeld: voedingsschema",
@@ -14,11 +14,14 @@ export default function DemoNutritionPage() {
     <section className="container-page py-10 sm:py-14">
       <DemoBanner>Voorbeeld van een voedingsschema in Mijn schema&apos;s, voor een fictieve klant.</DemoBanner>
       <PlanDocument
-        content={{ type: "voeding", plan: sampleNutritionPlan, targets: sampleTargets }}
+        content={{ type: "voeding", plan: sampleNutritionPlanPeriod2, targets: sampleTargets }}
         customerName={demoCustomerName}
-        generatedAt={new Date("2027-02-03T09:14:00+01:00")}
+        generatedAt={demoPlanDate}
         backHref="/voorbeeld/mijn-schemas"
         preview
+        pdfHref="/voorbeeld/pdf/voedingsschema"
+        shoppingPdfHref="/voorbeeld/pdf/boodschappenlijst"
+        storageKey="afb-boodschappen-voorbeeld"
       />
     </section>
   );

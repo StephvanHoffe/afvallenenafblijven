@@ -17,14 +17,17 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - De Stripe-webhook legt de bestelling vast en verstuurt een orderbevestiging.
 - Claude maakt het schema. Het systeem controleert het automatisch op calorieën, eiwit en het aantal maaltijden; voldoet het niet, dan wordt het één keer opnieuw gemaakt.
 - De bedankpagina laat live zien wanneer het schema klaar is. De klant krijgt ook een e-mail met een inloglink.
-- "Mijn schema's" (inloggen zonder wachtwoord): schema's bekijken en printen of als PDF opslaan, check-in invullen, abonnement opzeggen of de opzegging intrekken, en betaalgegevens en facturen inzien via het Stripe-portaal.
-- Abonnees krijgen elke 4 weken een nieuw schema, afgestemd op hun check-in. Is het streefgewicht bereikt, dan schakelt het schema automatisch over naar een onderhoudsplan ("afblijven").
+- "Mijn schema's" (inloggen zonder wachtwoord): schema's bekijken, check-in invullen, abonnement opzeggen of de opzegging intrekken, en betaalgegevens en facturen inzien via het Stripe-portaal.
+- Overzichtelijke schema's met tabbladen. Voeding: weekmenu in één oogopslag, recepten per dag (inklapbaar), boodschappenlijst om af te vinken en tips. Training: weekoverzicht, per training een compacte oefeningenlijst, opbouw in 4 weken en herstel.
+- Alles als PDF: elk schema, alleen de boodschappenlijst, of alle schema's van een periode in één bestand. Het trainingsschema bevat een logboek om gewichten bij te houden. De PDF's worden op de server gemaakt (`src/lib/pdf/`), in het lettertype van de site.
+- **Verplichte check-in**: elke periode duurt 4 weken. Drie dagen voor het einde opent de check-in en krijgt de klant een uitnodiging, met herinneringen na 3, 7 en 14 dagen (`checkin` in `src/config/site.ts`). Pas na de check-in maakt Claude het nieuwe schema, op basis van de antwoorden: gewicht en taille, hoe goed het schema lukte, honger, energie, slaap, wat de klant lekker vond, hoe zwaar de trainingen waren, aantal trainingsdagen en nieuwe klachten. Het caloriedoel wordt in stappen van 100 kcal bijgesteld als het gewicht anders verloopt dan gepland (maximaal 300 kcal in totaal). Bovenaan elk vervolgschema staat wat er is aangepast en waarom.
+- Is het streefgewicht bereikt, dan schakelt het schema automatisch over naar een onderhoudsplan ("afblijven").
 
 **Beheer (`/beheer`)**
 - Inloggen met één wachtwoord (`ADMIN_PASSWORD`, minimaal 12 tekens).
 - Overzicht: terugkerende omzet per maand, nieuwe bestellingen, conversie van gestarte betalingen, bestellingen per dag en actieve abonnementen per plan.
-- Klanten: zoeken, alle antwoorden uit de vragenlijst, check-ins, bestellingen en schema's. Acties: inloglink sturen, abonnement opzeggen namens de klant, klant volledig verwijderen (AVG).
-- Bestellingen en schema's met filters. Schema's bekijk je zoals de klant ze ziet, je kunt ze opnieuw laten maken en de e-mail opnieuw sturen.
+- Klanten: zoeken, alle antwoorden uit de vragenlijst, check-ins per periode, de status van de volgende check-in, bestellingen en schema's. Acties: inloglink sturen, een nieuwe periode starten zonder check-in (als de klant zijn gegevens anders heeft doorgegeven), abonnement opzeggen namens de klant, klant volledig verwijderen (AVG).
+- Bestellingen en schema's met filters. Schema's bekijk je zoals de klant ze ziet, ook als PDF. Je kunt ze opnieuw laten maken en de e-mail opnieuw sturen.
 - Herroepingen afhandelen, en een pagina Instellingen die laat zien welke koppelingen werken (met testmail).
 - `BEHEER_DEMO=1` toont het beheer met fictieve voorbeelddata en zonder wachtwoord. Alleen voor een demo; zet dit nooit aan op de live site.
 

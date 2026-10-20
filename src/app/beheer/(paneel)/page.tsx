@@ -108,7 +108,18 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
               <p className="text-muted">Opgezegd, loopt nog</p>
               <p className="text-lg font-extrabold tabular-nums">{o.pendingCancellations}</p>
             </div>
+            <div>
+              <p className="text-muted">Wachten op check-in</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.checkinsOpen}</p>
+            </div>
+            <div>
+              <p className="text-muted">Check-in verlopen</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.checkinsOverdue}</p>
+            </div>
           </div>
+          <p className="border-t border-line px-5 py-3 text-xs text-muted">
+            Een nieuw schema wordt pas gemaakt na de check-in. Klanten krijgen automatisch een uitnodiging en herinneringen.
+          </p>
         </Panel>
       </div>
 
