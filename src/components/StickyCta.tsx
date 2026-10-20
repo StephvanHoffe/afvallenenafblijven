@@ -1,0 +1,28 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
+
+/** Vaste knop onderin op mobiel, zichtbaar zodra de bezoeker voorbij de hero scrolt. */
+export function StickyCta({ href = "/start", label = "Start je persoonlijke plan" }: { href?: string; label?: string }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 650);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <div
+      className={`no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-cream/95 p-3 backdrop-blur transition-transform duration-300 sm:hidden ${
+        visible ? "translate-y-0" : "translate-y-full"
+      }`}
+      aria-hidden={!visible}
+    >
+      <Link href={href} className="btn-primary w-full" tabIndex={visible ? 0 : -1}>
+        {label} <ArrowRight className="size-5" aria-hidden />
+      </Link>
+    </div>
+  );
+}
