@@ -1,25 +1,60 @@
-import { CheckinForm } from "@/app/(site)/account/CheckinForm";
-import { products } from "@/config/pricing";
+import { healthSuggestion } from "@/lib/health/suggest";
+import { latestPeriodStart } from "@/lib/progress";
+import { CheckinForm } from "@/app/[lang]/(site)/account/CheckinForm";
+import { productFor } from "@/config/pricing";
 import { WeeklyHistory, WeeklySection } from "@/components/account/tabs/WeeklySection";
+import { defineCopy, type Locale } from "@/i18n/config";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { describeCheckin } from "@/lib/checkin";
 import { formatDate } from "@/lib/format";
 
-export function CheckinTab({ view, base, demo, notice }: { view: AccountView; base: string; demo: boolean; notice: AccountNotice }) {
+const copy = defineCopy({
+  nl: {
+    title: "Check-in",
+    none: "Je hebt op dit moment geen lopend abonnement met een check-in. Met een abonnement vul je aan het einde van elke periode een korte check-in in, en maken we daarop je nieuwe schema.",
+    titleFor: (seq: number) => `Check-in voor periode ${seq}`,
+    opensBefore: "Je check-in opent op",
+    opensAfter: ", een paar dagen voor het einde van je huidige periode. Je krijgt dan een e-mail.",
+    why: "Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten, zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.",
+    preview: "Bekijk hoe de check-in eruitziet",
+    submitted: "Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.",
+    overdue: "Je huidige periode is voorbij. Vul je check-in in, dan maken we direct je nieuwe schema.",
+    open: (date: string) => `Je huidige periode loopt tot ${date}. Vul je check-in in, dan maken we direct je nieuwe schema.`,
+    duration: "Het kost je ongeveer 2 minuten.",
+    history: "Je eerdere check-ins",
+    forPeriod: (seq: number) => `Voor periode ${seq}`,
+  },
+  en: {
+    title: "Check-in",
+    none: "You don't currently have an active subscription with a check-in. With a subscription, you complete a short check-in at the end of each period, and we use it to create your new plan.",
+    titleFor: (seq: number) => `Check-in for period ${seq}`,
+    opensBefore: "Your check-in opens on",
+    opensAfter: ", a few days before the end of your current period. We'll send you an email then.",
+    why: "We only create your new plan after your check-in. That way it matches your progress exactly: eating more or less, training harder or lighter, or switching to maintaining your weight once you've reached your goal.",
+    preview: "See what the check-in looks like",
+    submitted: "We've received your check-in. Your new plan is being created.",
+    overdue: "Your current period has ended. Complete your check-in and we'll create your new plan straight away.",
+    open: (date: string) => `Your current period runs until ${date}. Complete your check-in and we'll create your new plan straight away.`,
+    duration: "It takes about 2 minutes.",
+    history: "Your previous check-ins",
+    forPeriod: (seq: number) => `For period ${seq}`,
+  },
+});
+
+export function CheckinTab({ view, base, demo, notice, l }: { view: AccountView; base: string; demo: boolean; notice: AccountNotice; l: Locale }) {
+  const t = copy[l];
   const withCheckin = view.orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due") && o.checkin);
   const history = [...view.checkins].reverse();
+  const suggestion = healthSuggestion(view.health, l, "period", latestPeriodStart(view));
 
   return (
     <div className="space-y-8">
-      <WeeklySection view={view} base={base} demo={demo} notice={notice} />
+      <WeeklySection view={view} base={base} demo={demo} notice={notice} l={l} />
 
       {withCheckin.length === 0 && (
         <section className="card p-6 sm:p-8">
-          <h2 className="heading-md">Check-in</h2>
-          <p className="mt-2 text-muted">
-            Je hebt op dit moment geen lopend abonnement met een check-in. Met een abonnement vul je aan het einde van elke
-            periode een korte check-in in, en maken we daarop je nieuwe schema.
-          </p>
+          <h2 className="heading-md">{t.title}</h2>
+          <p className="mt-2 text-muted">{t.none}</p>
         </section>
       )}
 
@@ -27,56 +62,50 @@ export function CheckinTab({ view, base, demo, notice }: { view: AccountView; ba
         const c = o.checkin!;
         return (
           <section key={o.id} id="check-in" className="card scroll-mt-24 p-6 sm:p-8">
-            <h2 className="heading-md">Check-in voor periode {c.seq}</h2>
-            {withCheckin.length > 1 && <p className="mt-1 text-sm font-semibold text-muted">{products[o.product].name}</p>}
+            <h2 className="heading-md">{t.titleFor(c.seq)}</h2>
+            {withCheckin.length > 1 && <p className="mt-1 text-sm font-semibold text-muted">{productFor(o.product, l).name}</p>}
             {c.status === "upcoming" ? (
               <div className="mt-3 space-y-2 text-[0.9375rem] text-muted">
                 <p>
-                  Je check-in opent op <strong className="text-ink">{formatDate(c.opensAt)}</strong>, een paar dagen voor het
-                  einde van je huidige periode. Je krijgt dan een e-mail.
+                  {t.opensBefore} <strong className="text-ink">{formatDate(c.opensAt, l)}</strong>
+                  {t.opensAfter}
                 </p>
-                <p>
-                  Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten,
-                  zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.
-                </p>
+                <p>{t.why}</p>
                 {demo && (
                   <details className="pt-2">
-                    <summary className="cursor-pointer font-bold text-brand-700">Bekijk hoe de check-in eruitziet</summary>
+                    <summary className="cursor-pointer font-bold text-brand-700">{t.preview}</summary>
                     <div className="mt-4 text-ink">
-                      <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo />
+                      <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo suggestion={suggestion} />
                     </div>
                   </details>
                 )}
               </div>
             ) : c.status === "submitted" ? (
-              <p className="mt-3 text-[0.9375rem] text-muted">Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.</p>
+              <p className="mt-3 text-[0.9375rem] text-muted">{t.submitted}</p>
             ) : (
               <>
                 <p className="mt-2 mb-6 text-muted">
-                  {c.status === "overdue"
-                    ? "Je huidige periode is voorbij. Vul je check-in in, dan maken we direct je nieuwe schema."
-                    : `Je huidige periode loopt tot ${formatDate(c.dueAt)}. Vul je check-in in, dan maken we direct je nieuwe schema.`}{" "}
-                  Het kost je ongeveer 2 minuten.
+                  {c.status === "overdue" ? t.overdue : t.open(formatDate(c.dueAt, l))} {t.duration}
                 </p>
-                <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo={demo} />
+                <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo={demo} suggestion={suggestion} />
               </>
             )}
           </section>
         );
       })}
 
-      <WeeklyHistory logs={view.weekly} />
+      <WeeklyHistory logs={view.weekly} l={l} />
 
       {history.length > 0 && (
         <section>
-          <h2 className="heading-md mb-4">Je eerdere check-ins</h2>
+          <h2 className="heading-md mb-4">{t.history}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {history.map((ci) => (
               <article key={ci.date.toString()} className="card p-5">
-                <p className="font-extrabold">{ci.seq ? `Voor periode ${ci.seq}` : "Check-in"}</p>
-                <p className="text-sm text-muted">{formatDate(ci.date)}</p>
+                <p className="font-extrabold">{ci.seq ? t.forPeriod(ci.seq) : t.title}</p>
+                <p className="text-sm text-muted">{formatDate(ci.date, l)}</p>
                 <dl className="mt-3 grid grid-cols-[9.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
-                  {describeCheckin(ci.data).map(([k, v]) => (
+                  {describeCheckin(ci.data, l).map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="text-muted">{k}</dt>
                       <dd className="break-words">{v}</dd>

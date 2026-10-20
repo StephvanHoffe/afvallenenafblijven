@@ -1,11 +1,19 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { defineCopy } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
+
+const copy = defineCopy({
+  nl: { label: "Start je persoonlijke plan" },
+  en: { label: "Start your personal plan" },
+});
 
 /** Vaste knop onderin op mobiel, zichtbaar zodra de bezoeker voorbij de hero scrolt. */
-export function StickyCta({ href = "/start", label = "Start je persoonlijke plan" }: { href?: string; label?: string }) {
+export function StickyCta({ href = "/start", label }: { href?: string; label?: string }) {
+  const c = copy[useLocale()];
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 650);
@@ -21,7 +29,7 @@ export function StickyCta({ href = "/start", label = "Start je persoonlijke plan
       aria-hidden={!visible}
     >
       <Link href={href} className="btn-primary w-full" tabIndex={visible ? 0 : -1}>
-        {label} <ArrowRight className="size-5" aria-hidden />
+        {label ?? c.label} <ArrowRight className="size-5" aria-hidden />
       </Link>
     </div>
   );

@@ -1,13 +1,56 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { ArrowRight, Check } from "lucide-react";
 import { CtaBanner, FaqJsonLd, FaqList, Guarantee, PageHero, SectionHeading, TrustRow } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
 import type { FaqItem } from "@/content/faq";
-import { products, type ProductId } from "@/config/pricing";
+import type { ProductId } from "@/config/pricing";
 import { site } from "@/config/site";
+import { defineCopy } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
 import { launchOfferActive } from "@/lib/launch";
+
+const copy = defineCopy<{
+  start: Record<ProductId, string>;
+  seePrices: string;
+  forWhoEyebrow: string;
+  forWhoTitle: string;
+  sample: string;
+  pricingEyebrow: string;
+  pricingTitle: string;
+  pricingIntroBundle: string;
+  pricingIntroSingle: string;
+  faqEyebrow: string;
+  faqTitle: string;
+}>({
+  nl: {
+    start: { voeding: "Start je voedingsschema", training: "Start je trainingsschema", bundel: "Start je bundel" },
+    seePrices: "Bekijk prijzen",
+    forWhoEyebrow: "Voor wie?",
+    forWhoTitle: "Dit is voor jou als je…",
+    sample: "Bekijk een voorbeeldschema",
+    pricingEyebrow: "Prijzen",
+    pricingTitle: "Kies je looptijd",
+    pricingIntroBundle: "Tip: met de bundel krijg je voeding én training en betaal je per maand minder dan los.",
+    pricingIntroSingle: "Je betaalt per maand via automatische incasso. Hoe langer de minimale looptijd, hoe lager je maandprijs.",
+    faqEyebrow: "Veelgestelde vragen",
+    faqTitle: "Goed om te weten",
+  },
+  en: {
+    start: { voeding: "Start your nutrition plan", training: "Start your workout plan", bundel: "Start your bundle" },
+    seePrices: "See pricing",
+    forWhoEyebrow: "Who is it for?",
+    forWhoTitle: "This is for you if you…",
+    sample: "See a sample plan",
+    pricingEyebrow: "Pricing",
+    pricingTitle: "Choose your term",
+    pricingIntroBundle: "Tip: the bundle gives you nutrition and training, and you pay less per month than buying them separately.",
+    pricingIntroSingle: "You pay monthly by direct debit. The longer the minimum term, the lower your monthly price.",
+    faqEyebrow: "Frequently asked questions",
+    faqTitle: "Good to know",
+  },
+});
 
 export interface ProductLandingContent {
   product: ProductId;
@@ -25,17 +68,17 @@ export interface ProductLandingContent {
 
 export async function ProductLanding({ content }: { content: ProductLandingContent }) {
   const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
-  const p = products[content.product];
+  const c = copy[await getLocale()];
   return (
     <>
       <div className="bg-gradient-to-b from-brand-50 to-cream">
         <PageHero eyebrow={content.eyebrow} title={content.title} intro={content.intro} image={content.heroImage} imageAlt={content.heroAlt}>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href={`/start?plan=${content.product}`} className="btn-primary text-lg">
-              Start je {p.shortName.toLowerCase() === "bundel" ? "bundel" : p.shortName.toLowerCase() + "sschema"} <ArrowRight className="size-5" aria-hidden />
+              {c.start[content.product]} <ArrowRight className="size-5" aria-hidden />
             </Link>
             <Link href="#prijzen" className="btn-secondary text-lg">
-              Bekijk prijzen
+              {c.seePrices}
             </Link>
           </div>
           <div className="mt-8">
@@ -47,8 +90,8 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
       <section className="container-page py-16">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <p className="eyebrow mb-3">Voor wie?</p>
-            <h2 className="heading-lg">Dit is voor jou als je…</h2>
+            <p className="eyebrow mb-3">{c.forWhoEyebrow}</p>
+            <h2 className="heading-lg">{c.forWhoTitle}</h2>
             <ul className="mt-6 space-y-3">
               {content.forWho.map((t) => (
                 <li key={t} className="flex gap-3 text-lg">
@@ -84,7 +127,7 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
               ))}
             </ul>
             <Link href="/voorbeeld" className="btn-glow mt-8">
-              Bekijk een voorbeeldschema <ArrowRight className="size-5" aria-hidden />
+              {c.sample} <ArrowRight className="size-5" aria-hidden />
             </Link>
           </div>
         </div>
@@ -93,13 +136,9 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
       <section id="prijzen" className="scroll-mt-20 bg-sand py-16 sm:py-20">
         <div className="container-page">
           <SectionHeading
-            eyebrow="Prijzen"
-            title="Kies je looptijd"
-            intro={
-              content.pricingProducts.length > 1
-                ? "Tip: met de bundel krijg je voeding én training en betaal je per maand minder dan los."
-                : "Je betaalt per maand via automatische incasso. Hoe langer de minimale looptijd, hoe lager je maandprijs."
-            }
+            eyebrow={c.pricingEyebrow}
+            title={c.pricingTitle}
+            intro={content.pricingProducts.length > 1 ? c.pricingIntroBundle : c.pricingIntroSingle}
           />
           <PricingTable only={content.pricingProducts} launch={launch} highlight="bundel" />
           <div className="mt-12">
@@ -109,7 +148,7 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
       </section>
 
       <section className="container-page py-16 sm:py-20">
-        <SectionHeading eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <SectionHeading eyebrow={c.faqEyebrow} title={c.faqTitle} />
         <FaqList items={content.faq} />
         <FaqJsonLd items={content.faq} />
       </section>

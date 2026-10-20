@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { usePathname } from "next/navigation";
 import { FileText, LayoutDashboard, Receipt, Settings, Undo2, Users } from "lucide-react";
 

@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
+import type { Locale } from "@/i18n/config";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import type { NutritionTargets } from "@/lib/calculations";
@@ -19,6 +20,8 @@ export interface Customer {
   stripe_customer_id: string | null;
   marketing_consent: boolean;
   weekly_reminders: boolean;
+  /** "nl" of "en": de taal van e-mails, schema's en PDF's. */
+  locale: string;
   created_at: Date;
 }
 
@@ -29,6 +32,7 @@ export interface IntakeRow {
   name: string;
   data: Intake;
   consents: Record<string, unknown>;
+  locale: string;
   created_at: Date;
 }
 
@@ -75,11 +79,12 @@ export async function createIntake(input: {
   name: string;
   data: Intake;
   consents: Record<string, unknown>;
+  locale: Locale;
 }): Promise<string> {
   const sql = await db();
   const [row] = await sql<{ id: string }[]>`
-    insert into intakes (email, name, data, consents)
-    values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)})
+    insert into intakes (email, name, data, consents, locale)
+    values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)}, ${input.locale})
     returning id`;
   return row.id;
 }
@@ -110,17 +115,25 @@ export async function upsertCustomer(input: {
   name: string;
   stripeCustomerId: string | null;
   marketingConsent: boolean;
+  locale: Locale;
 }): Promise<Customer> {
   const sql = await db();
   const [row] = await sql<Customer[]>`
-    insert into customers (email, name, stripe_customer_id, marketing_consent)
-    values (${input.email}, ${input.name}, ${input.stripeCustomerId}, ${input.marketingConsent})
+    insert into customers (email, name, stripe_customer_id, marketing_consent, locale)
+    values (${input.email}, ${input.name}, ${input.stripeCustomerId}, ${input.marketingConsent}, ${input.locale})
     on conflict (email) do update set
       name = excluded.name,
+      locale = excluded.locale,
       stripe_customer_id = coalesce(excluded.stripe_customer_id, customers.stripe_customer_id),
       marketing_consent = customers.marketing_consent or excluded.marketing_consent
     returning *`;
   return row;
+}
+
+/** Onthoudt de taal waarin de klant de site gebruikt (voor e-mails en nieuwe schema's). */
+export async function setCustomerLocale(id: string, locale: Locale): Promise<void> {
+  const sql = await db();
+  await sql`update customers set locale = ${locale} where id = ${id} and locale <> ${locale}`;
 }
 
 export async function getCustomer(id: string): Promise<Customer | null> {
@@ -445,11 +458,11 @@ export async function setWeeklyReminders(customerId: string, on: boolean): Promi
  * het begin van de laatste periode en de weegmomenten die al zijn ingevuld.
  */
 export async function weeklyReminderOrders(): Promise<
-  (Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string })[]
+  (Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string; locale: string })[]
 > {
   const sql = await db();
-  return sql<(Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string })[]>`
-    select o.*, p.last_seq, p.last_start, c.email, c.name,
+  return sql<(Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string; locale: string })[]>`
+    select o.*, p.last_seq, p.last_start, c.email, c.name, c.locale,
       coalesce((select array_agg(w.week) from weekly_logs w where w.order_id = o.id and w.seq = p.last_seq), '{}') as logged_weeks
     from orders o
     join customers c on c.id = o.customer_id and c.weekly_reminders
@@ -490,22 +503,30 @@ export async function createWithdrawal(input: {
  * zonder bestelling na 30 dagen, en klanten zonder lopend abonnement 12
  * maanden na hun laatste bestelling (factuurgegevens blijven bij Stripe).
  */
-export async function cleanupExpiredData(): Promise<{ intakes: number; customers: number }> {
+export async function cleanupExpiredData(): Promise<{ intakes: number; customers: number; junctionUserIds: string[] }> {
   const sql = await db();
   const intakes = await sql`
     delete from intakes i
     where i.customer_id is null
       and i.created_at < now() - interval '30 days'
       and not exists (select 1 from orders o where o.intake_id = i.id)`;
-  const customers = await sql`
-    delete from customers c
+  const doomed = await sql<{ id: string }[]>`
+    select c.id from customers c
     where not exists (
       select 1 from orders o
       where o.customer_id = c.id
         and (o.status in ('active', 'past_due') or o.updated_at > now() - interval '12 months')
     )
     and c.created_at < now() - interval '12 months'`;
+  const ids = doomed.map((r) => r.id);
+  // Gekoppelde gezondheidsapps: de gebruiker bij Junction moet ook weg (dat doet de aanroeper).
+  const junction = ids.length
+    ? await sql<{ external_user_id: string }[]>`
+        select external_user_id from health_connections
+        where provider = 'junction' and external_user_id is not null and customer_id = any(${ids})`
+    : [];
+  const customers = ids.length ? await sql`delete from customers where id = any(${ids})` : { count: 0 };
   await sql`delete from withdrawals where created_at < now() - interval '24 months'`;
-  return { intakes: intakes.count, customers: customers.count };
+  return { intakes: intakes.count, customers: customers.count, junctionUserIds: junction.map((r) => r.external_user_id) };
 }
 

@@ -1,3 +1,5 @@
+import type { Locale } from "@/i18n/config";
+
 /**
  * Producten, looptijden en prijzen.
  *
@@ -98,6 +100,69 @@ export const durations: Record<DurationId, Duration> = {
   eenmalig: { id: "eenmalig", label: "Eenmalig", months: 0 },
 };
 
+/** Engelse teksten van de producten en looptijden; prijzen en sleutels zijn gelijk. */
+const productTextEn: Record<ProductId, Pick<Product, "name" | "shortName" | "tagline" | "features">> = {
+  voeding: {
+    name: "Nutrition plan",
+    shortName: "Nutrition",
+    tagline: "Lose weight without going hungry, eating food you enjoy.",
+    features: [
+      "Personal calorie and macro targets",
+      "7-day meal plan with recipes",
+      "Weekly shopping list",
+      "Tailored to allergies and preferences",
+      "Swap options for every meal",
+    ],
+  },
+  training: {
+    name: "Workout plan",
+    shortName: "Training",
+    tagline: "Stronger and more toned, at home or at the gym.",
+    features: [
+      "Plan for home or the gym",
+      "Built up over 4 weeks (progression)",
+      "Sets, reps and rest times",
+      "Clear instructions for every exercise",
+      "Takes injuries and level into account",
+    ],
+  },
+  bundel: {
+    name: "Bundle: Nutrition + Training",
+    shortName: "Bundle",
+    tagline: "The fastest route to lasting results.",
+    features: [
+      "Everything in the nutrition plan",
+      "Everything in the workout plan",
+      "Nutrition and training aligned",
+      "Extra protein advice on training days",
+      "Biggest saving compared to buying separately",
+    ],
+  },
+};
+
+const durationTextEn: Record<DurationId, Pick<Duration, "label" | "badge">> = {
+  "1m": { label: "1 month" },
+  "3m": { label: "3 months", badge: "Popular" },
+  "6m": { label: "6 months" },
+  "12m": { label: "12 months", badge: "Best value" },
+  eenmalig: { label: "One-off" },
+};
+
+/** Een product met teksten in de gegeven taal. */
+export function productFor(id: ProductId, l: Locale = "nl"): Product {
+  return l === "en" ? { ...products[id], ...productTextEn[id] } : products[id];
+}
+
+/** Alle producten met teksten in de gegeven taal. */
+export function productsFor(l: Locale = "nl"): Record<ProductId, Product> {
+  return l === "en" ? { voeding: productFor("voeding", l), training: productFor("training", l), bundel: productFor("bundel", l) } : products;
+}
+
+/** Een looptijd met teksten in de gegeven taal. */
+export function durationFor(id: DurationId, l: Locale = "nl"): Duration {
+  return l === "en" ? { ...durations[id], ...durationTextEn[id] } : durations[id];
+}
+
 export const SUBSCRIPTION_DURATIONS: SubscriptionDurationId[] = ["1m", "3m", "6m", "12m"];
 
 /**
@@ -165,8 +230,13 @@ export function maxSavingsPercent(): number {
   return Math.max(...PRODUCT_IDS.flatMap((p) => SUBSCRIPTION_DURATIONS.map((d) => savingsPercent(p, d))));
 }
 
-export function billingDescription(duration: DurationId): string {
+export function billingDescription(duration: DurationId, l: Locale = "nl"): string {
   const d = durations[duration];
+  if (l === "en") {
+    if (d.months === 0) return "One-off payment, no subscription";
+    if (d.months === 1) return "Monthly by direct debit, cancel monthly";
+    return `Monthly by direct debit, minimum ${d.months} months`;
+  }
   if (d.months === 0) return "Eenmalige betaling, geen abonnement";
   if (d.months === 1) return "Maandelijks via automatische incasso, maandelijks opzegbaar";
   return `Maandelijks via automatische incasso, minimaal ${d.months} maanden`;

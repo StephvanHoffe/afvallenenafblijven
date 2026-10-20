@@ -3,6 +3,7 @@ import type { CheckinData, CheckinWindow } from "@/lib/checkin";
 import type { Intake } from "@/lib/intake";
 import type { WeeklyLog, WeeklyWindow } from "@/lib/weekly";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
+import type { HealthView } from "@/lib/health/view";
 
 /** Wat Mijn schema's van een bestelling toont. */
 export interface DashboardOrder {
@@ -51,6 +52,8 @@ export interface AccountView {
   weeklyReminders: boolean;
   /** Dagdoelen van elk voedingsschema, oudste eerst. */
   targets: { seq: number; date: Date | null; calories: number; proteinG: number; carbsG: number; fatG: number }[];
+  /** Gekoppelde gezondheidsapps en hun data (null als de site geen koppelingen heeft). */
+  health: HealthView | null;
 }
 
 export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement";

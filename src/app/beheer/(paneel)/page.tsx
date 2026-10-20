@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { ArrowRight, CircleAlert } from "lucide-react";

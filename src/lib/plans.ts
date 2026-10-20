@@ -34,8 +34,28 @@ import {
 } from "@/lib/repo";
 import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
 import { processWeeklyLog } from "@/lib/weekly-server";
+import { defineCopy, toLocale, type Locale } from "@/i18n/config";
+import { nextActivityLevel, summarizeActivity, type ActivitySummary } from "@/lib/health/insights";
+import { connectionsForCustomer, healthDaysSince, healthWorkoutsSince } from "@/lib/health/repo";
+import { syncAllConnections } from "@/lib/health/sync";
 
 const DAY = 24 * 60 * 60 * 1000;
+
+/** Samenvatting van de gekoppelde gezondheidsdata sinds het begin van de vorige periode (null zonder koppeling). */
+async function measuredActivity(customerId: string, since: Date, intake: Intake, order: Order): Promise<ActivitySummary | null> {
+  try {
+    const connections = await connectionsForCustomer(customerId);
+    if (connections.length === 0) return null;
+    const from = new Date(since);
+    const [days, workouts] = await Promise.all([healthDaysSince(customerId, from), healthWorkoutsSince(customerId, from)]);
+    const planned = products[order.product].includes.includes("training") ? intake.trainingDays : null;
+    return summarizeActivity(days, workouts, from, new Date(), planned);
+  } catch (err) {
+    // Een storing bij de koppeling mag een nieuw schema nooit tegenhouden.
+    console.error("Gezondheidsdata ophalen voor schema mislukt", err);
+    return null;
+  }
+}
 
 /**
  * Maakt één schema met Claude. Veilig om vaker aan te roepen: alleen het
@@ -49,6 +69,8 @@ export async function processPlan(planId: string): Promise<void> {
     const order = await getOrder(plan.order_id);
     const customer = await getCustomer(plan.customer_id);
     if (!order || !customer) throw new Error("Bestelling of klant niet gevonden");
+    // Het schema (en alles wat de klant erin leest) komt in de taal van de klant.
+    const l = toLocale(customer.locale);
     const intakeRow = await getIntake(order.intake_id);
     if (!intakeRow) throw new Error("Intake niet gevonden");
 
@@ -96,6 +118,24 @@ export async function processPlan(planId: string): Promise<void> {
         note: w.data.comments,
       })),
     };
+    // Gekoppelde gezondheidsapps: hoeveel de klant in de vorige periode echt bewoog en trainde.
+    const measured = plan.seq > 1 ? await measuredActivity(customer.id, previous?.created_at ?? order.created_at, intake, order) : null;
+    const prevNutrition = previous?.content?.type === "voeding" ? previous.content : null;
+    const usedActivity = nextActivityLevel(prevNutrition?.activity ?? intake.activity, measured?.measuredActivity ?? null);
+    if (measured && measured.daysWithSteps + measured.workouts > 0) {
+      progress.health = {
+        days: Math.round((Date.now() - new Date(previous?.created_at ?? order.created_at).getTime()) / DAY),
+        avgSteps: measured.avgSteps,
+        workouts: measured.workouts,
+        plannedWorkouts: measured.plannedWorkouts,
+        workoutMinutes: measured.workoutMinutes,
+        walks: measured.byKind.wandelen ?? 0,
+        ...(plan.type === "voeding" && usedActivity !== (prevNutrition?.activity ?? intake.activity)
+          ? { activityChange: { from: prevNutrition?.activity ?? intake.activity, to: usedActivity } }
+          : {}),
+      };
+    }
+
     const fromKg = before?.data.weightKg ?? intakeRow.data.weightKg;
     const fromDate = before?.created_at ?? order.created_at;
     if (current?.data.weightKg) {
@@ -109,7 +149,8 @@ export async function processPlan(planId: string): Promise<void> {
 
     let content: PlanContent;
     if (plan.type === "voeding") {
-      const base = nutritionTargets(intake);
+      // Het activiteitsniveau volgt de gemeten stappen (hooguit één stap per periode).
+      const base = nutritionTargets(usedActivity === intake.activity ? intake : { ...intake, activity: usedActivity });
       const prev = previous?.content?.type === "voeding" ? previous.content : null;
       // Een eerdere bijstelling telt mee, behalve als het doel wezenlijk is veranderd.
       const sameDirection = prev ? Math.sign(Math.round(prev.targets.expectedKgPerWeek * 10)) === Math.sign(Math.round(base.expectedKgPerWeek * 10)) : false;
@@ -122,25 +163,32 @@ export async function processPlan(planId: string): Promise<void> {
         const ref = lastWeeklyChange
           ? { kg: lastWeeklyChange.data.weightKg, at: lastWeeklyChange.created_at.getTime() }
           : { kg: progress.weight.fromKg, at: new Date(fromDate).getTime() };
-        const adjustment = calorieAdjustment({
-          expectedKgPerWeek: prev.targets.expectedKgPerWeek,
-          fromKg: ref.kg,
-          toKg: progress.weight.toKg,
-          weeks: (current.created_at.getTime() - ref.at) / (7 * DAY),
-          checkin: current.data,
-        });
+        const adjustment = calorieAdjustment(
+          {
+            expectedKgPerWeek: prev.targets.expectedKgPerWeek,
+            fromKg: ref.kg,
+            toKg: progress.weight.toKg,
+            weeks: (current.created_at.getTime() - ref.at) / (7 * DAY),
+            checkin: current.data,
+          },
+          l,
+        );
         if (adjustment) {
           const next = clamp(offset + adjustment.kcal);
           if (next !== offset) progress.calorieChange = { kcal: next - offset, reason: adjustment.reason };
           offset = next;
         }
       }
-      content = await generateNutritionPlan(customer.name, intake, progress, {
-        targets: withCalorieOffset(intake, base, offset),
-        adjustmentKcal: offset,
-      });
+      content = await generateNutritionPlan(
+        customer.name,
+        intake,
+        progress,
+        { targets: withCalorieOffset(intake, base, offset), adjustmentKcal: offset },
+        l,
+      );
+      if (content.type === "voeding") content = { ...content, activity: usedActivity };
     } else {
-      content = await generateTrainingPlan(customer.name, intake, progress);
+      content = await generateTrainingPlan(customer.name, intake, progress, l);
     }
 
     await completePlan(plan.id, content);
@@ -173,13 +221,15 @@ async function notifyIfOrderPeriodReady(orderId: string, seq: number): Promise<v
 
   const customer = await getCustomer(plans[0].customer_id);
   if (!customer) return;
+  const l = toLocale(customer.locale);
   await sendMail(
     plansReadyEmail({
       to: customer.email,
       name: customer.name,
       types: plans.map((p) => p.type),
-      link: await loginUrl(customer.id),
+      link: await loginUrl(customer.id, undefined, l),
       seq,
+      locale: l,
     }),
   );
 }
@@ -211,7 +261,7 @@ export async function startNextPeriod(order: Pick<Order, "id" | "customer_id" | 
  */
 export async function runScheduledWork(
   budgetMs: number,
-): Promise<{ scheduled: number; reminders: number; weeklyReminders: number; processed: number }> {
+): Promise<{ scheduled: number; reminders: number; weeklyReminders: number; healthSynced: number; processed: number }> {
   const started = Date.now();
   let scheduled = 0;
   let reminders = 0;
@@ -236,15 +286,17 @@ export async function runScheduledWork(
     if (sent >= schedule.length || started - window.opensAt.getTime() < schedule[sent] * DAY) continue;
     const customer = await getCustomer(order.customer_id);
     if (!customer) continue;
+    const l = toLocale(customer.locale);
     try {
       await sendMail(
         checkinEmail({
           to: customer.email,
           name: customer.name,
-          link: await loginUrl(customer.id, "check-in"),
+          link: await loginUrl(customer.id, "check-in", l),
           seq: window.seq,
           dueAt: window.dueAt,
           reminder: sent,
+          locale: l,
         }),
       );
       await markCheckinReminder(order.id, window.seq, sent + 1);
@@ -267,8 +319,15 @@ export async function runScheduledWork(
     });
     if (window?.status !== "open") continue;
     try {
+      const l = toLocale(order.locale);
       await sendMail(
-        weeklyReminderEmail({ to: order.email, name: order.name, link: await loginUrl(order.customer_id, "weegmoment"), week: window.week }),
+        weeklyReminderEmail({
+          to: order.email,
+          name: order.name,
+          link: await loginUrl(order.customer_id, "weegmoment", l),
+          week: window.week,
+          locale: l,
+        }),
       );
       await markWeeklyReminded(order.id);
       weeklyReminders++;
@@ -276,6 +335,12 @@ export async function runScheduledWork(
       console.error(`Weegmoment-herinnering voor bestelling ${order.id} mislukt`, err);
     }
   }
+
+  // Gekoppelde gezondheidsapps bijwerken (vangnet naast de meldingen/webhooks).
+  const healthSynced = await syncAllConnections(started + Math.min(60_000, budgetMs / 4)).catch((err) => {
+    console.error("Gezondheidsdata synchroniseren mislukt", err);
+    return 0;
+  });
 
   // Aanwijzingen bij weegmomenten die nog niet klaar zijn (bijv. na een storing).
   for (const id of await pendingWeeklyLogIds(10)) {
@@ -293,10 +358,16 @@ export async function runScheduledWork(
     await Promise.all(batch.map((id) => processPlan(id)));
     processed += batch.length;
   }
-  return { scheduled, reminders, weeklyReminders, processed };
+  return { scheduled, reminders, weeklyReminders, healthSynced, processed };
 }
 
-export function planTitle(plan: Pick<Plan, "type" | "seq">): string {
-  const name = plan.type === "voeding" ? "Voedingsschema" : "Trainingsschema";
-  return plan.seq > 1 ? `${name} – periode ${plan.seq}` : name;
+const planTitleCopy = defineCopy({
+  nl: { voeding: "Voedingsschema", training: "Trainingsschema", period: (n: number) => `periode ${n}` },
+  en: { voeding: "Nutrition plan", training: "Workout plan", period: (n: number) => `period ${n}` },
+});
+
+export function planTitle(plan: Pick<Plan, "type" | "seq">, l: Locale = "nl"): string {
+  const c = planTitleCopy[l];
+  const name = c[plan.type];
+  return plan.seq > 1 ? `${name} – ${c.period(plan.seq)}` : name;
 }

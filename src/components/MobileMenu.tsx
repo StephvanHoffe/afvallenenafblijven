@@ -1,11 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/i18n/Link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Menu, UserRound, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { defineCopy } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
+import { usePagePath } from "@/i18n/navigation";
+
+const copy = defineCopy({
+  nl: { open: "Menu openen", close: "Menu sluiten", menu: "Menu", mobileMenu: "Mobiel menu", account: "Mijn schema's", start: "Start je persoonlijke plan" },
+  en: { open: "Open menu", close: "Close menu", menu: "Menu", mobileMenu: "Mobile menu", account: "My plans", start: "Start your personal plan" },
+});
 
 /**
  * Menu voor mobiel. Het paneel wordt buiten de kopbalk gerenderd (portal):
@@ -13,7 +21,8 @@ import { Logo } from "@/components/Logo";
  * paneel niet het hele scherm kunnen vullen.
  */
 export function MobileMenu({ items }: { items: { href: string; label: string }[] }) {
-  const pathname = usePathname();
+  const c = copy[useLocale()];
+  const pathname = usePagePath();
   // Het menu hoort bij de pagina waarop het is geopend; na navigeren (ook via het logo) is het vanzelf dicht.
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
@@ -44,19 +53,19 @@ export function MobileMenu({ items }: { items: { href: string; label: string }[]
         type="button"
         onClick={() => setOpen(true)}
         className="grid size-11 place-items-center rounded-full border border-line bg-white"
-        aria-label="Menu openen"
+        aria-label={c.open}
         aria-expanded={open}
       >
         <Menu className="size-5" />
       </button>
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label={c.menu}>
             <button
               type="button"
               tabIndex={-1}
               className="absolute inset-0 bg-brand-950/50 backdrop-blur-sm"
-              aria-label="Menu sluiten"
+              aria-label={c.close}
               onClick={() => setOpen(false)}
             />
             <div className="absolute inset-y-0 right-0 flex w-[min(24rem,90vw)] flex-col overflow-y-auto bg-cream shadow-[var(--shadow-lift)]">
@@ -67,12 +76,12 @@ export function MobileMenu({ items }: { items: { href: string; label: string }[]
                   type="button"
                   onClick={() => setOpen(false)}
                   className="grid size-11 place-items-center rounded-full border border-line bg-white"
-                  aria-label="Menu sluiten"
+                  aria-label={c.close}
                 >
                   <X className="size-5" />
                 </button>
               </div>
-              <nav aria-label="Mobiel menu" className="flex flex-col gap-1 p-4">
+              <nav aria-label={c.mobileMenu} className="flex flex-col gap-1 p-4">
                 {items.map((item) => (
                   <Link
                     key={item.href}
@@ -95,11 +104,14 @@ export function MobileMenu({ items }: { items: { href: string; label: string }[]
                   className="btn-secondary w-full"
                   aria-current={isActive("/account") ? "page" : undefined}
                 >
-                  <UserRound className="size-5" aria-hidden /> Mijn schema&apos;s
+                  <UserRound className="size-5" aria-hidden /> {c.account}
                 </Link>
                 <Link href="/start" onClick={() => setOpen(false)} className="btn-primary w-full">
-                  Start je persoonlijke plan <ArrowRight className="size-5" aria-hidden />
+                  {c.start} <ArrowRight className="size-5" aria-hidden />
                 </Link>
+                <div className="pt-2">
+                  <LanguageSwitcher variant="full" onNavigate={() => setOpen(false)} />
+                </div>
               </div>
             </div>
           </div>,

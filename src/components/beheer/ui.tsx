@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
 import { durations, products, type DurationId, type ProductId } from "@/config/pricing";

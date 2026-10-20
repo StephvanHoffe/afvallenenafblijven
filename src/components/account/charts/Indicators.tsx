@@ -1,7 +1,73 @@
+import { defineCopy, type Locale } from "@/i18n/config";
+import { checkinLabel } from "@/i18n/options";
 import { checkinOptions, type CheckinData } from "@/lib/checkin";
 import { formatDate, formatNumber } from "@/lib/format";
 
 /** Kleine, rustige weergaven voor de voortgang: kerncijfers, een meter en schalen. */
+
+type BmiBand = "under" | "healthy" | "over" | "obese";
+type MacroKey = "protein" | "carbs" | "fat";
+type AnswerKey = "energy" | "sleep" | "hunger" | "nutritionAdherence" | "trainingAdherence" | "difficulty";
+type Tone = "good" | "mid" | "low";
+
+const copy = defineCopy({
+  nl: {
+    goalTitle: "Op weg naar je streefgewicht",
+    goalAria: (pct: number) => `${pct}% van de weg naar je streefgewicht`,
+    start: "Start",
+    now: "Nu",
+    goal: "Doel",
+    bmiBands: { under: "Onder", healthy: "Gezond", over: "Overgewicht", obese: "Obesitas" } as Record<BmiBand, string>,
+    bmiChange: (start: string, now: string) => `Bij de start ${start}, nu ${now}.`,
+    bmiNow: (now: string) => `Je BMI is ${now}.`,
+    bmiNote: "BMI is een grove maat: spieren wegen ook. Je taille en hoe je je voelt zeggen vaak meer.",
+    macros: { protein: "Eiwit", carbs: "Koolhydraten", fat: "Vet" } as Record<MacroKey, string>,
+    ofCalories: (pct: number) => `${pct}% van je calorieën`,
+    bmr: { label: "Ruststofwisseling", hint: "wat je lichaam in rust verbruikt" },
+    tdee: { label: "Verbruik per dag", hint: "inclusief je dagelijkse activiteit en training" },
+    target: { label: "Jouw caloriedoel", hint: "wat je schema per dag bevat" },
+    answers: {
+      energy: "Energie",
+      sleep: "Slaap",
+      hunger: "Honger",
+      nutritionAdherence: "Voedingsschema gevolgd",
+      trainingAdherence: "Trainingen gedaan",
+      difficulty: "Zwaarte trainingen",
+    } as Record<AnswerKey, string>,
+    tones: { good: "goed", mid: "kan beter", low: "aandacht" } as Record<Tone, string>,
+    question: "Vraag",
+    period: (seq: number) => `Periode ${seq}`,
+    checkin: "Check-in",
+  },
+  en: {
+    goalTitle: "On the way to your target weight",
+    goalAria: (pct: number) => `${pct}% of the way to your target weight`,
+    start: "Start",
+    now: "Now",
+    goal: "Target",
+    bmiBands: { under: "Under", healthy: "Healthy", over: "Overweight", obese: "Obesity" },
+    bmiChange: (start: string, now: string) => `At the start ${start}, now ${now}.`,
+    bmiNow: (now: string) => `Your BMI is ${now}.`,
+    bmiNote: "BMI is a rough measure: muscle weighs too. Your waist and how you feel often tell you more.",
+    macros: { protein: "Protein", carbs: "Carbohydrates", fat: "Fat" },
+    ofCalories: (pct: number) => `${pct}% of your calories`,
+    bmr: { label: "Resting metabolism", hint: "what your body burns at rest" },
+    tdee: { label: "Burned per day", hint: "including your daily activity and training" },
+    target: { label: "Your calorie target", hint: "what your plan provides per day" },
+    answers: {
+      energy: "Energy",
+      sleep: "Sleep",
+      hunger: "Hunger",
+      nutritionAdherence: "Followed nutrition plan",
+      trainingAdherence: "Workouts done",
+      difficulty: "Workout difficulty",
+    },
+    tones: { good: "good", mid: "could be better", low: "needs attention" },
+    question: "Question",
+    period: (seq: number) => `Period ${seq}`,
+    checkin: "Check-in",
+  },
+});
 
 export function StatTile({
   label,
@@ -24,12 +90,25 @@ export function StatTile({
 }
 
 /** Hoe ver je bent richting je streefgewicht. */
-export function GoalMeter({ startKg, currentKg, targetKg, share }: { startKg: number; currentKg: number; targetKg: number; share: number }) {
+export function GoalMeter({
+  startKg,
+  currentKg,
+  targetKg,
+  share,
+  l,
+}: {
+  startKg: number;
+  currentKg: number;
+  targetKg: number;
+  share: number;
+  l: Locale;
+}) {
+  const c = copy[l];
   const pct = Math.round(share * 100);
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span className="font-semibold">Op weg naar je streefgewicht</span>
+        <span className="font-semibold">{c.goalTitle}</span>
         <span className="font-extrabold">{pct}%</span>
       </div>
       <div
@@ -38,14 +117,20 @@ export function GoalMeter({ startKg, currentKg, targetKg, share }: { startKg: nu
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        aria-label={`${pct}% van de weg naar je streefgewicht`}
+        aria-label={c.goalAria(pct)}
       >
         <div className="h-full rounded-full bg-brand-600" style={{ width: `${Math.max(pct, 2)}%` }} />
       </div>
       <div className="mt-1.5 flex justify-between text-xs text-muted tabular-nums">
-        <span>Start {formatNumber(startKg, 1)} kg</span>
-        <span>Nu {formatNumber(currentKg, 1)} kg</span>
-        <span>Doel {formatNumber(targetKg, 1)} kg</span>
+        <span>
+          {c.start} {formatNumber(startKg, 1, l)} kg
+        </span>
+        <span>
+          {c.now} {formatNumber(currentKg, 1, l)} kg
+        </span>
+        <span>
+          {c.goal} {formatNumber(targetKg, 1, l)} kg
+        </span>
       </div>
     </div>
   );
@@ -53,15 +138,16 @@ export function GoalMeter({ startKg, currentKg, targetKg, share }: { startKg: nu
 
 const BMI_MIN = 16;
 const BMI_MAX = 40;
-const BMI_BANDS = [
-  { from: 16, to: 18.5, label: "Onder" },
-  { from: 18.5, to: 25, label: "Gezond" },
-  { from: 25, to: 30, label: "Overgewicht" },
-  { from: 30, to: 40, label: "Obesitas" },
+const BMI_BANDS: { from: number; to: number; key: BmiBand }[] = [
+  { from: 16, to: 18.5, key: "under" },
+  { from: 18.5, to: 25, key: "healthy" },
+  { from: 25, to: 30, key: "over" },
+  { from: 30, to: 40, key: "obese" },
 ];
 
 /** BMI op een schaal, met de start (open rondje) en nu (gevuld). */
-export function BmiScale({ start, now }: { start: number | null; now: number }) {
+export function BmiScale({ start, now, l }: { start: number | null; now: number; l: Locale }) {
+  const c = copy[l];
   const pos = (v: number) => `${((Math.min(Math.max(v, BMI_MIN), BMI_MAX) - BMI_MIN) / (BMI_MAX - BMI_MIN)) * 100}%`;
   return (
     <div>
@@ -69,8 +155,8 @@ export function BmiScale({ start, now }: { start: number | null; now: number }) 
         <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
           {BMI_BANDS.map((b) => (
             <div
-              key={b.label}
-              className={b.label === "Gezond" ? "bg-brand-200" : "bg-line"}
+              key={b.key}
+              className={b.key === "healthy" ? "bg-brand-200" : "bg-line"}
               style={{ width: `${((b.to - b.from) / (BMI_MAX - BMI_MIN)) * 100}%` }}
             />
           ))}
@@ -88,19 +174,19 @@ export function BmiScale({ start, now }: { start: number | null; now: number }) 
           aria-hidden
         />
         <span className="absolute top-0 -translate-x-1/2 text-xs font-extrabold" style={{ left: pos(now) }}>
-          {formatNumber(now, 1)}
+          {formatNumber(now, 1, l)}
         </span>
       </div>
       <div className="mt-2 flex text-[0.6875rem] text-muted">
         {BMI_BANDS.map((b) => (
-          <span key={b.label} style={{ width: `${((b.to - b.from) / (BMI_MAX - BMI_MIN)) * 100}%` }} className="truncate">
-            {b.label}
+          <span key={b.key} style={{ width: `${((b.to - b.from) / (BMI_MAX - BMI_MIN)) * 100}%` }} className="truncate">
+            {c.bmiBands[b.key]}
           </span>
         ))}
       </div>
       <p className="mt-2 text-sm text-muted">
-        {start !== null && start !== now ? `Bij de start ${formatNumber(start, 1)}, nu ${formatNumber(now, 1)}.` : `Je BMI is ${formatNumber(now, 1)}.`}{" "}
-        BMI is een grove maat: spieren wegen ook. Je taille en hoe je je voelt zeggen vaak meer.
+        {start !== null && start !== now ? c.bmiChange(formatNumber(start, 1, l), formatNumber(now, 1, l)) : c.bmiNow(formatNumber(now, 1, l))}{" "}
+        {c.bmiNote}
       </p>
     </div>
   );
@@ -110,11 +196,12 @@ export function BmiScale({ start, now }: { start: number | null; now: number }) 
 const MACRO_COLORS = { protein: "#1c7a48", carbs: "#eda100", fat: "#2a78d6" };
 
 /** Verdeling van de calorieën over eiwit, koolhydraten en vet. */
-export function MacroBar({ proteinG, carbsG, fatG }: { proteinG: number; carbsG: number; fatG: number }) {
+export function MacroBar({ proteinG, carbsG, fatG, l }: { proteinG: number; carbsG: number; fatG: number; l: Locale }) {
+  const c = copy[l];
   const parts = [
-    { key: "protein", label: "Eiwit", grams: proteinG, kcal: proteinG * 4, color: MACRO_COLORS.protein },
-    { key: "carbs", label: "Koolhydraten", grams: carbsG, kcal: carbsG * 4, color: MACRO_COLORS.carbs },
-    { key: "fat", label: "Vet", grams: fatG, kcal: fatG * 9, color: MACRO_COLORS.fat },
+    { key: "protein", label: c.macros.protein, grams: proteinG, kcal: proteinG * 4, color: MACRO_COLORS.protein },
+    { key: "carbs", label: c.macros.carbs, grams: carbsG, kcal: carbsG * 4, color: MACRO_COLORS.carbs },
+    { key: "fat", label: c.macros.fat, grams: fatG, kcal: fatG * 9, color: MACRO_COLORS.fat },
   ];
   const total = parts.reduce((s, p) => s + p.kcal, 0) || 1;
   return (
@@ -129,7 +216,7 @@ export function MacroBar({ proteinG, carbsG, fatG }: { proteinG: number; carbsG:
           <li key={p.key} className="flex items-center gap-2">
             <span className="size-3 shrink-0 rounded-sm" style={{ background: p.color }} aria-hidden />
             <span>
-              <strong>{p.label}</strong> {p.grams} g <span className="text-muted">· {Math.round((p.kcal / total) * 100)}% van je calorieën</span>
+              <strong>{p.label}</strong> {p.grams} g <span className="text-muted">· {c.ofCalories(Math.round((p.kcal / total) * 100))}</span>
             </span>
           </li>
         ))}
@@ -139,12 +226,13 @@ export function MacroBar({ proteinG, carbsG, fatG }: { proteinG: number; carbsG:
 }
 
 /** Ruststofwisseling, dagelijks verbruik en het caloriedoel als staven. */
-export function EnergyBars({ bmr, tdee, calories }: { bmr: number; tdee: number; calories: number }) {
+export function EnergyBars({ bmr, tdee, calories, l }: { bmr: number; tdee: number; calories: number; l: Locale }) {
+  const c = copy[l];
   const max = Math.max(bmr, tdee, calories);
   const rows = [
-    { label: "Ruststofwisseling", hint: "wat je lichaam in rust verbruikt", value: bmr, emphasis: false },
-    { label: "Verbruik per dag", hint: "inclusief je dagelijkse activiteit en training", value: tdee, emphasis: false },
-    { label: "Jouw caloriedoel", hint: "wat je schema per dag bevat", value: calories, emphasis: true },
+    { ...c.bmr, value: bmr, emphasis: false },
+    { ...c.tdee, value: tdee, emphasis: false },
+    { ...c.target, value: calories, emphasis: true },
   ];
   return (
     <ul className="space-y-3">
@@ -154,7 +242,7 @@ export function EnergyBars({ bmr, tdee, calories }: { bmr: number; tdee: number;
             <span>
               <strong>{r.label}</strong> <span className="text-muted">· {r.hint}</span>
             </span>
-            <span className="font-extrabold whitespace-nowrap tabular-nums">{formatNumber(r.value)} kcal</span>
+            <span className="font-extrabold whitespace-nowrap tabular-nums">{formatNumber(r.value, 0, l)} kcal</span>
           </div>
           <div className="mt-1.5 h-2.5 rounded-full bg-sand">
             <div
@@ -170,35 +258,34 @@ export function EnergyBars({ bmr, tdee, calories }: { bmr: number; tdee: number;
 
 // ---------- Check-in-antwoorden per periode ----------
 
-type Tone = "good" | "mid" | "low";
 const short = (v: string) => v.replace(/\s*\(.*\)$/, "");
 
-const ROWS: { key: keyof CheckinData; label: string; tones: Record<string, Tone> }[] = [
-  { key: "energy", label: "Energie", tones: { Goed: "good", Gemiddeld: "mid", Laag: "low" } },
-  { key: "sleep", label: "Slaap", tones: { Goed: "good", Matig: "mid", Slecht: "low" } },
-  { key: "hunger", label: "Honger", tones: { "Bijna nooit": "good", Soms: "mid", Vaak: "low" } },
+// De tonen horen bij de opgeslagen (Nederlandse) antwoorden.
+const ROWS: { key: AnswerKey & keyof CheckinData; tones: Record<string, Tone> }[] = [
+  { key: "energy", tones: { Goed: "good", Gemiddeld: "mid", Laag: "low" } },
+  { key: "sleep", tones: { Goed: "good", Matig: "mid", Slecht: "low" } },
+  { key: "hunger", tones: { "Bijna nooit": "good", Soms: "mid", Vaak: "low" } },
   {
     key: "nutritionAdherence",
-    label: "Voedingsschema gevolgd",
     tones: Object.fromEntries(checkinOptions.nutritionAdherence.map((o, i) => [o, (["good", "good", "mid", "low"] as const)[i]])),
   },
   {
     key: "trainingAdherence",
-    label: "Trainingen gedaan",
     tones: Object.fromEntries(checkinOptions.trainingAdherence.map((o, i) => [o, (["good", "good", "mid", "low"] as const)[i]])),
   },
-  { key: "difficulty", label: "Zwaarte trainingen", tones: { "Precies goed": "good", "Te licht": "mid", "Te zwaar": "mid" } },
+  { key: "difficulty", tones: { "Precies goed": "good", "Te licht": "mid", "Te zwaar": "mid" } },
 ];
 
-const TONE: Record<Tone, { dot: string; label: string }> = {
-  good: { dot: "bg-brand-600", label: "goed" },
-  mid: { dot: "bg-amber-400", label: "kan beter" },
-  low: { dot: "bg-accent-500", label: "aandacht" },
+const TONE_DOT: Record<Tone, string> = {
+  good: "bg-brand-600",
+  mid: "bg-amber-400",
+  low: "bg-accent-500",
 };
 
 /** Tabel met de antwoorden uit elke check-in, met een kleurstip (en tekst) per antwoord. */
-export function AnswersGrid({ checkins }: { checkins: { seq: number | null; date: Date; data: CheckinData }[] }) {
-  const rows = ROWS.filter((r) => checkins.some((c) => c.data[r.key] !== undefined));
+export function AnswersGrid({ checkins, l }: { checkins: { seq: number | null; date: Date; data: CheckinData }[]; l: Locale }) {
+  const c = copy[l];
+  const rows = ROWS.filter((r) => checkins.some((ci) => ci.data[r.key] !== undefined));
   if (rows.length === 0) return null;
   return (
     <div>
@@ -207,12 +294,12 @@ export function AnswersGrid({ checkins }: { checkins: { seq: number | null; date
           <thead className="bg-sand text-xs font-bold tracking-wide text-muted uppercase">
             <tr>
               <th scope="col" className="px-4 py-2.5">
-                Vraag
+                {c.question}
               </th>
-              {checkins.map((c) => (
-                <th key={c.date.toString()} scope="col" className="px-3 py-2.5 whitespace-nowrap">
-                  {c.seq ? `Periode ${c.seq}` : "Check-in"}
-                  <span className="block font-semibold tracking-normal normal-case">{formatDate(c.date)}</span>
+              {checkins.map((ci) => (
+                <th key={ci.date.toString()} scope="col" className="px-3 py-2.5 whitespace-nowrap">
+                  {ci.seq ? c.period(ci.seq) : c.checkin}
+                  <span className="block font-semibold tracking-normal normal-case">{formatDate(ci.date, l)}</span>
                 </th>
               ))}
             </tr>
@@ -221,18 +308,18 @@ export function AnswersGrid({ checkins }: { checkins: { seq: number | null; date
             {rows.map((r) => (
               <tr key={r.key}>
                 <th scope="row" className="px-4 py-2.5 font-semibold whitespace-nowrap">
-                  {r.label}
+                  {c.answers[r.key]}
                 </th>
-                {checkins.map((c) => {
-                  const value = c.data[r.key];
+                {checkins.map((ci) => {
+                  const value = ci.data[r.key];
                   const tone = typeof value === "string" ? r.tones[value] : undefined;
                   return (
-                    <td key={c.date.toString()} className="px-3 py-2.5">
+                    <td key={ci.date.toString()} className="px-3 py-2.5">
                       {typeof value === "string" ? (
                         <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                          {tone && <span className={`size-2.5 rounded-full ${TONE[tone].dot}`} aria-hidden />}
-                          {short(value)}
-                          {tone && <span className="sr-only"> ({TONE[tone].label})</span>}
+                          {tone && <span className={`size-2.5 rounded-full ${TONE_DOT[tone]}`} aria-hidden />}
+                          {short(checkinLabel(l, value))}
+                          {tone && <span className="sr-only"> ({c.tones[tone]})</span>}
                         </span>
                       ) : (
                         <span className="text-muted">–</span>
@@ -246,9 +333,9 @@ export function AnswersGrid({ checkins }: { checkins: { seq: number | null; date
         </table>
       </div>
       <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted" aria-hidden>
-        {(Object.keys(TONE) as Tone[]).map((t) => (
+        {(Object.keys(TONE_DOT) as Tone[]).map((t) => (
           <span key={t} className="inline-flex items-center gap-1.5">
-            <span className={`size-2.5 rounded-full ${TONE[t].dot}`} /> {TONE[t].label}
+            <span className={`size-2.5 rounded-full ${TONE_DOT[t]}`} /> {c.tones[t]}
           </span>
         ))}
       </p>

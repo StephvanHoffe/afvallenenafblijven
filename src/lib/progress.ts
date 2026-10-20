@@ -1,6 +1,8 @@
+import { defineCopy, type Locale } from "@/i18n/config";
+import { intakeLabels } from "@/i18n/options";
 import type { AccountView } from "@/lib/account-types";
 import { bmi, nutritionTargets, weightProjection } from "@/lib/calculations";
-import { goalOptions, wantsWeightLoss, type Intake } from "@/lib/intake";
+import { wantsWeightLoss, type Intake } from "@/lib/intake";
 
 /**
  * De voortgang van een klant, berekend uit de vragenlijst (het startpunt) en
@@ -8,6 +10,21 @@ import { goalOptions, wantsWeightLoss, type Intake } from "@/lib/intake";
  */
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
+
+const copy = defineCopy({
+  nl: {
+    start: "Start",
+    checkin: (seq: number | null) => (seq ? `Check-in periode ${seq}` : "Check-in"),
+    weekly: (week: number, seq: number) => `Weegmoment week ${week} (periode ${seq})`,
+    week: (n: number) => `Week ${n}`,
+  },
+  en: {
+    start: "Start",
+    checkin: (seq: number | null) => (seq ? `Check-in period ${seq}` : "Check-in"),
+    weekly: (week: number, seq: number) => `Weigh-in week ${week} (period ${seq})`,
+    week: (n: number) => `Week ${n}`,
+  },
+});
 
 export interface SeriesPoint {
   /** Tijdstip in milliseconden. */
@@ -41,36 +58,37 @@ export interface Progress {
   checkins: AccountView["checkins"];
 }
 
-export function buildProgress(view: AccountView): Progress {
+export function buildProgress(view: AccountView, l: Locale = "nl"): Progress {
+  const c = copy[l];
   const intake = view.intake;
   const start = view.startedAt ? new Date(view.startedAt).getTime() : null;
-  const goal = [...view.checkins].reverse().find((c) => c.data.goal)?.data.goal ?? intake?.goal ?? null;
+  const goal = [...view.checkins].reverse().find((ci) => ci.data.goal)?.data.goal ?? intake?.goal ?? null;
 
   const weights: SeriesPoint[] = [];
-  if (intake && start !== null) weights.push({ t: start, v: intake.weightKg, label: "Start" });
-  for (const c of view.checkins) {
-    if (c.data.weightKg) {
-      weights.push({ t: new Date(c.date).getTime(), v: c.data.weightKg, label: c.seq ? `Check-in periode ${c.seq}` : "Check-in" });
+  if (intake && start !== null) weights.push({ t: start, v: intake.weightKg, label: c.start });
+  for (const ci of view.checkins) {
+    if (ci.data.weightKg) {
+      weights.push({ t: new Date(ci.date).getTime(), v: ci.data.weightKg, label: c.checkin(ci.seq) });
     }
   }
   for (const w of view.weekly) {
-    weights.push({ t: new Date(w.date).getTime(), v: w.data.weightKg, label: `Weegmoment week ${w.week} (periode ${w.seq})` });
+    weights.push({ t: new Date(w.date).getTime(), v: w.data.weightKg, label: c.weekly(w.week, w.seq) });
   }
   weights.sort((a, b) => a.t - b.t);
 
   const waist = [
     ...view.checkins
-      .filter((c) => c.data.waistCm)
-      .map((c) => ({ t: new Date(c.date).getTime(), v: c.data.waistCm!, label: c.seq ? `Check-in periode ${c.seq}` : "Check-in" })),
+      .filter((ci) => ci.data.waistCm)
+      .map((ci) => ({ t: new Date(ci.date).getTime(), v: ci.data.waistCm!, label: c.checkin(ci.seq) })),
     ...view.weekly
       .filter((w) => w.data.waistCm)
-      .map((w) => ({ t: new Date(w.date).getTime(), v: w.data.waistCm!, label: `Weegmoment week ${w.week} (periode ${w.seq})` })),
+      .map((w) => ({ t: new Date(w.date).getTime(), v: w.data.waistCm!, label: c.weekly(w.week, w.seq) })),
   ].sort((a, b) => a.t - b.t);
 
   let projection: SeriesPoint[] = [];
   if (intake && start !== null) {
     const p = weightProjection(intake, nutritionTargets(intake));
-    if (p) projection = p.points.map((v, i) => ({ t: start + i * WEEK, v, label: i === 0 ? "Start" : `Week ${i}` }));
+    if (p) projection = p.points.map((v, i) => ({ t: start + i * WEEK, v, label: i === 0 ? c.start : c.week(i) }));
   }
 
   const first = weights[0] ?? null;
@@ -87,7 +105,7 @@ export function buildProgress(view: AccountView): Progress {
 
   return {
     goal,
-    goalLabel: goal ? goalOptions[goal].label : null,
+    goalLabel: goal ? intakeLabels(l).goal[goal].label : null,
     direction: loss ? "down" : goal === "sterker" ? "up" : "steady",
     heightCm,
     weights,
@@ -125,4 +143,11 @@ export function currentProfile(view: AccountView): Intake | null {
     goal: latest("goal") ?? view.intake.goal,
     trainingDays: latest("trainingDays") ?? view.intake.trainingDays,
   };
+}
+
+/** Begin van de lopende periode: het moment waarop de laatste schema's klaarstonden. */
+export function latestPeriodStart(view: AccountView): Date | null {
+  const seq = view.plans.reduce((m, x) => Math.max(m, x.seq), 0);
+  const dates = view.plans.filter((x) => x.seq === seq && x.generatedAt).map((x) => new Date(x.generatedAt!).getTime());
+  return dates.length ? new Date(Math.min(...dates)) : null;
 }

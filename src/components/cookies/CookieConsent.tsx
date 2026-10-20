@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import Script from "next/script";
 import { useEffect, useState } from "react";
 import { Cookie } from "lucide-react";
@@ -11,9 +11,48 @@ import {
   writeConsent,
   type ConsentState,
 } from "@/lib/consent";
+import { defineCopy } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+
+const copy = defineCopy({
+  nl: {
+    title: "Mogen we cookies gebruiken?",
+    settingsTitle: "Cookie-instellingen",
+    text: "We gebruiken noodzakelijke cookies om de site te laten werken. Met jouw toestemming gebruiken we ook cookies om de site te verbeteren en onze advertenties te meten. Meer info in ons",
+    policy: "cookiebeleid",
+    necessary: "Noodzakelijk",
+    necessaryText: "Nodig voor inloggen, betalen en het onthouden van je keuze.",
+    analytics: "Analytisch",
+    analyticsText: "Anonieme statistieken over het gebruik van de site.",
+    marketing: "Marketing",
+    marketingText: "Meten en verbeteren van onze advertenties (bijv. Meta).",
+    rejectAll: "Alles weigeren",
+    save: "Keuze opslaan",
+    necessaryOnly: "Alleen noodzakelijk",
+    acceptAll: "Alles accepteren",
+    choose: "Zelf kiezen",
+  },
+  en: {
+    title: "May we use cookies?",
+    settingsTitle: "Cookie settings",
+    text: "We use necessary cookies to make the site work. With your consent, we also use cookies to improve the site and measure our adverts. More information in our",
+    policy: "cookie policy",
+    necessary: "Necessary",
+    necessaryText: "Needed for logging in, paying and remembering your choice.",
+    analytics: "Analytics",
+    analyticsText: "Anonymous statistics about the use of the site.",
+    marketing: "Marketing",
+    marketingText: "Measuring and improving our adverts (e.g. Meta).",
+    rejectAll: "Reject all",
+    save: "Save choice",
+    necessaryOnly: "Necessary only",
+    acceptAll: "Accept all",
+    choose: "Let me choose",
+  },
+});
 
 /**
  * Cookiebanner volgens de richtlijnen van de Autoriteit Persoonsgegevens:
@@ -21,6 +60,7 @@ const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
  * en analytische/marketingscripts laden pas ná toestemming.
  */
 export function CookieConsent() {
+  const c = copy[useLocale()];
   const [consent, setConsent] = useState<ConsentState | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -85,15 +125,14 @@ export function CookieConsent() {
             <div className="mb-2 flex items-center gap-2">
               <Cookie className="size-5 text-brand-600" aria-hidden />
               <h2 id="cookie-title" className="font-bold">
-                {showSettings ? "Cookie-instellingen" : "Mogen we cookies gebruiken?"}
+                {showSettings ? c.settingsTitle : c.title}
               </h2>
             </div>
             {!showSettings ? (
               <p className="text-sm leading-relaxed text-muted">
-                We gebruiken noodzakelijke cookies om de site te laten werken. Met jouw toestemming gebruiken we ook
-                cookies om de site te verbeteren en onze advertenties te meten. Meer info in ons{" "}
+                {c.text}{" "}
                 <Link href="/cookiebeleid" className="font-semibold text-brand-700 underline">
-                  cookiebeleid
+                  {c.policy}
                 </Link>
                 .
               </p>
@@ -102,8 +141,8 @@ export function CookieConsent() {
                 <label className="flex items-start gap-3 rounded-2xl bg-sand p-3">
                   <input type="checkbox" checked disabled className="mt-1 size-4 accent-brand-600" />
                   <span>
-                    <span className="font-semibold">Noodzakelijk</span>
-                    <span className="block text-muted">Nodig voor inloggen, betalen en het onthouden van je keuze.</span>
+                    <span className="font-semibold">{c.necessary}</span>
+                    <span className="block text-muted">{c.necessaryText}</span>
                   </span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-sand p-3">
@@ -114,8 +153,8 @@ export function CookieConsent() {
                     className="mt-1 size-4 accent-brand-600"
                   />
                   <span>
-                    <span className="font-semibold">Analytisch</span>
-                    <span className="block text-muted">Anonieme statistieken over het gebruik van de site.</span>
+                    <span className="font-semibold">{c.analytics}</span>
+                    <span className="block text-muted">{c.analyticsText}</span>
                   </span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-sand p-3">
@@ -126,8 +165,8 @@ export function CookieConsent() {
                     className="mt-1 size-4 accent-brand-600"
                   />
                   <span>
-                    <span className="font-semibold">Marketing</span>
-                    <span className="block text-muted">Meten en verbeteren van onze advertenties (bijv. Meta).</span>
+                    <span className="font-semibold">{c.marketing}</span>
+                    <span className="block text-muted">{c.marketingText}</span>
                   </span>
                 </label>
               </div>
@@ -136,19 +175,19 @@ export function CookieConsent() {
               {showSettings ? (
                 <>
                   <button type="button" className="btn-secondary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: false, marketing: false })}>
-                    Alles weigeren
+                    {c.rejectAll}
                   </button>
                   <button type="button" className="btn-primary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics, marketing })}>
-                    Keuze opslaan
+                    {c.save}
                   </button>
                 </>
               ) : (
                 <>
                   <button type="button" className="btn-secondary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: false, marketing: false })}>
-                    Alleen noodzakelijk
+                    {c.necessaryOnly}
                   </button>
                   <button type="button" className="btn-primary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: true, marketing: true })}>
-                    Alles accepteren
+                    {c.acceptAll}
                   </button>
                 </>
               )}
@@ -159,7 +198,7 @@ export function CookieConsent() {
                 className="mt-3 w-full text-center text-sm font-semibold text-muted underline hover:text-ink"
                 onClick={() => setShowSettings(true)}
               >
-                Zelf kiezen
+                {c.choose}
               </button>
             )}
           </div>

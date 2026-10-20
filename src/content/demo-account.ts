@@ -1,3 +1,5 @@
+import { demoHealth } from "@/content/demo-health";
+import type { Locale } from "@/i18n/config";
 import type { AccountView, DashboardPlan } from "@/lib/account-types";
 import type { WeeklyLog } from "@/lib/weekly";
 import type { Intake } from "@/lib/intake";
@@ -200,6 +202,7 @@ export const demoAccountView: AccountView = {
   ],
   weekly: demoWeekly,
   weeklyReminders: true,
+  health: demoHealth,
   targets: [
     { seq: 1, date: at(PERIODS[0]), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
     { seq: 2, date: at(PERIODS[1]), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },
@@ -207,3 +210,77 @@ export const demoAccountView: AccountView = {
     { seq: 4, date: at(PERIODS[3]), calories: sampleTargetsFollowUp.calories, proteinG: 120, carbsG: sampleTargetsFollowUp.carbsG, fatG: 50 },
   ],
 };
+
+/**
+ * Dezelfde weegmomenten in het Engels. Antwoorden uit vaste keuzes (energie,
+ * honger, ...) blijven de Nederlandse waarden, net als in de database; vrije
+ * tekst en onze uitleg zijn Engels.
+ */
+const demoWeeklyEn: WeeklyLog[] = [
+  {
+    ...demoWeekly[0],
+    adjustment: { kcal: 0, calories: 1540, message: "You're on track. Your plan stays as it is; keep it up!" },
+  },
+  {
+    ...demoWeekly[1],
+    data: { ...demoWeekly[1].data, comments: "The workouts are getting easier and easier!" },
+    adjustment: {
+      kcal: -100,
+      calories: 1440,
+      nutritionReason:
+        "You lost 0.2 kg, less than expected (0.9 kg), even though you followed the plan well. So you'll now eat 100 kcal less per day.",
+      training: "zwaarder",
+      trainingReason: "You found the workouts too easy. So we're making them a little harder.",
+      nutrition: {
+        summary: "From now on, you'll eat about 100 kcal less per day, with the same dishes.",
+        swaps: [
+          { meal: "Breakfast: quark bowl", change: "Have 30 g oats instead of 40 g, and 10 g walnuts instead of 15 g.", kcal: -60 },
+          { meal: "Dinner", change: "Have 150 g baby potatoes instead of 200 g, or 50 g brown rice (uncooked) instead of 60 g.", kcal: -40 },
+        ],
+      },
+      trainingPlan: {
+        summary: "Your workouts get a little harder: one small step per exercise.",
+        changes: [
+          { exercise: "Goblet squat", change: "Go 2 kg heavier, or do 12 reps instead of 10." },
+          { exercise: "One-arm dumbbell row", change: "Go 2 kg heavier; stick to 10-12 reps per side." },
+          { exercise: "Incline push-up", change: "Use a lower surface, for example a chair instead of a table." },
+          { exercise: "Dumbbell Romanian deadlift", change: "Go 2 kg heavier per hand." },
+        ],
+      },
+      message: "We've adjusted your plan for the rest of this period.",
+    },
+  },
+];
+
+const [checkin2, checkin3, checkin4] = demoAccountView.checkins;
+
+/** De voorbeeldomgeving in het Engels: dezelfde klant, met Engelse vrije tekst. */
+const demoAccountViewEn: AccountView = {
+  ...demoAccountView,
+  intake: { ...demoIntake, dislikes: "mushrooms" },
+  checkins: [
+    {
+      ...checkin2,
+      data: { ...checkin2.data, likedMeals: "The quark bowl and the stir-fry", dislikedMeals: "Quicker lunches, please" },
+    },
+    {
+      ...checkin3,
+      data: { ...checkin3.data, injuries: "My knee sometimes aches after walking" },
+    },
+    {
+      ...checkin4,
+      data: { ...checkin4.data, likedMeals: "Chicken teriyaki and the overnight oats", comments: "Busy at work, but it's going well!" },
+    },
+  ],
+  weekly: demoWeeklyEn,
+};
+
+/** De voorbeeldomgeving in de gegeven taal. */
+export function demoAccountViewFor(l: Locale): AccountView {
+  return l === "en" ? demoAccountViewEn : demoAccountView;
+}
+
+/** De voorbeeld-weegmomenten in de gegeven taal. */
+export function demoWeeklyFor(l: Locale): WeeklyLog[] {
+  return l === "en" ? demoWeeklyEn : demoWeekly;
+}

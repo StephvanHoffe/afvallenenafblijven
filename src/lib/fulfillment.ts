@@ -1,10 +1,11 @@
 import "server-only";
 import {
-  durations,
+  durationFor,
   isDurationId,
   isProductId,
   isSubscription,
   monthlyPrice,
+  productFor,
   products,
 } from "@/config/pricing";
 import { orderConfirmationEmail, sendMail } from "@/lib/email";
@@ -20,6 +21,31 @@ import {
   type OrderStatus,
 } from "@/lib/repo";
 import { retrieveCheckoutSession, type Stripe } from "@/lib/stripe";
+import { defineCopy, toLocale } from "@/i18n/config";
+
+/** Teksten voor de orderbevestiging, in de taal van de klant. */
+const orderCopy = defineCopy({
+  nl: {
+    oneOff: "Los schema (4 weken)",
+    monthly: "Per maand",
+    minimum: (label: string) => `Minimaal ${label}`,
+    noRenewal: "Geen, eenmalige aankoop",
+    renewalMonthly: (amount: string) => `${amount} per maand via SEPA-incasso, maandelijks opzegbaar`,
+    renewalAfter: (amount: string, label: string) => `${amount} per maand via SEPA-incasso; na ${label} maandelijks opzegbaar`,
+    incasso: (amount: string) =>
+      `We schrijven elke maand ${amount} af via SEPA-incasso, rond dezelfde datum als je eerste betaling. Deze e-mail geldt als vooraankondiging van die afschrijvingen. Op je bankafschrift staat de afschrijving van onze betaalpartner Stripe.`,
+  },
+  en: {
+    oneOff: "Single plan (4 weeks)",
+    monthly: "Monthly",
+    minimum: (label: string) => `Minimum ${label}`,
+    noRenewal: "None, one-off purchase",
+    renewalMonthly: (amount: string) => `${amount} a month by SEPA Direct Debit, cancel monthly`,
+    renewalAfter: (amount: string, label: string) => `${amount} a month by SEPA Direct Debit; cancel monthly after ${label}`,
+    incasso: (amount: string) =>
+      `We'll collect ${amount} every month by SEPA Direct Debit, around the same date as your first payment. This email serves as advance notice of these collections. The payments will appear on your bank statement under our payment partner Stripe.`,
+  },
+});
 
 /**
  * Verwerkt een afgeronde Stripe-checkout: klant en bestelling vastleggen en
@@ -54,6 +80,7 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
     name: intake.name,
     stripeCustomerId,
     marketingConsent: intake.consents.marketing === true,
+    locale: toLocale(intake.locale),
   });
 
   const order = await createOrder({
@@ -71,24 +98,21 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
 
   await createPlans(order.id, customer.id, products[product].includes, 1);
 
-  const d = durations[duration];
-  const monthly = euro(monthlyPrice(product, duration));
+  const l = toLocale(customer.locale);
+  const c = orderCopy[l];
+  const d = durationFor(duration, l);
+  const monthly = euro(monthlyPrice(product, duration), l);
   await sendMail(
     orderConfirmationEmail({
       to: customer.email,
       name: customer.name,
       orderNumber: order.id.slice(0, 8).toUpperCase(),
-      productName: products[product].name,
-      durationLabel: !isSubscription(duration) ? "Los schema (4 weken)" : d.months === 1 ? "Per maand" : `Minimaal ${d.label}`,
-      amountPaid: euro(order.amount_cents),
-      renewal: !isSubscription(duration)
-        ? "Geen, eenmalige aankoop"
-        : d.months === 1
-          ? `${monthly} per maand via SEPA-incasso, maandelijks opzegbaar`
-          : `${monthly} per maand via SEPA-incasso; na ${d.label} maandelijks opzegbaar`,
-      incassoNote: isSubscription(duration)
-        ? `We schrijven elke maand ${monthly} af via SEPA-incasso, rond dezelfde datum als je eerste betaling. Deze e-mail geldt als vooraankondiging van die afschrijvingen. Op je bankafschrift staat de afschrijving van onze betaalpartner Stripe.`
-        : undefined,
+      productName: productFor(product, l).name,
+      durationLabel: !isSubscription(duration) ? c.oneOff : d.months === 1 ? c.monthly : c.minimum(d.label),
+      amountPaid: euro(order.amount_cents, l),
+      renewal: !isSubscription(duration) ? c.noRenewal : d.months === 1 ? c.renewalMonthly(monthly) : c.renewalAfter(monthly, d.label),
+      incassoNote: isSubscription(duration) ? c.incasso(monthly) : undefined,
+      locale: l,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));
 

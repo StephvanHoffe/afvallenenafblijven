@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
+import { defineCopy, type Locale } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
+
+const copy = defineCopy({
+  nl: { progress: (done: number, total: number) => `${done} van ${total} afgevinkt`, reset: "Opnieuw beginnen" },
+  en: { progress: (done: number, total: number) => `${done} of ${total} ticked off`, reset: "Start again" },
+});
 
 interface Group {
   category: string;
@@ -12,7 +19,9 @@ interface Group {
  * Boodschappenlijst om af te vinken in de winkel. Wat je afvinkt onthoudt de
  * browser per schema (alleen op dit apparaat).
  */
-export function ShoppingChecklist({ groups, storageKey }: { groups: Group[]; storageKey?: string }) {
+export function ShoppingChecklist({ groups, storageKey, l }: { groups: Group[]; storageKey?: string; l?: Locale }) {
+  const current = useLocale();
+  const c = copy[l ?? current];
   const [checked, setChecked] = useState<string[]>([]);
 
   useEffect(() => {
@@ -47,12 +56,10 @@ export function ShoppingChecklist({ groups, storageKey }: { groups: Group[]; sto
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="font-semibold text-muted">
-          {checked.length} van {total} afgevinkt
-        </p>
+        <p className="font-semibold text-muted">{c.progress(checked.length, total)}</p>
         {checked.length > 0 && (
           <button type="button" onClick={() => setChecked([])} className="font-bold text-brand-700 hover:underline">
-            Opnieuw beginnen
+            {c.reset}
           </button>
         )}
       </div>

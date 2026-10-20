@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { ArrowLeft, Download, ShoppingCart } from "lucide-react";
 import { NutritionPlanView } from "@/components/plan/NutritionPlanView";
 import { TrainingPlanView } from "@/components/plan/TrainingPlanView";
@@ -7,19 +7,43 @@ import type { PlanAdjustment } from "@/lib/weekly";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { formatDate } from "@/lib/format";
 import { site } from "@/config/site";
+import { defineCopy, localePath, type Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
+
+const copy = defineCopy({
+  nl: {
+    back: "Mijn schema's",
+    shoppingPdf: "Boodschappenlijst (PDF)",
+    downloadPdf: "Download als PDF",
+    madeFor: (name: string) => `Persoonlijk schema voor ${name}`,
+    madeOn: (date: string) => `, gemaakt op ${date}`,
+    disclaimer:
+      "Dit schema is persoonlijk leefstijladvies op basis van jouw antwoorden. Het is geen medisch advies en geen vervanging voor begeleiding door een arts, diëtist of fysiotherapeut. Heb je klachten, een medische aandoening of twijfel? Overleg dan eerst met je huisarts. Lees bij allergieën altijd de etiketten.",
+  },
+  en: {
+    back: "My plans",
+    shoppingPdf: "Shopping list (PDF)",
+    downloadPdf: "Download as PDF",
+    madeFor: (name: string) => `Personal plan for ${name}`,
+    madeOn: (date: string) => `, created on ${date}`,
+    disclaimer:
+      "This plan is personal lifestyle advice based on your answers. It is not medical advice and does not replace guidance from a doctor, dietitian or physiotherapist. Do you have symptoms, a medical condition or any doubts? Then check with your GP first. If you have allergies, always read the labels.",
+  },
+});
 
 /** Een volledig schema zoals de klant het ziet: terug-link, downloads, inhoud en disclaimer. */
-export function PlanDocument({
+export async function PlanDocument({
   content,
   customerName,
   generatedAt,
   backHref = "/account/schemas",
-  backLabel = "Mijn schema's",
+  backLabel,
   preview = false,
   pdfHref,
   shoppingPdfHref,
   storageKey,
   adjustments,
+  l: locale,
 }: {
   content: PlanContent;
   customerName: string;
@@ -34,30 +58,35 @@ export function PlanDocument({
   storageKey?: string;
   /** Bijsturingen uit de wekelijkse weegmomenten van deze periode. */
   adjustments?: PlanAdjustment[];
+  /** Taal van de teksten om het schema heen; standaard de taal van de pagina. */
+  l?: Locale;
 }) {
+  const l = locale ?? (await getLocale());
+  const c = copy[l];
   const kcal = (adjustments ?? []).reduce((sum, a) => sum + a.kcal, 0);
+  const shoppingHref = shoppingPdfHref ? localePath(l, shoppingPdfHref) : undefined;
   return (
     <div>
       <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-3">
         <Link href={backHref} className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-          <ArrowLeft className="size-4" aria-hidden /> {backLabel}
+          <ArrowLeft className="size-4" aria-hidden /> {backLabel ?? c.back}
         </Link>
         <div className="flex flex-wrap gap-2">
-          {shoppingPdfHref && (
-            <a href={shoppingPdfHref} className="btn-secondary !px-4 !py-2.5 text-sm">
-              <ShoppingCart className="size-4" aria-hidden /> Boodschappenlijst (PDF)
+          {shoppingHref && (
+            <a href={shoppingHref} className="btn-secondary !px-4 !py-2.5 text-sm">
+              <ShoppingCart className="size-4" aria-hidden /> {c.shoppingPdf}
             </a>
           )}
           {pdfHref && (
-            <a href={pdfHref} className="btn-primary !px-4 !py-2.5 text-sm">
-              <Download className="size-4" aria-hidden /> Download als PDF
+            <a href={localePath(l, pdfHref)} className="btn-primary !px-4 !py-2.5 text-sm">
+              <Download className="size-4" aria-hidden /> {c.downloadPdf}
             </a>
           )}
         </div>
       </div>
       <p className="mb-4 text-sm text-muted">
-        Persoonlijk schema voor {customerName}
-        {generatedAt ? `, gemaakt op ${formatDate(generatedAt)}` : ""} · {site.name}
+        {c.madeFor(customerName)}
+        {generatedAt ? c.madeOn(formatDate(generatedAt, l)) : ""} · {site.name}
       </p>
       {content.type === "voeding" ? (
         <NutritionPlanView
@@ -65,18 +94,20 @@ export function PlanDocument({
           targets={content.targets}
           preview={preview}
           storageKey={storageKey}
-          shoppingPdfHref={shoppingPdfHref}
+          shoppingPdfHref={shoppingHref}
           adjustedCalories={kcal ? content.targets.calories + kcal : undefined}
-          notice={<AdjustmentsCard type="voeding" adjustments={adjustments} />}
+          notice={<AdjustmentsCard type="voeding" adjustments={adjustments} l={l} />}
+          l={l}
         />
       ) : (
-        <TrainingPlanView plan={content.plan} preview={preview} notice={<AdjustmentsCard type="training" adjustments={adjustments} />} />
+        <TrainingPlanView
+          plan={content.plan}
+          preview={preview}
+          notice={<AdjustmentsCard type="training" adjustments={adjustments} l={l} />}
+          l={l}
+        />
       )}
-      <p className="mt-12 rounded-2xl bg-sand p-4 text-xs leading-relaxed text-muted">
-        Dit schema is persoonlijk leefstijladvies op basis van jouw antwoorden. Het is geen medisch advies en geen
-        vervanging voor begeleiding door een arts, diëtist of fysiotherapeut. Heb je klachten, een medische aandoening
-        of twijfel? Overleg dan eerst met je huisarts. Lees bij allergieën altijd de etiketten.
-      </p>
+      <p className="mt-12 rounded-2xl bg-sand p-4 text-xs leading-relaxed text-muted">{c.disclaimer}</p>
     </div>
   );
 }

@@ -1,5 +1,12 @@
+import type { Locale } from "@/i18n/config";
 import type { NutritionTargets } from "@/lib/calculations";
 import type { NutritionPlan, TrainingPlan } from "@/lib/ai/schemas";
+import {
+  sampleNutritionPlanEn,
+  sampleNutritionPlanFollowUpEn,
+  sampleTrainingPlanEn,
+  sampleTrainingPlanFollowUpEn,
+} from "@/content/sample-plans.en";
 
 /**
  * Voorbeeldschema's voor de pagina /voorbeeld en de previews op de site.
@@ -439,3 +446,25 @@ export const sampleTrainingPlanFollowUp: TrainingPlan = {
     "Nieuw: training A sluit af met de farmer's walk voor je grip en core.",
   ],
 };
+
+/** Alle voorbeeldschema's in de gegeven taal. De dagdoelen zijn in beide talen gelijk. */
+export function samplePlansFor(l: Locale) {
+  if (l === "en") {
+    return {
+      sampleTargets,
+      sampleNutritionPlan: sampleNutritionPlanEn,
+      sampleTrainingPlan: sampleTrainingPlanEn,
+      sampleTargetsFollowUp,
+      sampleNutritionPlanFollowUp: sampleNutritionPlanFollowUpEn,
+      sampleTrainingPlanFollowUp: sampleTrainingPlanFollowUpEn,
+    };
+  }
+  return {
+    sampleTargets,
+    sampleNutritionPlan,
+    sampleTrainingPlan,
+    sampleTargetsFollowUp,
+    sampleNutritionPlanFollowUp,
+    sampleTrainingPlanFollowUp,
+  };
+}

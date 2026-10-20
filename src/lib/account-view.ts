@@ -1,3 +1,4 @@
+import type { HealthView } from "@/lib/health/view";
 import type { AccountView, DashboardOrder, DashboardPlan } from "@/lib/account-types";
 import { durations, isSubscription } from "@/config/pricing";
 import type { NutritionTargets } from "@/lib/calculations";
@@ -16,6 +17,7 @@ export function toAccountView(input: {
   weeklyReminders: boolean;
   intake: IntakeRow | null;
   targets: { seq: number; generated_at: Date | null; targets: NutritionTargets | null }[];
+  health?: HealthView | null;
 }): AccountView {
   const { orders, plans, checkins } = input;
   const now = Date.now();
@@ -84,6 +86,7 @@ export function toAccountView(input: {
       .map((c) => ({ seq: c.for_seq, date: c.created_at, data: c.data })),
     weekly: input.weekly.map((w) => ({ seq: w.seq, week: w.week, date: w.created_at, data: w.data, adjustment: w.adjustment, status: w.status })),
     weeklyReminders: input.weeklyReminders,
+    health: input.health ?? null,
     targets: input.targets
       .filter((t) => t.targets)
       .map((t) => ({

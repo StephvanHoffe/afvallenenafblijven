@@ -1,3 +1,4 @@
+import { isAppleHealthEnabled, isJunctionConfigured, isWithingsConfigured, junctionProviders } from "@/lib/health/config";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -52,6 +53,19 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
     { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "SMTP_HOST ontbreekt; e-mails komen alleen in de serverlog" },
     { label: "Dagelijkse taak", ok: env("CRON_SECRET"), detail: env("CRON_SECRET") ? "Ingesteld (elke ochtend om 06:00 UTC)" : "CRON_SECRET ontbreekt" },
     { label: "Websiteadres", ok: env("NEXT_PUBLIC_SITE_URL"), detail: site.url },
+    {
+      label: "Gezondheidsapps: Withings (optioneel)",
+      ok: demo || isWithingsConfigured(),
+      detail: demo || isWithingsConfigured() ? "Ingesteld" : "Niet ingesteld (WITHINGS_CLIENT_ID, WITHINGS_CLIENT_SECRET en HEALTH_ENCRYPTION_KEY)",
+    },
+    {
+      label: "Gezondheidsapps: Junction (optioneel)",
+      ok: demo || isJunctionConfigured(),
+      detail:
+        demo || isJunctionConfigured()
+          ? `Ingesteld: ${junctionProviders().join(", ")}${demo || isAppleHealthEnabled() ? " + Apple Health" : ""}${demo || process.env.JUNCTION_WEBHOOK_SECRET ? "" : " (JUNCTION_WEBHOOK_SECRET ontbreekt)"}`
+          : "Niet ingesteld (JUNCTION_API_KEY)",
+    },
     { label: "Beheerwachtwoord", ok: demo || isAdminConfigured(), detail: demo ? "Demo-modus" : isAdminConfigured() ? "Ingesteld" : "ADMIN_PASSWORD ontbreekt of is te kort" },
   ];
 

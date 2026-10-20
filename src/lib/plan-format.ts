@@ -11,4 +11,5 @@ export function restLabel(seconds: number): string {
   return seconds >= 120 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`;
 }
 
-export const isTrainingDay = (activity: string) => /training/i.test(activity);
+/** Een dag met een training ("Training A …" of, in Engelse schema's, "Workout A …"). */
+export const isTrainingDay = (activity: string) => /training|workout/i.test(activity);

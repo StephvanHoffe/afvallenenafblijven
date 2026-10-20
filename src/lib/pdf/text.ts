@@ -19,6 +19,7 @@ const REPLACEMENTS: Record<string, string> = {
   "⅔": "2/3",
   "⅛": "1/8",
   "­": "",
+  "‐": "-",
   "‑": "-",
   "‒": "-",
   "―": "—",

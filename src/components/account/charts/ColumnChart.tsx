@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
 
 /**
  * Staafgrafiek met één reeks (bijv. het caloriedoel per periode). De staven
@@ -16,11 +18,17 @@ export interface Column {
 
 const C = { bar: "#1c7a48", barActive: "#17623b", grid: "#ecebe4", text: "#4d6156", ink: "#10231a" };
 
-function fmt(n: number) {
-  return n.toLocaleString("nl-NL", { maximumFractionDigits: 0 });
+const copy = defineCopy({
+  nl: { chart: "grafiek" },
+  en: { chart: "chart" },
+});
+
+function fmt(n: number, l: Locale) {
+  return n.toLocaleString(intlLocale(l), { maximumFractionDigits: 0 });
 }
 
 export function ColumnChart({ columns, unit, description, height = 200 }: { columns: Column[]; unit: string; description: string; height?: number }) {
+  const l = useLocale();
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(560);
   const [active, setActive] = useState<number | null>(null);
@@ -55,7 +63,7 @@ export function ColumnChart({ columns, unit, description, height = 200 }: { colu
   const tipX = active !== null ? m.left + band * active + band / 2 : 0;
 
   return (
-    <div ref={wrap} className="relative" role="group" aria-roledescription="grafiek" aria-label={description}>
+    <div ref={wrap} className="relative" role="group" aria-roledescription={copy[l].chart} aria-label={description}>
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="block h-auto max-w-full overflow-visible" aria-hidden>
         <line x1={m.left} x2={m.left + plotW} y1={m.top + plotH} y2={m.top + plotH} stroke={C.grid} strokeWidth="1" />
         {columns.map((c, i) => {
@@ -64,7 +72,7 @@ export function ColumnChart({ columns, unit, description, height = 200 }: { colu
             <g key={c.label}>
               <path d={bar(i, c.value)} fill={active === i ? C.barActive : C.bar} />
               <text x={cx} y={y(c.value) - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill={C.ink} className="tabular-nums">
-                {fmt(c.value)}
+                {fmt(c.value, l)}
               </text>
               <text x={cx} y={height - 6} textAnchor="middle" fontSize="11" fill={C.text}>
                 {c.label}
@@ -80,7 +88,7 @@ export function ColumnChart({ columns, unit, description, height = 200 }: { colu
             key={c.label}
             type="button"
             className="h-full flex-1 cursor-default rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-brand-100"
-            aria-label={`${c.label}: ${fmt(c.value)} ${unit}${c.detail ? `, ${c.detail}` : ""}`}
+            aria-label={`${c.label}: ${fmt(c.value, l)} ${unit}${c.detail ? `, ${c.detail}` : ""}`}
             onPointerEnter={() => setActive(i)}
             onPointerLeave={() => setActive(null)}
             onFocus={() => setActive(i)}
@@ -96,7 +104,7 @@ export function ColumnChart({ columns, unit, description, height = 200 }: { colu
           <p className="text-xs text-muted">{tip.label}</p>
           <p>
             <strong className="tabular-nums">
-              {fmt(tip.value)} {unit}
+              {fmt(tip.value, l)} {unit}
             </strong>
           </p>
           {tip.detail && <p className="text-xs text-muted">{tip.detail}</p>}

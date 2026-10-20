@@ -2,9 +2,11 @@ import "server-only";
 import { z } from "zod";
 import { generateStructured } from "@/lib/ai/generate";
 import type { PlanContent } from "@/lib/ai/schemas";
-import { allergyOptions, type Intake } from "@/lib/intake";
+import type { Intake } from "@/lib/intake";
 import { formatNumber } from "@/lib/format";
 import type { WeeklyAdjustment, WeeklyData } from "@/lib/weekly";
+import { defineCopy, type Locale } from "@/i18n/config";
+import { checkinLabel, intakeLabels } from "@/i18n/options";
 
 /**
  * Concrete aanwijzingen na een weegmoment: kleine aanpassingen binnen het
@@ -50,6 +52,14 @@ Regels:
 - Schrijf in kort, warm Nederlands en spreek de klant aan met je/jij. Geen medische claims.
 - Laat "nutrition" leeg (null) als er niets aan de voeding verandert, en "training" leeg als er niets aan de training verandert.`;
 
+/** Taalinstructie voor Engelstalige klanten (komt achter de vaste systeemprompt). */
+const LANGUAGE_EN = `## Taal: Engels
+Deze klant gebruikt de Engelstalige website. Schrijf "summary", "meal", "change" en "exercise" in kort, warm en natuurlijk Brits Engels (en-GB) en spreek de klant aan met "you". Dit gaat voor op de aanwijzing om in het Nederlands te schrijven.
+- Noem maaltijden en oefeningen zoals ze in het schema hieronder staan (bijv. "Breakfast (every day)" of "Dinner Monday").
+- Gebruik metrische eenheden (g, ml, kg, kcal) en schrijf decimalen met een punt.
+- Gegevens van de klant kunnen deels Nederlands zijn; vertaal wat je daaruit overneemt naar het Engels.
+- De JSON-sleutels en de structuur blijven ongewijzigd.`;
+
 function nutritionBlock(content: Extract<PlanContent, { type: "voeding" }>): string {
   const seen = new Set<string>();
   const lines: string[] = [];
@@ -69,91 +79,127 @@ function trainingBlock(content: Extract<PlanContent, { type: "training" }>): str
     .join("\n");
 }
 
-export async function weeklyInstructions(input: {
-  decision: WeeklyAdjustment;
-  data: WeeklyData;
-  intake: Intake;
-  nutrition: Extract<PlanContent, { type: "voeding" }> | null;
-  training: Extract<PlanContent, { type: "training" }> | null;
-}): Promise<Pick<WeeklyAdjustment, "nutrition" | "trainingPlan">> {
+export async function weeklyInstructions(
+  input: {
+    decision: WeeklyAdjustment;
+    data: WeeklyData;
+    intake: Intake;
+    nutrition: Extract<PlanContent, { type: "voeding" }> | null;
+    training: Extract<PlanContent, { type: "training" }> | null;
+  },
+  /** De taal waarin de aanwijzingen voor de klant worden geschreven. */
+  l: Locale = "nl",
+): Promise<Pick<WeeklyAdjustment, "nutrition" | "trainingPlan">> {
   const { decision, data, intake } = input;
   const wantsNutrition = decision.kcal !== 0 && input.nutrition;
   const wantsTraining = decision.training && input.training;
   if (!wantsNutrition && !wantsTraining) return {};
 
-  const allergies = [...intake.allergies.map((a) => allergyOptions[a]), ...(intake.otherAllergies ? [intake.otherAllergies] : [])];
+  const num = (n: number, digits = 0) => formatNumber(n, digits, l);
+  const answer = (v: string) => checkinLabel(l, v);
+  const allergyLabels = intakeLabels(l).allergy;
+  const allergies = [...intake.allergies.map((a) => allergyLabels[a]), ...(intake.otherAllergies ? [intake.otherAllergies] : [])];
   const prompt = [
     "## Beslissing",
     wantsNutrition
-      ? `Voeding: ${decision.kcal > 0 ? "verhoog" : "verlaag"} de inname met ongeveer ${Math.abs(decision.kcal)} kcal per dag (nieuw dagdoel ${formatNumber(decision.calories ?? 0)} kcal). Reden: ${decision.nutritionReason}`
+      ? `Voeding: ${decision.kcal > 0 ? "verhoog" : "verlaag"} de inname met ongeveer ${Math.abs(decision.kcal)} kcal per dag (nieuw dagdoel ${num(decision.calories ?? 0)} kcal). Reden: ${decision.nutritionReason}`
       : "Voeding: geen aanpassing (nutrition = null).",
     wantsTraining ? `Training: ${decision.training}. Reden: ${decision.trainingReason}` : "Training: geen aanpassing (training = null).",
     "",
     "## Weegmoment van de klant",
-    `Gewicht: ${formatNumber(data.weightKg, 1)} kg`,
-    data.hunger ? `Honger: ${data.hunger}` : null,
-    data.energy ? `Energie: ${data.energy}` : null,
-    data.nutritionAdherence ? `Voedingsschema gevolgd: ${data.nutritionAdherence}` : null,
-    data.trainingAdherence ? `Trainingen gedaan: ${data.trainingAdherence}` : null,
-    data.difficulty ? `Zwaarte trainingen: ${data.difficulty}` : null,
+    `Gewicht: ${num(data.weightKg, 1)} kg`,
+    data.hunger ? `Honger: ${answer(data.hunger)}` : null,
+    data.energy ? `Energie: ${answer(data.energy)}` : null,
+    data.nutritionAdherence ? `Voedingsschema gevolgd: ${answer(data.nutritionAdherence)}` : null,
+    data.trainingAdherence ? `Trainingen gedaan: ${answer(data.trainingAdherence)}` : null,
+    data.difficulty ? `Zwaarte trainingen: ${answer(data.difficulty)}` : null,
     data.comments ? `Opmerking: ${data.comments}` : null,
     "",
     "## Klant",
     `Allergieën (strikt vermijden): ${allergies.length ? allergies.join(", ") : "geen"}`,
     `Lust niet: ${intake.dislikes ?? "niets opgegeven"}`,
     intake.injuries ? `Blessures of klachten: ${intake.injuries}` : null,
-    wantsNutrition ? `\n## Huidig voedingsschema (dagdoel ${formatNumber(input.nutrition!.targets.calories)} kcal)\n${nutritionBlock(input.nutrition!)}` : null,
+    wantsNutrition ? `\n## Huidig voedingsschema (dagdoel ${num(input.nutrition!.targets.calories)} kcal)\n${nutritionBlock(input.nutrition!)}` : null,
     wantsTraining ? `\n## Huidig trainingsschema\n${trainingBlock(input.training!)}` : null,
   ]
-    .filter((l) => l !== null)
+    .filter((line) => line !== null)
     .join("\n");
 
-  const result = await generateStructured(instructionsSchema, SYSTEM, prompt, { effort: "medium", maxTokens: 8000 });
+  const system = l === "en" ? [SYSTEM, LANGUAGE_EN] : SYSTEM;
+  const result = await generateStructured(instructionsSchema, system, prompt, { effort: "medium", maxTokens: 8000 });
   return {
     nutrition: wantsNutrition && result.nutrition ? result.nutrition : undefined,
     trainingPlan: wantsTraining && result.training ? result.training : undefined,
   };
 }
 
+const fallbackCopy = defineCopy({
+  nl: {
+    less: (kcal: number) => `Eet vanaf nu ongeveer ${kcal} kcal per dag minder.`,
+    everyDay: "Elke dag",
+    lessTip: "Gebruik de tips onder 'Tussentijds bijsturen' in je schema, bijvoorbeeld wat minder noten, olie of rijst.",
+    more: (kcal: number) => `Eet vanaf nu ongeveer ${kcal} kcal per dag meer.`,
+    snackMeal: "Tussendoortje (elke dag)",
+    snack: (name: string, kcal: number) => `Neem er elke dag een snack bij, bijvoorbeeld: ${name} (${kcal} kcal).`,
+    proteinSnack: "Neem er elke dag een eiwitrijk tussendoortje bij.",
+    harder: "Pak een iets zwaarder gewicht (1-2 kg) of doe 1-2 herhalingen meer per set.",
+    lighter: "Gebruik ongeveer 10% minder gewicht of doe 2 herhalingen minder, en neem wat langer rust.",
+    simpler: "Doe per oefening één set minder, zodat elke training korter is.",
+    trainingSummary: "We passen je trainingen aan.",
+    allExercises: "Alle oefeningen",
+  },
+  en: {
+    less: (kcal: number) => `From now on, eat about ${kcal} kcal less per day.`,
+    everyDay: "Every day",
+    lessTip: "Use the tips in your plan for adjusting along the way, for example slightly less nuts, oil or rice.",
+    more: (kcal: number) => `From now on, eat about ${kcal} kcal more per day.`,
+    snackMeal: "Snack (every day)",
+    snack: (name: string, kcal: number) => `Add a snack every day, for example: ${name} (${kcal} kcal).`,
+    proteinSnack: "Add a protein-rich snack every day.",
+    harder: "Use a slightly heavier weight (1-2 kg) or do 1-2 more reps per set.",
+    lighter: "Use about 10% less weight or do 2 fewer reps, and rest a little longer.",
+    simpler: "Do one set fewer per exercise, so each workout is shorter.",
+    trainingSummary: "We're adjusting your workouts.",
+    allExercises: "All exercises",
+  },
+});
+
 /** Vaste aanwijzingen als Claude (tijdelijk) niet beschikbaar is. */
-export function fallbackInstructions(input: {
-  decision: WeeklyAdjustment;
-  nutrition: Extract<PlanContent, { type: "voeding" }> | null;
-  training: Extract<PlanContent, { type: "training" }> | null;
-}): Pick<WeeklyAdjustment, "nutrition" | "trainingPlan"> {
+export function fallbackInstructions(
+  input: {
+    decision: WeeklyAdjustment;
+    nutrition: Extract<PlanContent, { type: "voeding" }> | null;
+    training: Extract<PlanContent, { type: "training" }> | null;
+  },
+  l: Locale = "nl",
+): Pick<WeeklyAdjustment, "nutrition" | "trainingPlan"> {
   const { decision } = input;
+  const c = fallbackCopy[l];
   const out: Pick<WeeklyAdjustment, "nutrition" | "trainingPlan"> = {};
   if (decision.kcal !== 0 && input.nutrition) {
     const snack = input.nutrition.plan.snackIdeas[0];
     out.nutrition =
       decision.kcal < 0
         ? {
-            summary: `Eet vanaf nu ongeveer ${Math.abs(decision.kcal)} kcal per dag minder.`,
-            swaps: [
-              { meal: "Elke dag", change: "Gebruik de tips onder 'Tussentijds bijsturen' in je schema, bijvoorbeeld wat minder noten, olie of rijst.", kcal: decision.kcal },
-            ],
+            summary: c.less(Math.abs(decision.kcal)),
+            swaps: [{ meal: c.everyDay, change: c.lessTip, kcal: decision.kcal }],
           }
         : {
-            summary: `Eet vanaf nu ongeveer ${decision.kcal} kcal per dag meer.`,
+            summary: c.more(decision.kcal),
             swaps: [
               {
-                meal: "Tussendoortje (elke dag)",
-                change: snack ? `Neem er elke dag een snack bij, bijvoorbeeld: ${snack.name} (${snack.kcal} kcal).` : "Neem er elke dag een eiwitrijk tussendoortje bij.",
+                meal: c.snackMeal,
+                change: snack ? c.snack(snack.name, snack.kcal) : c.proteinSnack,
                 kcal: decision.kcal,
               },
             ],
           };
   }
   if (decision.training && input.training) {
-    const change =
-      decision.training === "zwaarder"
-        ? "Pak een iets zwaarder gewicht (1-2 kg) of doe 1-2 herhalingen meer per set."
-        : decision.training === "lichter"
-          ? "Gebruik ongeveer 10% minder gewicht of doe 2 herhalingen minder, en neem wat langer rust."
-          : "Doe per oefening één set minder, zodat elke training korter is.";
+    const change = decision.training === "zwaarder" ? c.harder : decision.training === "lichter" ? c.lighter : c.simpler;
     out.trainingPlan = {
-      summary: decision.trainingReason ?? "We passen je trainingen aan.",
-      changes: [{ exercise: "Alle oefeningen", change }],
+      summary: decision.trainingReason ?? c.trainingSummary,
+      changes: [{ exercise: c.allExercises, change }],
     };
   }
   return out;

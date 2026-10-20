@@ -1,8 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { useEffect, useRef } from "react";
+import { defineCopy } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
 import type { AccountTab } from "@/lib/account-types";
+
+const copy = defineCopy({
+  nl: { nav: "Mijn schema's", open: "(open)" },
+  en: { nav: "My plans", open: "(open)" },
+});
 
 /**
  * De tabbladen van Mijn schema's. Op een smal scherm schuiven ze horizontaal;
@@ -17,6 +24,7 @@ export function AccountTabsNav({
   active: AccountTab;
   checkinOpen: boolean;
 }) {
+  const c = copy[useLocale()];
   const list = useRef<HTMLUListElement>(null);
   useEffect(() => {
     const el = list.current?.querySelector<HTMLElement>("[aria-current=page]");
@@ -27,7 +35,7 @@ export function AccountTabsNav({
   }, [active]);
 
   return (
-    <nav aria-label="Mijn schema's" className="relative mt-6 mb-8 border-b border-line">
+    <nav aria-label={c.nav} className="relative mt-6 mb-8 border-b border-line">
       <ul ref={list} className="-mb-px flex gap-1 overflow-x-auto [scrollbar-width:none] sm:gap-2">
         {tabs.map((t) => {
           const on = t.id === active;
@@ -42,7 +50,7 @@ export function AccountTabsNav({
               >
                 {t.icon}
                 {t.label}
-                {t.id === "check-in" && checkinOpen && <span className="size-2 rounded-full bg-accent-500" aria-label="(open)" role="img" />}
+                {t.id === "check-in" && checkinOpen && <span className="size-2 rounded-full bg-accent-500" aria-label={c.open} role="img" />}
               </Link>
             </li>
           );

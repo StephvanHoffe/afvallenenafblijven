@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { ExternalLink, LogOut } from "lucide-react";
 import { adminLogout } from "@/app/beheer/actions";

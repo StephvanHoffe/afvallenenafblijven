@@ -1,3 +1,5 @@
+import { intlLocale, type Locale } from "@/i18n/config";
+
 /**
  * Centrale bedrijfs- en site-instellingen.
  *
@@ -55,6 +57,7 @@ export const site = {
     startsAt: "2026-12-01T00:00:00+01:00",
     endsAt: "2027-01-31T23:59:59+01:00",
     label: "Lanceringsactie",
+    labelEn: "Launch offer",
   },
 
   /** Lengte van een periode: abonnees krijgen elke 28 dagen een nieuw schema, na hun check-in. */
@@ -89,8 +92,8 @@ export function isLaunchOfferActive(now: Date): boolean {
   return t >= Date.parse(o.startsAt) && t <= Date.parse(o.endsAt);
 }
 
-export function launchOfferEndLabel(): string {
-  return new Intl.DateTimeFormat("nl-NL", {
+export function launchOfferEndLabel(l: Locale = "nl"): string {
+  return new Intl.DateTimeFormat(intlLocale(l), {
     day: "numeric",
     month: "long",
     year: "numeric",

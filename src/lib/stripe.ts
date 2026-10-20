@@ -10,6 +10,7 @@ import {
 } from "@/config/pricing";
 import { isLaunchOfferActive, site } from "@/config/site";
 import { addMonthsClamped } from "@/lib/dates";
+import { localeUrl, type Locale } from "@/i18n/config";
 
 /**
  * Stripe-koppeling. Producten, prijzen en de lanceringskorting worden
@@ -111,6 +112,7 @@ export interface CheckoutInput {
   duration: DurationId;
   email: string;
   name: string;
+  locale?: Locale;
 }
 
 export async function createCheckoutSession(input: CheckoutInput): Promise<string> {
@@ -122,16 +124,18 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
     duration: input.duration,
   };
   const discounts = isLaunchOfferActive(new Date()) ? [{ coupon: await ensureLaunchCoupon() }] : undefined;
+  const l = input.locale ?? "nl";
+  const months = durations[input.duration].months;
 
   const session = await stripe().checkout.sessions.create({
     mode: subscription ? "subscription" : "payment",
     line_items: [{ price, quantity: 1 }],
     customer_email: input.email,
-    locale: "nl",
+    locale: l,
     billing_address_collection: "auto",
     ...(discounts ? { discounts } : { allow_promotion_codes: true }),
-    success_url: `${site.url}/bedankt?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${site.url}/start?stap=plan&geannuleerd=1`,
+    success_url: localeUrl(site.url, l, "/bedankt?session_id={CHECKOUT_SESSION_ID}"),
+    cancel_url: localeUrl(site.url, l, "/start?stap=plan&geannuleerd=1"),
     client_reference_id: input.intakeId,
     metadata,
     ...(subscription
@@ -148,9 +152,14 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
         }),
     custom_text: {
       submit: {
-        message: subscription
-          ? `Je betaalt nu de eerste maand. Daarna schrijven we elke maand automatisch af via SEPA-incasso.${durations[input.duration].months > 1 ? ` De minimale looptijd is ${durations[input.duration].months} maanden, daarna is je abonnement maandelijks opzegbaar.` : " Je abonnement is maandelijks opzegbaar."} Je schema wordt direct gemaakt.`
-          : "Je schema wordt direct na betaling gemaakt. Dit is een eenmalige aankoop, geen abonnement.",
+        message:
+          l === "en"
+            ? subscription
+              ? `You pay for the first month now. After that we collect the amount automatically every month by SEPA Direct Debit.${months > 1 ? ` The minimum term is ${months} months; after that you can cancel your subscription monthly.` : " You can cancel your subscription monthly."} Your plan will be created right away.`
+              : "Your plan is created straight after payment. This is a one-off purchase, not a subscription."
+            : subscription
+              ? `Je betaalt nu de eerste maand. Daarna schrijven we elke maand automatisch af via SEPA-incasso.${months > 1 ? ` De minimale looptijd is ${months} maanden, daarna is je abonnement maandelijks opzegbaar.` : " Je abonnement is maandelijks opzegbaar."} Je schema wordt direct gemaakt.`
+              : "Je schema wordt direct na betaling gemaakt. Dit is een eenmalige aankoop, geen abonnement.",
       },
     },
   });
@@ -197,12 +206,15 @@ export async function retrieveCheckoutSession(sessionId: string) {
   return stripe().checkout.sessions.retrieve(sessionId);
 }
 
-/** Link naar het Stripe-klantportaal: betaalgegevens en facturen. Opzeggen regelen we zelf. */
-export async function billingPortalUrl(stripeCustomerId: string, returnPath = "/account/abonnement"): Promise<string> {
+/**
+ * Link naar het Stripe-klantportaal: betaalgegevens en facturen. Opzeggen regelen we zelf.
+ * Het portaal en de terugkeerlink volgen de taal van de klant.
+ */
+export async function billingPortalUrl(stripeCustomerId: string, returnPath = "/account/abonnement", l: Locale = "nl"): Promise<string> {
   const session = await stripe().billingPortal.sessions.create({
     customer: stripeCustomerId,
-    locale: "nl",
-    return_url: `${site.url}${returnPath}`,
+    locale: l === "en" ? "en-GB" : "nl",
+    return_url: localeUrl(site.url, l, returnPath),
   });
   return session.url;
 }

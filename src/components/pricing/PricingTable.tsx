@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { useState } from "react";
 import { Check, Sparkles } from "lucide-react";
 import {
@@ -8,15 +8,65 @@ import {
   applyPercentOff,
   billingDescription,
   bundleSavings,
+  durationFor,
   durations,
   monthlyPrice,
   commitmentTotal,
-  products,
+  productFor,
   savingsPercent,
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
+import { defineCopy } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
 import { euro, euroAmount } from "@/lib/format";
+
+const copy = defineCopy({
+  nl: {
+    chooseTerm: "Kies een looptijd",
+    shortDuration: (months: number) => `${months} mnd`,
+    backToSubscription: "Toch liever een voordelig abonnement?",
+    showOneOff: "Liever geen abonnement? Bekijk een los schema",
+    choose: { voeding: "Kies voeding", training: "Kies training", bundel: "Kies de bundel" },
+    popular: "Meest gekozen",
+    oneOff: "eenmalig",
+    perMonth: "/ maand",
+    oneOffNote: "Eén schema voor 4 weken. Geen abonnement.",
+    monthlyNote: "Maandelijks afgeschreven via automatische incasso. Maandelijks opzegbaar.",
+    termNote: (term: string, total: string) =>
+      `Maandelijks afgeschreven via automatische incasso. Minimaal ${term} (samen ${total}), daarna maandelijks opzegbaar.`,
+    savePercent: (n: number) => `${n}% voordeliger dan per maand`,
+    bundleOneOff: (amount: string) => `${amount} goedkoper dan los`,
+    bundleMonthly: (amount: string) => `Bespaar ${amount} p/m t.o.v. los`,
+    launch: (oneOff: boolean, price: string, regular: string) =>
+      `Lanceringsactie: ${oneOff ? "nu" : "eerste maand"} ${price} in plaats van ${regular}`,
+    renewal: "Elke 4 weken een nieuw, bijgestuurd schema",
+    selected: "Gekozen ✓",
+    vat: "Prijzen incl. btw",
+  },
+  en: {
+    chooseTerm: "Choose a term",
+    shortDuration: (months: number) => `${months} mo`,
+    backToSubscription: "Prefer a better-value subscription after all?",
+    showOneOff: "Rather not subscribe? See a one-off plan",
+    choose: { voeding: "Choose nutrition", training: "Choose training", bundel: "Choose the bundle" },
+    popular: "Most popular",
+    oneOff: "one-off",
+    perMonth: "/ month",
+    oneOffNote: "One plan for 4 weeks. No subscription.",
+    monthlyNote: "Billed monthly by direct debit. Cancel any month.",
+    termNote: (term: string, total: string) =>
+      `Billed monthly by direct debit. Minimum ${term} (${total} in total), then cancel any month.`,
+    savePercent: (n: number) => `${n}% cheaper than monthly`,
+    bundleOneOff: (amount: string) => `${amount} cheaper than buying separately`,
+    bundleMonthly: (amount: string) => `Save ${amount} a month vs. buying separately`,
+    launch: (oneOff: boolean, price: string, regular: string) =>
+      `Launch offer: ${oneOff ? "now" : "first month"} ${price} instead of ${regular}`,
+    renewal: "A new, fine-tuned plan every 4 weeks",
+    selected: "Selected ✓",
+    vat: "Prices incl. VAT",
+  },
+});
 
 interface Props {
   /** Toon alleen deze producten (standaard alle drie). */
@@ -40,11 +90,12 @@ export function DurationToggle({
   onChange: (d: DurationId) => void;
   product?: ProductId;
 }) {
+  const c = copy[useLocale()];
   return (
     <div className="flex flex-col items-center gap-3">
       <div
         role="radiogroup"
-        aria-label="Kies een looptijd"
+        aria-label={c.chooseTerm}
         className="grid w-full max-w-xl grid-cols-4 gap-1 rounded-full border border-line bg-white p-1 shadow-[var(--shadow-soft)]"
       >
         {SUBSCRIPTION_DURATIONS.map((d) => {
@@ -61,7 +112,7 @@ export function DurationToggle({
                 active ? "bg-brand-900 text-white shadow" : "text-ink/75 hover:bg-brand-50"
               }`}
             >
-              {durations[d].label.replace(" maanden", " mnd").replace(" maand", " mnd")}
+              {c.shortDuration(durations[d].months)}
               {save > 0 && (
                 <span
                   className={`absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-0.5 text-[0.6875rem] leading-none font-extrabold whitespace-nowrap ${
@@ -81,7 +132,7 @@ export function DurationToggle({
         className={`text-sm font-semibold underline underline-offset-2 ${value === "eenmalig" ? "text-brand-700" : "text-muted hover:text-ink"}`}
         aria-pressed={value === "eenmalig"}
       >
-        {value === "eenmalig" ? "Toch liever een voordelig abonnement?" : "Liever geen abonnement? Bekijk een los schema"}
+        {value === "eenmalig" ? c.backToSubscription : c.showOneOff}
       </button>
     </div>
   );
@@ -126,15 +177,17 @@ function PriceCard({
   onSelect?: Props["onSelect"];
   selected?: boolean;
 }) {
-  const p = products[product];
-  const d = durations[duration];
+  const l = useLocale();
+  const c = copy[l];
+  const p = productFor(product, l);
+  const d = durationFor(duration, l);
   const perMonth = monthlyPrice(product, duration);
   const total = commitmentTotal(product, duration);
   const save = savingsPercent(product, duration);
   const oneOff = d.months === 0;
   const launchPrice = launch?.active ? applyPercentOff(perMonth, launch.percentOff) : null;
 
-  const cta = `Kies ${p.shortName.toLowerCase() === "bundel" ? "de bundel" : p.shortName.toLowerCase()}`;
+  const cta = c.choose[product];
   const href = `/start?plan=${product}&looptijd=${duration}`;
 
   return (
@@ -147,47 +200,38 @@ function PriceCard({
     >
       {featured && (
         <span className="absolute -top-3.5 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-lime-glow px-3.5 py-1 text-xs font-extrabold tracking-wide text-brand-950 uppercase">
-          <Sparkles className="size-3.5" aria-hidden /> Meest gekozen
+          <Sparkles className="size-3.5" aria-hidden /> {c.popular}
         </span>
       )}
       <h3 className={`text-xl font-extrabold ${featured ? "text-white" : ""}`}>{p.name}</h3>
       <p className={`mt-1 text-sm ${featured ? "text-white/75" : "text-muted"}`}>{p.tagline}</p>
 
       <div className="mt-6 flex items-end gap-1.5">
-        <span className="text-[2.75rem] leading-none font-extrabold tracking-tight">€{euroAmount(perMonth)}</span>
+        <span className="text-[2.75rem] leading-none font-extrabold tracking-tight">€{euroAmount(perMonth, l)}</span>
         <span className={`pb-1 text-sm font-semibold ${featured ? "text-white/70" : "text-muted"}`}>
-          {oneOff ? "eenmalig" : "/ maand"}
+          {oneOff ? c.oneOff : c.perMonth}
         </span>
       </div>
       <p className={`mt-2 min-h-10 text-sm ${featured ? "text-white/75" : "text-muted"}`}>
-        {oneOff ? (
-          "Eén schema voor 4 weken. Geen abonnement."
-        ) : d.months === 1 ? (
-          "Maandelijks afgeschreven via automatische incasso. Maandelijks opzegbaar."
-        ) : (
-          <>
-            Maandelijks afgeschreven via automatische incasso. Minimaal {d.label} (samen {euro(total)}), daarna
-            maandelijks opzegbaar.
-          </>
-        )}
+        {oneOff ? c.oneOffNote : d.months === 1 ? c.monthlyNote : c.termNote(d.label, euro(total, l))}
       </p>
 
       <div className="mt-3 flex min-h-7 flex-wrap gap-2">
         {save > 0 && (
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${featured ? "bg-white/10 text-lime-glow" : "bg-brand-50 text-brand-700"}`}>
-            {save}% voordeliger dan per maand
+            {c.savePercent(save)}
           </span>
         )}
         {product === "bundel" && bundleSavings(duration) > 0 && (
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${featured ? "bg-white/10 text-lime-glow" : "bg-brand-50 text-brand-700"}`}>
-            {oneOff ? `${euro(bundleSavings(duration))} goedkoper dan los` : `Bespaar ${euro(bundleSavings(duration))} p/m t.o.v. los`}
+            {oneOff ? c.bundleOneOff(euro(bundleSavings(duration), l)) : c.bundleMonthly(euro(bundleSavings(duration), l))}
           </span>
         )}
       </div>
 
       {launchPrice !== null && (
         <p className={`mt-3 rounded-2xl px-3 py-2 text-sm font-semibold ${featured ? "bg-lime-glow/15 text-lime-glow" : "bg-accent-50 text-accent-600"}`}>
-          Lanceringsactie: {oneOff ? "nu" : "eerste maand"} {euro(launchPrice)} in plaats van {euro(perMonth)}
+          {c.launch(oneOff, euro(launchPrice, l), euro(perMonth, l))}
         </p>
       )}
 
@@ -201,7 +245,7 @@ function PriceCard({
         {!oneOff && (
           <li className="flex gap-2.5">
             <Check className={`mt-0.5 size-5 shrink-0 ${featured ? "text-lime-glow" : "text-brand-600"}`} aria-hidden />
-            <span>Elke 4 weken een nieuw, bijgestuurd schema</span>
+            <span>{c.renewal}</span>
           </li>
         )}
       </ul>
@@ -213,7 +257,7 @@ function PriceCard({
             onClick={() => onSelect(product, duration)}
             className={`${featured ? "btn-glow" : "btn-primary"} w-full`}
           >
-            {selected ? "Gekozen ✓" : cta}
+            {selected ? c.selected : cta}
           </button>
         ) : (
           <Link href={href} className={`${featured ? "btn-glow" : "btn-primary"} w-full`}>
@@ -221,7 +265,7 @@ function PriceCard({
           </Link>
         )}
         <p className={`mt-3 text-center text-xs ${featured ? "text-white/60" : "text-muted"}`}>
-          {billingDescription(duration)} · Prijzen incl. btw
+          {billingDescription(duration, l)} · {c.vat}
         </p>
       </div>
     </div>

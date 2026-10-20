@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { AdminLoginForm } from "@/app/beheer/inloggen/LoginForm";
 import { LogoMark } from "@/components/Logo";
 import { isDemoMode } from "@/lib/admin/auth";

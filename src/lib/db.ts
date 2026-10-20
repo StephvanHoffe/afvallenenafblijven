@@ -136,6 +136,57 @@ create table if not exists weekly_logs (
 alter table customers add column if not exists weekly_reminders boolean not null default true;
 alter table orders add column if not exists weekly_reminded_at timestamptz;
 create index if not exists intakes_created_idx on intakes(created_at);
+
+-- Taal van de klant: e-mails, schema's en PDF's in het Nederlands of Engels.
+alter table intakes add column if not exists locale text not null default 'nl';
+alter table customers add column if not exists locale text not null default 'nl';
+
+-- Gekoppelde gezondheidsapps (Withings direct, overige via een aggregator).
+create table if not exists health_connections (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers(id) on delete cascade,
+  provider text not null,
+  external_user_id text,
+  access_token text,
+  refresh_token text,
+  expires_at timestamptz,
+  sources text[] not null default '{}',
+  status text not null default 'active',
+  error text,
+  consent_at timestamptz not null default now(),
+  connected_at timestamptz not null default now(),
+  last_sync_at timestamptz,
+  unique (customer_id, provider)
+);
+create index if not exists health_connections_external_idx on health_connections(provider, external_user_id);
+
+-- Eén regel per klant, dag en koppeling: stappen, actieve calorieën en gewicht.
+create table if not exists health_days (
+  customer_id uuid not null references customers(id) on delete cascade,
+  day date not null,
+  provider text not null,
+  source text not null default '',
+  steps integer,
+  active_kcal integer,
+  active_minutes integer,
+  weight_kg numeric(5,2),
+  updated_at timestamptz not null default now(),
+  primary key (customer_id, day, provider)
+);
+
+-- Geregistreerde trainingen (workouts) uit de gekoppelde apps.
+create table if not exists health_workouts (
+  customer_id uuid not null references customers(id) on delete cascade,
+  provider text not null,
+  external_id text not null,
+  source text not null default '',
+  started_at timestamptz not null,
+  minutes integer not null,
+  kcal integer,
+  sport text,
+  primary key (customer_id, provider, external_id)
+);
+create index if not exists health_workouts_started_idx on health_workouts(customer_id, started_at);
 `;
 
 /** Geeft de SQL-client terug nadat het schema gegarandeerd bestaat. */

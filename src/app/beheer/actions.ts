@@ -2,7 +2,8 @@
 
 import { after } from "next/server";
 import { redirect } from "next/navigation";
-import { products } from "@/config/pricing";
+import { productFor } from "@/config/pricing";
+import { toLocale } from "@/i18n/config";
 import { endAdminSession, isAdminConfigured, isDemoMode, passwordMatches, requireAdmin, startAdminSession } from "@/lib/admin/auth";
 import { loginUrl } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,6 +12,8 @@ import { syncSubscription } from "@/lib/fulfillment";
 import { processOrderPlans, processPlan, startNextPeriod } from "@/lib/plans";
 import { getCustomer, getOrder, plansForOrder } from "@/lib/repo";
 import { cancelSubscription } from "@/lib/stripe";
+import { connectionsForCustomer } from "@/lib/health/repo";
+import { disconnect } from "@/lib/health/sync";
 
 export interface LoginState {
   error?: string;
@@ -71,13 +74,15 @@ export async function resendPlanEmail(formData: FormData): Promise<void> {
   if (!plan || !customer) back(formData, "niet-gevonden");
   const period = (await plansForOrder(plan.order_id)).filter((p) => p.seq === plan.seq && p.status === "ready");
   if (period.length === 0) back(formData, "nog-niet-klaar");
+  const l = toLocale(customer.locale);
   await sendMail(
     plansReadyEmail({
       to: customer.email,
       name: customer.name,
       types: period.map((p) => p.type),
-      link: await loginUrl(customer.id),
+      link: await loginUrl(customer.id, undefined, l),
       seq: plan.seq,
+      locale: l,
     }),
   );
   back(formData, "mail-verstuurd");
@@ -87,7 +92,8 @@ export async function sendCustomerLoginLink(formData: FormData): Promise<void> {
   await guard(formData);
   const customer = await getCustomer(String(formData.get("klant") ?? ""));
   if (!customer) back(formData, "niet-gevonden");
-  await sendMail(loginEmail({ to: customer.email, name: customer.name, link: await loginUrl(customer.id) }));
+  const l = toLocale(customer.locale);
+  await sendMail(loginEmail({ to: customer.email, name: customer.name, link: await loginUrl(customer.id, undefined, l), locale: l }));
   back(formData, "inloglink-verstuurd");
 }
 
@@ -104,8 +110,9 @@ export async function adminCancelSubscription(formData: FormData): Promise<void>
     cancellationEmail({
       to: customer.email,
       name: customer.name,
-      productName: products[order.product].name,
+      productName: productFor(order.product, toLocale(customer.locale)).name,
       endsAt: end ? new Date(end * 1000) : null,
+      locale: toLocale(customer.locale),
     }),
   );
   back(formData, "opgezegd");
@@ -136,6 +143,8 @@ export async function deleteCustomer(formData: FormData): Promise<void> {
   const active = await sql`
     select 1 from orders where customer_id = ${customerId} and status in ('active', 'past_due') and duration <> 'eenmalig'`;
   if (active.length > 0) back(formData, "eerst-opzeggen");
+  // Koppelingen met gezondheidsapps eerst bij de aanbieder afmelden (Junction bewaart anders zelf data).
+  for (const conn of await connectionsForCustomer(customerId)) await disconnect(conn);
   await sql`delete from customers where id = ${customerId}`;
   redirect("/beheer/klanten?melding=verwijderd");
 }

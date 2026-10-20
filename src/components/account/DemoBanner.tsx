@@ -1,7 +1,9 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Info } from "lucide-react";
+import { getLocale } from "@/i18n/server";
 
-export function DemoBanner({ children }: { children: React.ReactNode }) {
+export async function DemoBanner({ children }: { children: React.ReactNode }) {
+  const l = await getLocale();
   return (
     <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 text-[0.9375rem]">
       <p className="flex items-start gap-2">
@@ -9,7 +11,7 @@ export function DemoBanner({ children }: { children: React.ReactNode }) {
         <span>{children}</span>
       </p>
       <Link href="/start" className="btn-primary !px-5 !py-2.5 text-sm">
-        Start je eigen plan
+        {l === "en" ? "Start your own plan" : "Start je eigen plan"}
       </Link>
     </div>
   );

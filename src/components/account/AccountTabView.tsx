@@ -5,33 +5,39 @@ import { OverviewTab } from "@/components/account/tabs/OverviewTab";
 import { ProgressTab } from "@/components/account/tabs/ProgressTab";
 import { SchemasTab } from "@/components/account/tabs/SchemasTab";
 import { SubscriptionTab } from "@/components/account/tabs/SubscriptionTab";
+import type { ConnectionNotice } from "@/components/account/health/HealthConnections";
+import { getLocale } from "@/i18n/server";
 import type { AccountNotice, AccountTab, AccountView } from "@/lib/account-types";
 
 /** Eén tabblad van Mijn schema's, met de kop en de tabbladen erboven. */
-export function AccountTabView({
+export async function AccountTabView({
   tab,
   view,
   base,
   demo = false,
   notice = null,
+  connectionNotice = null,
 }: {
   tab: AccountTab;
   view: AccountView;
   base: string;
   demo?: boolean;
   notice?: AccountNotice;
+  /** Melding na het koppelen van een gezondheidsapp (?koppeling=...). */
+  connectionNotice?: ConnectionNotice;
 }) {
+  const l = await getLocale();
   const checkinOpen = view.orders.some(
     (o) => o.checkin?.status === "open" || o.checkin?.status === "overdue" || o.weekly?.status === "open",
   );
   return (
-    <AccountShell name={view.name} base={base} active={tab} demo={demo} checkinOpen={checkinOpen}>
-      {tab === "overzicht" && <OverviewTab view={view} base={base} demo={demo} notice={notice} />}
-      {tab === "schemas" && <SchemasTab view={view} demo={demo} />}
-      {tab === "voortgang" && <ProgressTab view={view} base={base} />}
-      {tab === "check-in" && <CheckinTab view={view} base={base} demo={demo} notice={notice} />}
-      {tab === "gegevens" && <DetailsTab view={view} base={base} />}
-      {tab === "abonnement" && <SubscriptionTab view={view} demo={demo} notice={notice} />}
+    <AccountShell name={view.name} base={base} active={tab} l={l} demo={demo} checkinOpen={checkinOpen}>
+      {tab === "overzicht" && <OverviewTab view={view} base={base} demo={demo} notice={notice} l={l} />}
+      {tab === "schemas" && <SchemasTab view={view} demo={demo} l={l} />}
+      {tab === "voortgang" && <ProgressTab view={view} base={base} l={l} />}
+      {tab === "check-in" && <CheckinTab view={view} base={base} demo={demo} notice={notice} l={l} />}
+      {tab === "gegevens" && <DetailsTab view={view} base={base} l={l} demo={demo} connectionNotice={connectionNotice} />}
+      {tab === "abonnement" && <SubscriptionTab view={view} demo={demo} notice={notice} l={l} />}
     </AccountShell>
   );
 }

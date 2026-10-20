@@ -1,3 +1,4 @@
+import type { Intake } from "@/lib/intake";
 import { z } from "zod";
 import type { NutritionTargets } from "@/lib/calculations";
 
@@ -122,5 +123,7 @@ export type PlanContent =
       targets: NutritionTargets;
       /** Totale bijstelling van het caloriedoel na check-ins (kcal per dag). */
       adjustmentKcal?: number;
+      /** Activiteitsniveau waarmee gerekend is (kan door gemeten stappen afwijken van de intake). */
+      activity?: Intake["activity"];
     }
   | { type: "training"; plan: TrainingPlan };

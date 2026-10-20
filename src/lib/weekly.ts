@@ -1,5 +1,6 @@
 import type { DurationId } from "@/config/pricing";
 import { calorieAdjustment, MAX_CALORIE_OFFSET, type CheckinData } from "@/lib/checkin";
+import { defineCopy, type Locale } from "@/i18n/config";
 
 /**
  * Het wekelijkse weegmoment. Tussen twee check-ins kan de klant elke week
@@ -102,44 +103,76 @@ export function weeklyWindow(input: {
 
 export const isLowTrainingAdherence = (v?: string) => v === "Ongeveer de helft" || v === "Weinig of geen";
 
+/** Uitleg bij de bijsturing na een weegmoment, in de taal van de klant. */
+const decisionCopy = defineCopy({
+  nl: {
+    tired: "Je had vaak honger en weinig energie. Daarom eet je nu 100 kcal per dag meer, zodat je het goed volhoudt.",
+    harder: "Je vond de trainingen te licht. Daarom maken we ze iets zwaarder.",
+    lighter: "Je vond de trainingen te zwaar. Daarom maken we ze iets lichter, zodat je met goede techniek kunt trainen.",
+    simpler: "Het lukte niet om alle trainingen te doen. Daarom maken we ze korter en eenvoudiger, zodat ze beter in je week passen.",
+    adjusted: "We hebben je schema voor de rest van deze periode bijgestuurd.",
+    onTrack: "Je ligt op koers. Je schema blijft zoals het is; ga zo door!",
+  },
+  en: {
+    tired: "You were often hungry and low on energy. So you'll now eat 100 kcal more per day, to help you keep it up.",
+    harder: "You found the workouts too easy. So we're making them a little harder.",
+    lighter: "You found the workouts too hard. So we're making them a little lighter, so you can train with good technique.",
+    simpler: "You weren't able to do all the workouts. So we're making them shorter and simpler, so they fit into your week better.",
+    adjusted: "We've adjusted your plan for the rest of this period.",
+    onTrack: "You're on track. Your plan stays as it is; keep it up!",
+  },
+});
+
+/** Korte omschrijving van een bijsturing van de training, bijv. "zwaarder" of "harder". */
+export function trainingDirectionLabel(direction: TrainingDirection, l: Locale = "nl"): string {
+  return l === "en" ? { zwaarder: "harder", lichter: "lighter", eenvoudiger: "simpler" }[direction] : direction;
+}
+
 /**
  * Beslist met vaste regels of het schema na dit weegmoment wordt bijgestuurd.
  * Calorieën: pas na ongeveer twee weken sinds het begin van de periode (of
  * sinds de vorige aanpassing), omdat het gewicht van week tot week
  * schommelt. Uitzondering: veel honger en weinig energie.
  */
-export function decideWeeklyAdjustment(input: {
-  nutrition: boolean;
-  training: boolean;
-  expectedKgPerWeek: number;
-  /** Gewicht en moment waarop we het laatst hebben gekeken (start periode of vorige aanpassing). */
-  reference: { kg: number; at: Date };
-  data: WeeklyData;
-  now: number;
-  /** Caloriedoel zoals het nu is (schema plus eerdere aanpassingen). */
-  calories: number;
-  /** Totale bijstelling tot nu toe, ten opzichte van de berekening. */
-  totalOffset: number;
-  minCalories: number;
-  /** Is er deze periode al een keer verhoogd vanwege honger? */
-  raisedForHunger: boolean;
-}): Pick<WeeklyAdjustment, "kcal" | "calories" | "nutritionReason" | "training" | "trainingReason" | "message"> {
+export function decideWeeklyAdjustment(
+  input: {
+    nutrition: boolean;
+    training: boolean;
+    expectedKgPerWeek: number;
+    /** Gewicht en moment waarop we het laatst hebben gekeken (start periode of vorige aanpassing). */
+    reference: { kg: number; at: Date };
+    data: WeeklyData;
+    now: number;
+    /** Caloriedoel zoals het nu is (schema plus eerdere aanpassingen). */
+    calories: number;
+    /** Totale bijstelling tot nu toe, ten opzichte van de berekening. */
+    totalOffset: number;
+    minCalories: number;
+    /** Is er deze periode al een keer verhoogd vanwege honger? */
+    raisedForHunger: boolean;
+  },
+  l: Locale = "nl",
+): Pick<WeeklyAdjustment, "kcal" | "calories" | "nutritionReason" | "training" | "trainingReason" | "message"> {
+  const c = decisionCopy[l];
   let kcal = 0;
   let nutritionReason: string | undefined;
   if (input.nutrition) {
     const weeks = (input.now - new Date(input.reference.at).getTime()) / (7 * DAY);
     const decision =
       weeks >= 1.5
-        ? calorieAdjustment({
-            expectedKgPerWeek: input.expectedKgPerWeek,
-            fromKg: input.reference.kg,
-            toKg: input.data.weightKg,
-            weeks,
-            checkin: input.data as CheckinData,
-            minWeeks: 1.5,
-          })
+        ? calorieAdjustment(
+            {
+              expectedKgPerWeek: input.expectedKgPerWeek,
+              fromKg: input.reference.kg,
+              toKg: input.data.weightKg,
+              weeks,
+              checkin: input.data as CheckinData,
+              minWeeks: 1.5,
+            },
+            l,
+          )
         : input.data.hunger === "Vaak" && input.data.energy === "Laag" && !input.raisedForHunger
-          ? { kcal: 100, reason: "Je had vaak honger en weinig energie. Daarom eet je nu 100 kcal per dag meer, zodat je het goed volhoudt." }
+          ? { kcal: 100, reason: c.tired }
           : null;
     if (decision) {
       const capped = Math.max(-MAX_CALORIE_OFFSET, Math.min(MAX_CALORIE_OFFSET, input.totalOffset + decision.kcal)) - input.totalOffset;
@@ -156,20 +189,17 @@ export function decideWeeklyAdjustment(input: {
   if (input.training) {
     if (input.data.difficulty === "Te licht") {
       training = "zwaarder";
-      trainingReason = "Je vond de trainingen te licht. Daarom maken we ze iets zwaarder.";
+      trainingReason = c.harder;
     } else if (input.data.difficulty === "Te zwaar") {
       training = "lichter";
-      trainingReason = "Je vond de trainingen te zwaar. Daarom maken we ze iets lichter, zodat je met goede techniek kunt trainen.";
+      trainingReason = c.lighter;
     } else if (isLowTrainingAdherence(input.data.trainingAdherence)) {
       training = "eenvoudiger";
-      trainingReason = "Het lukte niet om alle trainingen te doen. Daarom maken we ze korter en eenvoudiger, zodat ze beter in je week passen.";
+      trainingReason = c.simpler;
     }
   }
 
-  const message =
-    kcal || training
-      ? "We hebben je schema voor de rest van deze periode bijgestuurd."
-      : "Je ligt op koers. Je schema blijft zoals het is; ga zo door!";
+  const message = kcal || training ? c.adjusted : c.onTrack;
   return { kcal, calories: input.nutrition ? input.calories + kcal : undefined, nutritionReason, training, trainingReason, message };
 }
 

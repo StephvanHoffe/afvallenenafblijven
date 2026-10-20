@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
+import { useLocale } from "@/i18n/client";
 
 /**
  * Lijngrafiek over de tijd (gewicht, taille). Eén gemeten reeks in de
@@ -37,14 +39,34 @@ const C = {
   surface: "#ffffff",
 };
 
+const copy = defineCopy({
+  nl: { chart: "grafiek", keys: "Gebruik de pijltjestoetsen om per meting de waarde te zien.", expected: "verwacht" },
+  en: { chart: "chart", keys: "Use the arrow keys to see the value for each measurement.", expected: "expected" },
+});
+
 const TZ = "Europe/Amsterdam";
-const monthFmt = new Intl.DateTimeFormat("nl-NL", { month: "short", timeZone: TZ });
-const dayFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", timeZone: TZ });
-const longFmt = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: TZ });
 const DAY = 24 * 60 * 60 * 1000;
 
-function fmt(n: number, decimals: number) {
-  return n.toLocaleString("nl-NL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+type DateFormats = { month: Intl.DateTimeFormat; day: Intl.DateTimeFormat; long: Intl.DateTimeFormat };
+const dateFormats = new Map<Locale, DateFormats>();
+
+/** Datumweergaven per taal (één keer aangemaakt). */
+function formats(l: Locale): DateFormats {
+  let f = dateFormats.get(l);
+  if (!f) {
+    const locale = intlLocale(l);
+    f = {
+      month: new Intl.DateTimeFormat(locale, { month: "short", timeZone: TZ }),
+      day: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: TZ }),
+      long: new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: TZ }),
+    };
+    dateFormats.set(l, f);
+  }
+  return f;
+}
+
+function fmt(n: number, decimals: number, l: Locale) {
+  return n.toLocaleString(intlLocale(l), { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function niceStep(range: number, maxTicks: number) {
@@ -63,6 +85,8 @@ function interpolate(points: ChartPoint[], t: number): number | null {
 }
 
 export function TimeChart({ measured, projection, reference, unit, decimals = 1, height = 260, description, compact = false }: Props) {
+  const l = useLocale();
+  const text = copy[l];
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [active, setActive] = useState<number | null>(null);
@@ -100,6 +124,7 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
 
     // Datumlabels: per maand, of per week bij een korte periode.
     const xTicks: { t: number; label: string }[] = [];
+    const { day: dayFmt, month: monthFmt } = formats(l);
     if (t1 - t0 < 60 * DAY) {
       for (let t = t0; t <= t1; t += 7 * DAY) xTicks.push({ t, label: dayFmt.format(t) });
     } else {
@@ -112,7 +137,7 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
       }
     }
     return { t0, t1, y0, y1, ticks, xTicks };
-  }, [pts, proj, reference, compact]);
+  }, [pts, proj, reference, compact, l]);
 
   const x = (t: number) => m.left + ((t - geo.t0) / Math.max(geo.t1 - geo.t0, 1)) * plotW;
   const y = (v: number) => m.top + (1 - (v - geo.y0) / Math.max(geo.y1 - geo.y0, 1e-6)) * plotH;
@@ -186,8 +211,8 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
         className="relative rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-brand-100"
         tabIndex={0}
         role="group"
-        aria-roledescription="grafiek"
-        aria-label={`${description} Gebruik de pijltjestoetsen om per meting de waarde te zien.`}
+        aria-roledescription={text.chart}
+        aria-label={`${description} ${text.keys}`}
         onKeyDown={onKey}
         onFocus={() => setActive((a) => a ?? pts.length - 1)}
         onBlur={() => setActive(null)}
@@ -198,7 +223,7 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
             <g key={v}>
               <line x1={m.left} x2={m.left + plotW} y1={y(v)} y2={y(v)} stroke={C.grid} strokeWidth="1" />
               <text x={m.left - 8} y={y(v)} dy="0.32em" textAnchor="end" fontSize="11" fill={C.text} className="tabular-nums">
-                {fmt(v, Number.isInteger(v) ? 0 : 1)}
+                {fmt(v, Number.isInteger(v) ? 0 : 1, l)}
               </text>
             </g>
           ))}
@@ -213,7 +238,7 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
             <g>
               <line x1={m.left} x2={m.left + plotW} y1={refY} y2={refY} stroke={C.reference} strokeWidth="1.5" strokeDasharray="2 3" />
               <text x={m.left + plotW + 6} y={refY} dy={refLabelBelow ? "1.1em" : "0.32em"} fontSize="11" fill={C.text}>
-                {fmt(reference.v, decimals)} {unit}
+                {fmt(reference.v, decimals, l)} {unit}
               </text>
             </g>
           )}
@@ -246,7 +271,7 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
 
           {last && (
             <text x={x(last.t) + 10} y={y(last.v)} dy={labelBelow ? "1.3em" : "-0.6em"} fontSize="12" fontWeight="700" fill={C.ink}>
-              {fmt(last.v, decimals)} {unit}
+              {fmt(last.v, decimals, l)} {unit}
             </text>
           )}
 
@@ -272,11 +297,11 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
               right: tipOnLeft ? width - tipLeft + 12 : undefined,
             }}
           >
-            <p className="text-xs text-muted">{longFmt.format(hovered.t)}</p>
+            <p className="text-xs text-muted">{formats(l).long.format(hovered.t)}</p>
             <p className="mt-0.5 flex items-center gap-2">
               <span className="inline-block h-0.5 w-3 rounded" style={{ background: C.measured }} aria-hidden />
               <strong className="tabular-nums">
-                {fmt(hovered.v, decimals)} {unit}
+                {fmt(hovered.v, decimals, l)} {unit}
               </strong>
               <span className="text-muted">{hovered.label}</span>
             </p>
@@ -284,9 +309,9 @@ export function TimeChart({ measured, projection, reference, unit, decimals = 1,
               <p className="mt-0.5 flex items-center gap-2">
                 <span className="inline-block h-0.5 w-3 rounded" style={{ background: C.projection }} aria-hidden />
                 <strong className="tabular-nums">
-                  {fmt(expected, decimals)} {unit}
+                  {fmt(expected, decimals, l)} {unit}
                 </strong>
-                <span className="text-muted">verwacht</span>
+                <span className="text-muted">{text.expected}</span>
               </p>
             )}
           </div>

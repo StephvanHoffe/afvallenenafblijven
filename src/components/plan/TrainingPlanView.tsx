@@ -3,13 +3,56 @@ import type { TrainingPlan } from "@/lib/ai/schemas";
 import { ChangesCard } from "@/components/plan/ChangesCard";
 import { PlanTabs } from "@/components/plan/PlanTabs";
 import { isTrainingDay, restLabel, workoutShortName } from "@/lib/plan-format";
+import { defineCopy, type Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
 
 type Workout = TrainingPlan["workouts"][number];
 
-function WeekStrip({ schedule }: { schedule: TrainingPlan["weekSchedule"] }) {
+const copy = defineCopy({
+  nl: {
+    yourWeek: "Jouw week",
+    exercises: (n: number) => `${n} oefeningen`,
+    warmup: (minutes: number) => `Eerst: warming-up (${minutes} min)`,
+    tapExercise: "Tik op een oefening voor uitleg, intensiteit en een alternatief.",
+    rest: "rust",
+    intensity: "Intensiteit:",
+    howTo: "Zo doe je het",
+    alternative: "Alternatief:",
+    finisher: "Afsluiter:",
+    cooldown: "Tot slot: cooling-down",
+    stepsCardio: "Stappen & cardio",
+    recovery: "Herstel",
+    tabsLabel: "Onderdelen van je trainingsschema",
+    tabProgression: "Opbouw in 4 weken",
+    tabTips: "Herstel & veiligheid",
+    previewNote: "In je eigen schema staan alle trainingen voor jouw aantal trainingsdagen, afgestemd op jouw materiaal en niveau.",
+  },
+  en: {
+    yourWeek: "Your week",
+    exercises: (n: number) => `${n} exercises`,
+    warmup: (minutes: number) => `First: warm-up (${minutes} min)`,
+    tapExercise: "Tap an exercise for instructions, intensity and an alternative.",
+    rest: "rest",
+    intensity: "Intensity:",
+    howTo: "How to do it",
+    alternative: "Alternative:",
+    finisher: "Finisher:",
+    cooldown: "To finish: cool-down",
+    stepsCardio: "Steps & cardio",
+    recovery: "Recovery",
+    tabsLabel: "Sections of your workout plan",
+    tabProgression: "4-week progression",
+    tabTips: "Recovery & safety",
+    previewNote: "Your own plan includes every workout for your number of training days, tailored to your equipment and level.",
+  },
+});
+
+type Copy = (typeof copy)[Locale];
+
+function WeekStrip({ schedule, c }: { schedule: TrainingPlan["weekSchedule"]; c: Copy }) {
   return (
-    <section aria-label="Jouw week" className="avoid-break overflow-hidden rounded-[var(--radius-card)] bg-brand-900 text-white">
-      <p className="px-5 pt-4 text-xs font-bold tracking-wide text-lime-glow uppercase">Jouw week</p>
+    <section aria-label={c.yourWeek} className="avoid-break overflow-hidden rounded-[var(--radius-card)] bg-brand-900 text-white">
+      <p className="px-5 pt-4 text-xs font-bold tracking-wide text-lime-glow uppercase">{c.yourWeek}</p>
       <ol className="grid gap-2 p-4 pt-3 sm:grid-cols-7">
         {schedule.map((d) => {
           const training = isTrainingDay(d.activity);
@@ -44,7 +87,7 @@ function Collapsible({ icon, title, children }: { icon: React.ReactNode; title: 
   );
 }
 
-function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan }) {
+function WorkoutPanel({ workout, plan, c }: { workout: Workout; plan: TrainingPlan; c: Copy }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -56,11 +99,11 @@ function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan 
           <span className="inline-flex items-center gap-1.5 rounded-full bg-sand px-3 py-1.5">
             <Timer className="size-4" aria-hidden /> ± {workout.minutes} min
           </span>
-          <span className="rounded-full bg-sand px-3 py-1.5">{workout.exercises.length} oefeningen</span>
+          <span className="rounded-full bg-sand px-3 py-1.5">{c.exercises(workout.exercises.length)}</span>
         </p>
       </div>
 
-      <Collapsible icon={<Flame className="size-5 text-accent-500" aria-hidden />} title={`Eerst: warming-up (${plan.warmup.minutes} min)`}>
+      <Collapsible icon={<Flame className="size-5 text-accent-500" aria-hidden />} title={c.warmup(plan.warmup.minutes)}>
         <ol className="list-decimal space-y-1 pl-5">
           {plan.warmup.steps.map((s) => (
             <li key={s}>{s}</li>
@@ -68,7 +111,7 @@ function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan 
         </ol>
       </Collapsible>
 
-      <p className="text-sm text-muted">Tik op een oefening voor uitleg, intensiteit en een alternatief.</p>
+      <p className="text-sm text-muted">{c.tapExercise}</p>
       <ol className="space-y-2.5">
         {workout.exercises.map((e, i) => (
           <li key={e.name}>
@@ -85,24 +128,26 @@ function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan 
                   <span className="block max-w-[6.5rem] font-extrabold tabular-nums sm:max-w-none sm:whitespace-nowrap">
                     {e.sets} × {e.reps}
                   </span>
-                  <span className="block text-xs text-muted">{restLabel(e.restSeconds)} rust</span>
+                  <span className="block text-xs text-muted">
+                    {restLabel(e.restSeconds)} {c.rest}
+                  </span>
                 </span>
                 <ChevronDown className="size-5 transition-transform group-open:rotate-180" aria-hidden />
               </summary>
               <div className="grid gap-4 border-t border-line px-4 py-4 text-[0.9375rem] sm:grid-cols-2 sm:px-5">
                 <div>
                   <p>
-                    <strong>Intensiteit:</strong> {e.intensity}
+                    <strong>{c.intensity}</strong> {e.intensity}
                   </p>
-                  <h4 className="mt-3 font-bold">Zo doe je het</h4>
+                  <h4 className="mt-3 font-bold">{c.howTo}</h4>
                   <ul className="mt-1 list-disc space-y-1 pl-5">
-                    {e.cues.map((c) => (
-                      <li key={c}>{c}</li>
+                    {e.cues.map((cue) => (
+                      <li key={cue}>{cue}</li>
                     ))}
                   </ul>
                 </div>
                 <p className="self-start rounded-2xl bg-accent-50 p-3 text-sm">
-                  <strong>Alternatief:</strong> {e.alternative}
+                  <strong>{c.alternative}</strong> {e.alternative}
                 </p>
               </div>
             </details>
@@ -114,15 +159,15 @@ function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan 
         <p className="flex gap-2 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-[0.9375rem]">
           <Activity className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
           <span>
-            <strong>Afsluiter:</strong> {workout.finisher}
+            <strong>{c.finisher}</strong> {workout.finisher}
           </span>
         </p>
       )}
 
-      <Collapsible icon={<Snowflake className="size-5 text-brand-600" aria-hidden />} title="Tot slot: cooling-down">
+      <Collapsible icon={<Snowflake className="size-5 text-brand-600" aria-hidden />} title={c.cooldown}>
         <ul className="list-disc space-y-1 pl-5">
-          {plan.cooldown.map((c) => (
-            <li key={c}>{c}</li>
+          {plan.cooldown.map((step) => (
+            <li key={step}>{step}</li>
           ))}
         </ul>
       </Collapsible>
@@ -130,7 +175,7 @@ function WorkoutPanel({ workout, plan }: { workout: Workout; plan: TrainingPlan 
   );
 }
 
-function ProgressionPanel({ plan }: { plan: TrainingPlan }) {
+function ProgressionPanel({ plan, c }: { plan: TrainingPlan; c: Copy }) {
   return (
     <div className="space-y-5">
       <ol className="grid gap-3 md:grid-cols-4">
@@ -144,7 +189,7 @@ function ProgressionPanel({ plan }: { plan: TrainingPlan }) {
       </ol>
       <section className="card p-5 sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-bold">
-          <HeartPulse className="size-5 text-brand-600" aria-hidden /> Stappen & cardio
+          <HeartPulse className="size-5 text-brand-600" aria-hidden /> {c.stepsCardio}
         </h2>
         <p className="mt-2 text-[0.9375rem]">{plan.cardioAndSteps}</p>
       </section>
@@ -152,14 +197,14 @@ function ProgressionPanel({ plan }: { plan: TrainingPlan }) {
   );
 }
 
-function TipsPanel({ plan }: { plan: TrainingPlan }) {
+function TipsPanel({ plan, c }: { plan: TrainingPlan; c: Copy }) {
   return (
     <div className="space-y-5">
       <section className="card p-5 sm:p-6">
-        <h2 className="text-lg font-bold">Herstel</h2>
+        <h2 className="text-lg font-bold">{c.recovery}</h2>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[0.9375rem]">
-          {plan.recoveryTips.map((c) => (
-            <li key={c}>{c}</li>
+          {plan.recoveryTips.map((tip) => (
+            <li key={tip}>{tip}</li>
           ))}
         </ul>
       </section>
@@ -177,7 +222,20 @@ function TipsPanel({ plan }: { plan: TrainingPlan }) {
   );
 }
 
-export function TrainingPlanView({ plan, preview = false, notice }: { plan: TrainingPlan; preview?: boolean; notice?: React.ReactNode }) {
+export async function TrainingPlanView({
+  plan,
+  preview = false,
+  notice,
+  l: locale,
+}: {
+  plan: TrainingPlan;
+  preview?: boolean;
+  notice?: React.ReactNode;
+  /** Taal van de teksten om het schema heen; standaard de taal van de pagina. */
+  l?: Locale;
+}) {
+  const l = locale ?? (await getLocale());
+  const c = copy[l];
   return (
     <div className="space-y-8">
       <header className="space-y-3">
@@ -185,26 +243,26 @@ export function TrainingPlanView({ plan, preview = false, notice }: { plan: Trai
         <p className="max-w-3xl text-lg leading-relaxed text-muted">{plan.intro}</p>
       </header>
 
-      <WeekStrip schedule={plan.weekSchedule} />
-      <ChangesCard changes={plan.changes} />
+      <WeekStrip schedule={plan.weekSchedule} c={c} />
+      <ChangesCard changes={plan.changes} l={l} />
       {notice}
 
       <PlanTabs
-        label="Onderdelen van je trainingsschema"
+        label={c.tabsLabel}
         tabs={[
           ...plan.workouts.map((w, i) => ({
             id: `training-${i + 1}`,
             label: workoutShortName(w.name),
-            content: <WorkoutPanel workout={w} plan={plan} />,
+            content: <WorkoutPanel workout={w} plan={plan} c={c} />,
           })),
-          { id: "opbouw", label: "Opbouw in 4 weken", content: <ProgressionPanel plan={plan} /> },
-          { id: "tips", label: "Herstel & veiligheid", content: <TipsPanel plan={plan} /> },
+          { id: "opbouw", label: c.tabProgression, content: <ProgressionPanel plan={plan} c={c} /> },
+          { id: "tips", label: c.tabTips, content: <TipsPanel plan={plan} c={c} /> },
         ]}
       />
 
       {preview && (
         <p className="rounded-2xl border-2 border-dashed border-brand-300 p-4 text-center text-sm font-semibold text-brand-800">
-          In je eigen schema staan alle trainingen voor jouw aantal trainingsdagen, afgestemd op jouw materiaal en niveau.
+          {c.previewNote}
         </p>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PRODUCT_IDS } from "@/config/pricing";
+import { defineCopy, type Locale } from "@/i18n/config";
 
 /**
  * De intake: alles wat we van een klant weten om een persoonlijk schema te
@@ -86,6 +87,48 @@ export const conditionOptions = {
   anders: "Anders",
 } as const;
 
+/**
+ * Foutmeldingen van de schema's hieronder. De schema's gebruiken de
+ * Nederlandse tekst; met intakeMessage() toon je een melding in een andere taal.
+ */
+const messages = defineCopy({
+  nl: {
+    maxLength: (max: number) => `Maximaal ${max} tekens`,
+    minAge: "Je moet minimaal 18 jaar zijn",
+    height: "Vul een geldige lengte in",
+    weight: "Vul een geldig gewicht in",
+    targetWeight: "Je streefgewicht moet lager zijn dan je huidige gewicht",
+    name: "Vul je voornaam in",
+    email: "Vul een geldig e-mailadres in",
+    healthData: "Geef toestemming voor het verwerken van je gezondheidsgegevens",
+    terms: "Ga akkoord met de algemene voorwaarden",
+    immediateDelivery: "Geef aan dat we direct met je schema mogen beginnen",
+  },
+  en: {
+    maxLength: (max: number) => `Maximum ${max} characters`,
+    minAge: "You must be at least 18 years old",
+    height: "Please enter a valid height",
+    weight: "Please enter a valid weight",
+    targetWeight: "Your target weight must be lower than your current weight",
+    name: "Please enter your first name",
+    email: "Please enter a valid email address",
+    healthData: "Please give consent for us to process your health data",
+    terms: "Please accept the terms and conditions",
+    immediateDelivery: "Please confirm that we may start on your plan straight away",
+  },
+});
+const m = messages.nl;
+
+/** Een foutmelding uit de schema's hieronder in de gegeven taal (onbekende meldingen blijven ongewijzigd). */
+export function intakeMessage(message: string, l: Locale = "nl"): string {
+  if (l === "nl") return message;
+  const max = /^Maximaal (\d+) tekens$/.exec(message);
+  if (max) return messages[l].maxLength(Number(max[1]));
+  const key = (Object.keys(m) as (keyof typeof m)[]).find((k) => m[k] === message);
+  const translated = key ? messages[l][key] : undefined;
+  return typeof translated === "string" ? translated : message;
+}
+
 type Keys<T> = [keyof T & string, ...(keyof T & string)[]];
 const keys = <T extends object>(o: T) => Object.keys(o) as Keys<T>;
 
@@ -93,7 +136,7 @@ const optionalText = (max: number) =>
   z
     .string()
     .trim()
-    .max(max, `Maximaal ${max} tekens`)
+    .max(max, m.maxLength(max))
     .optional()
     .transform((v) => (v ? v : undefined));
 
@@ -102,9 +145,9 @@ export const intakeSchema = z
     product: z.enum(PRODUCT_IDS),
     goal: z.enum(keys(goalOptions)),
     sex: z.enum(keys(sexOptions)),
-    age: z.coerce.number().int().min(18, "Je moet minimaal 18 jaar zijn").max(99),
-    heightCm: z.coerce.number().min(130, "Vul een geldige lengte in").max(230, "Vul een geldige lengte in"),
-    weightKg: z.coerce.number().min(35, "Vul een geldig gewicht in").max(300, "Vul een geldig gewicht in"),
+    age: z.coerce.number().int().min(18, m.minAge).max(99),
+    heightCm: z.coerce.number().min(130, m.height).max(230, m.height),
+    weightKg: z.coerce.number().min(35, m.weight).max(300, m.weight),
     targetWeightKg: z.coerce.number().min(35).max(300).optional(),
     pace: z.enum(keys(paceOptions)).default("gemiddeld"),
     activity: z.enum(keys(activityOptions)),
@@ -140,7 +183,7 @@ export const intakeSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["targetWeightKg"],
-          message: "Je streefgewicht moet lager zijn dan je huidige gewicht",
+          message: m.targetWeight,
         });
       }
     }
@@ -150,16 +193,14 @@ export type Intake = z.infer<typeof intakeSchema>;
 export type IntakeInput = z.input<typeof intakeSchema>;
 
 export const customerSchema = z.object({
-  name: z.string().trim().min(2, "Vul je voornaam in").max(80),
-  email: z.string().trim().toLowerCase().email("Vul een geldig e-mailadres in").max(200),
+  name: z.string().trim().min(2, m.name).max(80),
+  email: z.string().trim().toLowerCase().email(m.email).max(200),
 });
 
 export const consentSchema = z.object({
-  healthData: z.literal(true, { message: "Geef toestemming voor het verwerken van je gezondheidsgegevens" }),
-  terms: z.literal(true, { message: "Ga akkoord met de algemene voorwaarden" }),
-  immediateDelivery: z.literal(true, {
-    message: "Geef aan dat we direct met je schema mogen beginnen",
-  }),
+  healthData: z.literal(true, { message: m.healthData }),
+  terms: z.literal(true, { message: m.terms }),
+  immediateDelivery: z.literal(true, { message: m.immediateDelivery }),
   marketing: z.boolean().default(false),
 });
 

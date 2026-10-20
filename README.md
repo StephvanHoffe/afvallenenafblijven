@@ -27,6 +27,25 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - **Wekelijks weegmoment** (rond dag 7, 14 en 21 van elke periode, ook bij een los schema): gewicht en een paar korte vragen. Vaste regels beslissen of het lopende schema wordt bijgestuurd: ±100 kcal per dag als het gewicht anders verloopt dan gepland (pas na ongeveer 2 weken, of meteen bij veel honger en weinig energie), en zwaarder, lichter of eenvoudiger trainen. Claude zet dat om in concrete aanpassingen binnen het bestaande schema (met een vaste tekst als terugval). De bijsturing staat bovenaan het schema en in de PDF, en telt mee in het volgende schema. Herinnering per e-mail (uit te zetten door de klant). Logica: `src/lib/weekly.ts`.
 - Is het streefgewicht bereikt, dan schakelt het schema automatisch over naar een onderhoudsplan ("afblijven").
 
+**Twee talen: Nederlands en Engels**
+- Nederlands staat zonder voorvoegsel (`/prijzen`), Engels onder `/en` (`/en/prijzen`). De taalwisselaar staat in de kopbalk, het mobiele menu en de footer en houdt je op dezelfde pagina. Zoekmachines krijgen per pagina beide versies door (hreflang en sitemap).
+- Alles is vertaald: pagina's, vragenlijst, prijzen, FAQ, Mijn schema's, voorbeelden, PDF's en e-mails. De juridische teksten zijn ook in het Engels, met de vermelding dat de Nederlandse versie voorgaat.
+- De taal van de klant wordt bij de bestelling opgeslagen (`customers.locale`) en bijgewerkt als de klant een check-in of weegmoment in een andere taal invult. E-mails, de schema's van Claude en de PDF's volgen die taal.
+- Werking: `src/proxy.ts` herschrijft Nederlandse adressen intern naar `/nl/...`; alle pagina's staan in `src/app/[lang]/`. Hulpfuncties staan in `src/i18n/`: `getLocale()` (Server Components), `useLocale()` (Client Components), `requestLocale()` (Server Actions en Route Handlers) en `Link` (zet vanzelf `/en` voor interne links). Teksten staan per bestand in `defineCopy({ nl, en })`.
+- De beheeromgeving blijft Nederlands.
+
+**Koppelingen met gezondheidsapps (optioneel)**
+- Klanten koppelen in Mijn schema's → Mijn gegevens hun app of horloge, met een apart toestemmingsvinkje (gezondheidsgegevens, art. 9 AVG). We halen alleen stappen, actieve minuten en calorieën, trainingen (soort, duur) en gewicht op.
+- **Withings** (weegschalen, Health Mate): rechtstreekse koppeling via de eigen login van Withings. Geen contract nodig.
+- **Apple Health (iPhone/Apple Watch), Garmin, Fitbit, Oura, Polar** en meer: via het platform [Junction](https://junction.com) (EU-regio). Apple Health kan alleen op de iPhone zelf worden uitgelezen; de klant installeert daarom de Junction-app en vult een koppelcode in die de website maakt.
+- **Niet mogelijk zonder eigen app**: Android Health Connect en Samsung Health zonder horloge (die gegevens staan alleen op de telefoon). **Strava** koppelen we bewust niet: de API-voorwaarden verbieden gebruik van de data voor AI.
+- Wat we ermee doen:
+  - Voortgang: stappen per dag, trainingen per week tegenover het schema, actieve minuten, laatste weging, en "wat levert het op": de gewichtsverandering in weken waarin het schema gehaald werd tegenover de andere weken.
+  - Overzicht: trainingen en stappen van deze week.
+  - Weegmoment en check-in worden alvast ingevuld met de laatste weging en het aantal geregistreerde trainingen (de klant kan het aanpassen).
+  - Nieuw schema: het activiteitsniveau volgt de gemeten stappen (hooguit één stap per periode, pas vanaf 10 dagen met metingen), en Claude krijgt de gemeten trainingen en stappen als extra context.
+- Ontkoppelen stopt het ophalen direct en wist alle gegevens van die koppeling. Toegangstokens worden versleuteld opgeslagen. Code: `src/lib/health/`.
+
 **Beheer (`/beheer`)**
 - Inloggen met één wachtwoord (`ADMIN_PASSWORD`, minimaal 12 tekens).
 - Overzicht: terugkerende omzet per maand, nieuwe bestellingen, conversie van gestarte betalingen, bestellingen per dag en actieve abonnementen per plan.
@@ -60,7 +79,9 @@ Belangrijke bestanden:
 | `src/lib/ai/generate.ts` | Generatie en automatische kwaliteitscontrole |
 | `src/lib/calculations.ts` | Berekening van calorieën en macro's |
 | `src/lib/safety.ts` | Veiligheidscheck vóór betaling |
-| `src/app/(site)/` | Alle publieke pagina's, inclusief de juridische |
+| `src/app/[lang]/(site)/` | Alle publieke pagina's (Nederlands en Engels), inclusief de juridische |
+| `src/i18n/` | Talen: adressen, taalwisselaar, vertaalde antwoordopties |
+| `src/lib/health/` | Koppelingen met gezondheidsapps en de berekeningen daarop |
 | `src/app/beheer/` | De beheeromgeving |
 
 ## Lokaal starten
@@ -104,7 +125,12 @@ Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwi
 6. **Claude**: maak een API-sleutel aan op platform.claude.com, zet `ANTHROPIC_API_KEY` en draai `npm run schema:test` om de kwaliteit te beoordelen.
 7. **Cron en beheer**: zet `CRON_SECRET` en een sterk `ADMIN_PASSWORD`. Kijk daarna op `/beheer/instellingen` of alle koppelingen groen zijn.
 8. **Test** de hele flow in Stripe-testmodus: bestellen, schema ontvangen, check-in, opzeggen, opzegging intrekken en herroepen.
-9. **Juridische controle**: laat de voorwaarden, het privacybeleid en de disclaimer controleren door een jurist. Sluit verwerkersovereenkomsten af met Anthropic, je hosting-, database- en e-mailpartij. Voeg de algemene voorwaarden eventueel als PDF toe aan de orderbevestiging.
+9. **Gezondheidsapps (optioneel)**
+   - Zet `HEALTH_ENCRYPTION_KEY` (64 hextekens, bijv. `openssl rand -hex 32`).
+   - **Withings**: maak een app aan op [developer.withings.com](https://developer.withings.com) met callback-URL `https://jouwdomein.nl/api/koppelingen/withings/callback` en zet `WITHINGS_CLIENT_ID` en `WITHINGS_CLIENT_SECRET`. Meldingen van nieuwe metingen komen binnen op `/api/koppelingen/withings/notify` (wordt automatisch aangemeld). Testen zonder weegschaal: `WITHINGS_DEMO=1`.
+   - **Junction**: maak een account op junction.com (kies de EU-regio), zet `JUNCTION_API_KEY` en voeg een webhook toe naar `https://jouwdomein.nl/api/koppelingen/junction/webhook`; zet het signing secret in `JUNCTION_WEBHOOK_SECRET`. Welke apps de klant kan kiezen staat in `JUNCTION_PROVIDERS` (standaard `garmin,fitbit,oura,polar`). Apple Health via de Junction-app vraagt een Grow- of Scale-abonnement bij Junction; zet daarna `JUNCTION_APPLE_HEALTH=1`. Sluit een verwerkersovereenkomst af met Junction.
+   - Fitbit: de oude Fitbit Web API stopt op 30 oktober 2026; Junction gebruikt daarna de Google Health API. Kies bij Junction voor Fitbit dus de nieuwe koppeling.
+10. **Juridische controle**: laat de voorwaarden, het privacybeleid en de disclaimer controleren door een jurist. Sluit verwerkersovereenkomsten af met Anthropic, je hosting-, database- en e-mailpartij. Voeg de algemene voorwaarden eventueel als PDF toe aan de orderbevestiging.
 
 ## Prijzen, actie en garantie aanpassen
 

@@ -8,6 +8,7 @@ import {
   checkinsForOrder,
   claimWeeklyLog,
   completeWeeklyLog,
+  getCustomer,
   getIntake,
   getOrder,
   plansForOrder,
@@ -18,6 +19,7 @@ import {
   type WeeklyLogRow,
 } from "@/lib/repo";
 import { decideWeeklyAdjustment, weeklyKcal, weeklyWindow, type WeeklyAdjustment, type WeeklyData, type WeeklyWindow } from "@/lib/weekly";
+import { toLocale, type Locale } from "@/i18n/config";
 
 /** De lopende periode van een bestelling: nummer, begin en de schema's. */
 function currentPeriod(plans: Plan[]) {
@@ -75,18 +77,21 @@ export async function recordWeeklyLog(input: {
   const targets = period.nutrition?.targets;
   const earlierKcal = weeklyKcal(earlier);
 
-  const decision = decideWeeklyAdjustment({
-    nutrition: includes.includes("voeding") && Boolean(targets),
-    training: includes.includes("training") && Boolean(period.training),
-    expectedKgPerWeek: targets?.expectedKgPerWeek ?? 0,
-    reference,
-    data,
-    now: Date.now(),
-    calories: (targets?.calories ?? 0) + earlierKcal,
-    totalOffset: (period.nutrition?.adjustmentKcal ?? 0) + earlierKcal,
-    minCalories: minimumCalories(intakeRow?.data ?? { sex: "vrouw" }),
-    raisedForHunger: earlier.some((l) => (l.adjustment?.kcal ?? 0) > 0),
-  });
+  const decision = decideWeeklyAdjustment(
+    {
+      nutrition: includes.includes("voeding") && Boolean(targets),
+      training: includes.includes("training") && Boolean(period.training),
+      expectedKgPerWeek: targets?.expectedKgPerWeek ?? 0,
+      reference,
+      data,
+      now: Date.now(),
+      calories: (targets?.calories ?? 0) + earlierKcal,
+      totalOffset: (period.nutrition?.adjustmentKcal ?? 0) + earlierKcal,
+      minCalories: minimumCalories(intakeRow?.data ?? { sex: "vrouw" }),
+      raisedForHunger: earlier.some((l) => (l.adjustment?.kcal ?? 0) > 0),
+    },
+    toLocale(customer.locale),
+  );
   const needsInstructions = decision.kcal !== 0 || Boolean(decision.training);
   const id = await addWeeklyLog({
     customerId: customer.id,
@@ -107,7 +112,10 @@ export async function processWeeklyLog(id: string): Promise<void> {
   const decision: WeeklyAdjustment = log.adjustment;
   let nutrition: Extract<PlanContent, { type: "voeding" }> | null = null;
   let training: Extract<PlanContent, { type: "training" }> | null = null;
+  // De aanwijzingen komen in de taal van de klant (de beslissing zelf is al in die taal opgeslagen).
+  let l: Locale = "nl";
   try {
+    l = toLocale((await getCustomer(log.customer_id))?.locale);
     const order = await getOrder(log.order_id);
     const plans = order ? await plansForOrder(order.id) : [];
     const own = plans.filter((p) => p.seq === log.seq && p.status === "ready");
@@ -115,8 +123,8 @@ export async function processWeeklyLog(id: string): Promise<void> {
     training = (own.find((p) => p.type === "training")?.content ?? null) as typeof training;
     const intake = order ? await getIntake(order.intake_id) : null;
     if (!intake) throw new Error("Intake niet gevonden");
-    const instructions = await weeklyInstructions({ decision, data: log.data, intake: intake.data, nutrition, training });
-    const fallback = fallbackInstructions({ decision, nutrition, training });
+    const instructions = await weeklyInstructions({ decision, data: log.data, intake: intake.data, nutrition, training }, l);
+    const fallback = fallbackInstructions({ decision, nutrition, training }, l);
     await completeWeeklyLog(id, {
       ...decision,
       nutrition: instructions.nutrition ?? fallback.nutrition,
@@ -124,6 +132,6 @@ export async function processWeeklyLog(id: string): Promise<void> {
     });
   } catch (err) {
     console.error(`Aanwijzingen voor weegmoment ${id} mislukt; vaste tekst gebruikt`, err);
-    await completeWeeklyLog(id, { ...decision, ...fallbackInstructions({ decision, nutrition, training }) });
+    await completeWeeklyLog(id, { ...decision, ...fallbackInstructions({ decision, nutrition, training }, l) });
   }
 }

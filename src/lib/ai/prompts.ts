@@ -1,20 +1,10 @@
 import type { NutritionTargets } from "@/lib/calculations";
-import {
-  activityOptions,
-  allergyOptions,
-  budgetOptions,
-  conditionOptions,
-  cookingTimeOptions,
-  dietOptions,
-  experienceOptions,
-  goalOptions,
-  locationOptions,
-  paceOptions,
-  sexOptions,
-  type Intake,
-} from "@/lib/intake";
+import type { Intake } from "@/lib/intake";
 import type { CheckinData } from "@/lib/checkin";
 import { formatNumber } from "@/lib/format";
+import { trainingDirectionLabel, type TrainingDirection } from "@/lib/weekly";
+import type { Locale } from "@/i18n/config";
+import { checkinLabel, intakeLabels } from "@/i18n/options";
 
 /** Context van een vorige periode, zodat elk nieuw schema voortbouwt op het vorige. */
 export interface ProgressContext {
@@ -29,7 +19,18 @@ export interface ProgressContext {
   /** Klachten die bij eerdere check-ins zijn gemeld. */
   earlierInjuries?: string[];
   /** Weegmomenten van de vorige periode, met wat er toen is bijgestuurd. */
-  weekly?: { week: number; weightKg: number; kcal: number; training?: string; note?: string }[];
+  weekly?: { week: number; weightKg: number; kcal: number; training?: TrainingDirection; note?: string }[];
+  /** Gemeten in gekoppelde gezondheidsapps tijdens de vorige periode. */
+  health?: {
+    days: number;
+    avgSteps: number | null;
+    workouts: number;
+    plannedWorkouts: number | null;
+    workoutMinutes: number;
+    walks: number;
+    /** Activiteitsniveau waarmee nu gerekend is, als dat door de metingen is veranderd. */
+    activityChange?: { from: Intake["activity"]; to: Intake["activity"] };
+  };
 }
 
 const WEEKDAYS = "Maandag, Dinsdag, Woensdag, Donderdag, Vrijdag, Zaterdag, Zondag";
@@ -79,24 +80,49 @@ Vervolgschema's (na een check-in):
 
 Het weekoverzicht bevat precies de dagen ${WEEKDAYS}.`;
 
+/**
+ * Taalinstructie voor Engelstalige klanten. De systeemprompts blijven
+ * Nederlands; deze instructie komt erachter als extra systeemtekst.
+ */
+export function languageInstruction(l: Locale, kind: "voeding" | "training"): string | null {
+  if (l !== "en") return null;
+  return [
+    "## Taal: Engels",
+    'Deze klant gebruikt de Engelstalige website. Schrijf ALLE tekst voor de klant in natuurlijk, warm en motiverend Brits Engels (en-GB, met Britse spelling zoals "personalised" en "fibre") en spreek de klant aan met "you". Dit gaat voor op de aanwijzing om in het Nederlands te schrijven; alle inhoudelijke eisen hierboven blijven gewoon gelden.',
+    "- Gebruik metrische eenheden (g, ml, kg, cm, kcal) en schrijf decimalen met een punt (bijv. 0.5 kg).",
+    "- Gebruik Engelse dagnamen (Monday t/m Sunday, in die volgorde) in plaats van Maandag t/m Zondag.",
+    kind === "voeding"
+      ? '- Gebruik Engelse namen voor gerechten, ingrediënten, maaltijdmomenten (Breakfast, Lunch, Snack, Dinner) en de afdelingen van de boodschappenlijst (bijv. "Fruit & veg", "Dairy", "Meat, fish & veggie", "Bread & grains", "Store cupboard"), en Engelse huishoudelijke maten (tbsp, tsp, pieces, slices). De supermarkten en producten blijven dezelfde; bij een typisch Nederlands product zonder gangbare Engelse naam mag je de Nederlandse naam tussen haakjes zetten, zodat de klant het in de winkel herkent (bijv. "low-fat quark (magere kwark)").'
+      : '- Gebruik gangbare Engelse namen voor oefeningen en spiergroepen (bijv. "Goblet squat", "Romanian deadlift", "Glutes & hamstrings") en Engelse notatie voor de intensiteit (bijv. "RPE 7 (3 reps in reserve)"). Rustdagen heten "Rest" of "Active recovery".',
+    "- Gegevens van de klant in de opdracht (antwoorden, opmerkingen, eerdere schema's) kunnen deels Nederlands zijn; vertaal wat je daaruit overneemt naar het Engels.",
+    "- De JSON-sleutels en de structuur blijven ongewijzigd.",
+  ].join("\n");
+}
+
+/** Korte herinnering onderaan de opdracht, zodat de taal niet wegzakt. */
+function languageReminder(l: Locale): string {
+  return l === "en" ? "\nSchrijf alle tekst voor de klant in natuurlijk Brits Engels (zie de taalinstructie); de JSON-sleutels blijven ongewijzigd.\n" : "";
+}
+
 function list(values: string[]): string {
   return values.length ? values.join(", ") : "geen";
 }
 
-function personBlock(name: string, intake: Intake): string {
-  const conditions = intake.conditions.filter((c) => c !== "geen").map((c) => conditionOptions[c]);
+function personBlock(name: string, intake: Intake, l: Locale): string {
+  const o = intakeLabels(l);
+  const conditions = intake.conditions.filter((c) => c !== "geen").map((c) => o.condition[c]);
   return [
     `Voornaam: ${name}`,
-    `Doel: ${goalOptions[intake.goal].label} (${goalOptions[intake.goal].description})`,
-    `Geslacht: ${sexOptions[intake.sex]}`,
+    `Doel: ${o.goal[intake.goal].label} (${o.goal[intake.goal].description})`,
+    `Geslacht: ${o.sex[intake.sex]}`,
     `Leeftijd: ${intake.age} jaar`,
     `Lengte: ${intake.heightCm} cm`,
     `Huidig gewicht: ${intake.weightKg} kg`,
     intake.targetWeightKg ? `Streefgewicht: ${intake.targetWeightKg} kg` : null,
     intake.goal === "afvallen" || intake.goal === "afvallen_strakker"
-      ? `Gewenst tempo: ${paceOptions[intake.pace].label} (${paceOptions[intake.pace].description})`
+      ? `Gewenst tempo: ${o.pace[intake.pace].label} (${o.pace[intake.pace].description})`
       : null,
-    `Dagelijkse activiteit: ${activityOptions[intake.activity].label} – ${activityOptions[intake.activity].description}`,
+    `Dagelijkse activiteit: ${o.activity[intake.activity].label} – ${o.activity[intake.activity].description}`,
     `Medische aandoeningen: ${list(conditions)}${conditions.length ? " (klant heeft overlegd met arts)" : ""}`,
     intake.medication ? `Medicatie: ${intake.medication}` : null,
     intake.notes ? `Overige opmerkingen van de klant: ${intake.notes}` : null,
@@ -105,7 +131,9 @@ function personBlock(name: string, intake: Intake): string {
     .join("\n");
 }
 
-function progressBlock(progress: ProgressContext, kind: "voeding" | "training"): string {
+function progressBlock(progress: ProgressContext, kind: "voeding" | "training", l: Locale): string {
+  const num = (n: number, digits = 0) => formatNumber(n, digits, l);
+  const answer = (v?: string) => (v ? checkinLabel(l, v) : v);
   if (progress.periodNumber <= 1) {
     return 'Dit is het eerste schema van deze klant. Laat "changes" leeg.';
   }
@@ -117,8 +145,8 @@ function progressBlock(progress: ProgressContext, kind: "voeding" | "training"):
   if (w) {
     const change = w.toKg - w.fromKg;
     lines.push(
-      `Gewichtsverloop: van ${formatNumber(w.fromKg, 1)} kg naar ${formatNumber(w.toKg, 1)} kg in ${formatNumber(w.weeks, 1)} weken (${change <= 0 ? "-" : "+"}${formatNumber(Math.abs(change), 1)} kg)${
-        w.expectedKgPerWeek !== undefined ? `; verwacht was ${formatNumber(w.expectedKgPerWeek * w.weeks, 1)} kg` : ""
+      `Gewichtsverloop: van ${num(w.fromKg, 1)} kg naar ${num(w.toKg, 1)} kg in ${num(w.weeks, 1)} weken (${change <= 0 ? "-" : "+"}${num(Math.abs(change), 1)} kg)${
+        w.expectedKgPerWeek !== undefined ? `; verwacht was ${num(w.expectedKgPerWeek * w.weeks, 1)} kg` : ""
       }.`,
     );
   }
@@ -135,20 +163,20 @@ function progressBlock(progress: ProgressContext, kind: "voeding" | "training"):
     lines.push(
       [
         "Check-in van de klant:",
-        item("Huidig gewicht", c.weightKg ? `${formatNumber(c.weightKg, 1)} kg` : undefined),
+        item("Huidig gewicht", c.weightKg ? `${num(c.weightKg, 1)} kg` : undefined),
         item("Taille-omtrek", c.waistCm ? `${c.waistCm} cm` : undefined),
-        item("Energie", c.energy),
-        item("Slaap", c.sleep),
+        item("Energie", answer(c.energy)),
+        item("Slaap", answer(c.sleep)),
         ...(kind === "voeding"
           ? [
-              item("Schema kunnen volgen", c.nutritionAdherence),
-              item("Honger", c.hunger),
+              item("Schema kunnen volgen", answer(c.nutritionAdherence)),
+              item("Honger", answer(c.hunger)),
               item("Vond lekker / wil terugzien", c.likedMeals),
               item("Wil niet meer / minder lekker", c.dislikedMeals),
             ]
           : [
-              item("Trainingen gedaan", c.trainingAdherence),
-              item("Zwaarte van de trainingen", c.difficulty),
+              item("Trainingen gedaan", answer(c.trainingAdherence)),
+              item("Zwaarte van de trainingen", answer(c.difficulty)),
               item("Trainingsdagen per week vanaf nu", c.trainingDays),
               item("Nieuwe klachten of blessures", c.injuries),
             ]),
@@ -164,11 +192,30 @@ function progressBlock(progress: ProgressContext, kind: "voeding" | "training"):
         "Wekelijkse weegmomenten in de vorige periode:",
         ...progress.weekly.map(
           (w) =>
-            `- Week ${w.week}: ${formatNumber(w.weightKg, 1)} kg${w.kcal ? `, calorieën bijgesteld met ${w.kcal > 0 ? "+" : ""}${w.kcal} kcal per dag` : ""}${
-              w.training ? `, training ${w.training} gemaakt` : ""
+            `- Week ${w.week}: ${num(w.weightKg, 1)} kg${w.kcal ? `, calorieën bijgesteld met ${w.kcal > 0 ? "+" : ""}${w.kcal} kcal per dag` : ""}${
+              w.training ? `, training ${trainingDirectionLabel(w.training, l)} gemaakt` : ""
             }${w.note ? ` (opmerking: ${w.note})` : ""}`,
         ),
       ].join("\n"),
+    );
+  }
+  const h = progress.health;
+  if (h) {
+    const o = intakeLabels(l);
+    lines.push(
+      [
+        `Gemeten in de gekoppelde gezondheidsapp(s) van de klant (vorige periode, ${h.days} dagen):`,
+        h.avgSteps !== null ? `- Gemiddeld ${num(h.avgSteps)} stappen per dag` : null,
+        `- Trainingen geregistreerd: ${h.workouts}${h.plannedWorkouts ? ` van de ${h.plannedWorkouts} geplande` : ""}${
+          h.workoutMinutes ? ` (samen ${num(h.workoutMinutes)} minuten)` : ""
+        }${h.walks ? `, plus ${h.walks} wandeling(en)` : ""}`,
+        h.activityChange
+          ? `- Op basis van de stappen rekenen we nu met activiteitsniveau "${o.activity[h.activityChange.to].label}" in plaats van "${o.activity[h.activityChange.from].label}" (al verwerkt in de dagdoelen).`
+          : null,
+        "Gebruik dit als objectieve aanvulling op de check-in. Wijkt het af van wat de klant zelf invulde, ga dan uit van de metingen, maar wees niet belerend: een training zonder horloge wordt niet geregistreerd.",
+      ]
+        .filter(Boolean)
+        .join("\n"),
     );
   }
   if (kind === "training" && progress.earlierInjuries?.length) {
@@ -183,24 +230,26 @@ export function nutritionUserPrompt(
   targets: NutritionTargets,
   progress: ProgressContext,
   feedback?: string,
+  l: Locale = "nl",
 ): string {
+  const o = intakeLabels(l);
   const allergies = [
-    ...intake.allergies.map((a) => allergyOptions[a]),
+    ...intake.allergies.map((a) => o.allergy[a]),
     ...(intake.otherAllergies ? [intake.otherAllergies] : []),
   ];
   return `Maak een persoonlijk 7-daags voedingsschema voor deze klant.
 
 ## Klant
-${personBlock(name, intake)}
+${personBlock(name, intake, l)}
 
 ## Voedingsvoorkeuren
-Eetpatroon: ${dietOptions[intake.diet]}
+Eetpatroon: ${o.diet[intake.diet]}
 Allergieën/intoleranties (strikt vermijden): ${list(allergies)}
 Lust niet / wil niet: ${intake.dislikes ?? "niets opgegeven"}
 Aantal eetmomenten per dag: ${intake.mealsPerDay}
-Kooktijd: ${cookingTimeOptions[intake.cookingTime].label} (${cookingTimeOptions[intake.cookingTime].description})
-Budget: ${budgetOptions[intake.budget]}
-${intake.product === "bundel" ? `Traint ook: ${intake.trainingDays}x per week (${locationOptions[intake.location].label}). Plan op trainingsdagen een eiwitrijke maaltijd binnen 2 uur na de training.` : ""}
+Kooktijd: ${o.cookingTime[intake.cookingTime].label} (${o.cookingTime[intake.cookingTime].description})
+Budget: ${o.budget[intake.budget]}
+${intake.product === "bundel" ? `Traint ook: ${intake.trainingDays}x per week (${o.location[intake.location].label}). Plan op trainingsdagen een eiwitrijke maaltijd binnen 2 uur na de training.` : ""}
 
 ## Berekende dagdoelen (gebruik deze exact)
 Calorieën: ${targets.calories} kcal per dag
@@ -211,25 +260,32 @@ Vezels: minimaal ${targets.fiberG} g
 Water: ongeveer ${targets.waterL} liter
 
 ## Voortgang
-${progressBlock(progress, "voeding")}
-${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}`;
+${progressBlock(progress, "voeding", l)}
+${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}${languageReminder(l)}`;
 }
 
-export function trainingUserPrompt(name: string, intake: Intake, progress: ProgressContext, feedback?: string): string {
+export function trainingUserPrompt(
+  name: string,
+  intake: Intake,
+  progress: ProgressContext,
+  feedback?: string,
+  l: Locale = "nl",
+): string {
+  const o = intakeLabels(l);
   return `Maak een persoonlijk trainingsschema van 4 weken voor deze klant.
 
 ## Klant
-${personBlock(name, intake)}
+${personBlock(name, intake, l)}
 
 ## Trainingsgegevens
-Locatie en materiaal: ${locationOptions[intake.location].label} (${locationOptions[intake.location].description})
-Ervaring: ${experienceOptions[intake.experience].label} – ${experienceOptions[intake.experience].description}
+Locatie en materiaal: ${o.location[intake.location].label} (${o.location[intake.location].description})
+Ervaring: ${o.experience[intake.experience].label} – ${o.experience[intake.experience].description}
 Trainingsdagen per week: ${intake.trainingDays}
 Beschikbare tijd per training: ${intake.sessionMinutes} minuten
 Blessures of klachten: ${intake.injuries ?? "geen opgegeven"}
 ${intake.product === "bundel" ? "De klant volgt ook een voedingsschema van ons; verwijs voor voeding naar dat schema." : ""}
 
 ## Voortgang
-${progressBlock(progress, "training")}
-${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}`;
+${progressBlock(progress, "training", l)}
+${feedback ? `\n## Correctie op een eerdere versie\n${feedback}\n` : ""}${languageReminder(l)}`;
 }

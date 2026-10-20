@@ -1,12 +1,18 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { AccountTabView } from "@/components/account/AccountTabView";
+import type { ConnectionNotice } from "@/components/account/health/HealthConnections";
+import { products } from "@/config/pricing";
+import { defineCopy, localePath, type Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
 import type { AccountNotice, AccountTab } from "@/lib/account-types";
 import { toAccountView } from "@/lib/account-view";
 import { currentCustomer } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
+import { isHealthEnabled } from "@/lib/health/config";
+import { loadHealthView } from "@/lib/health/view-server";
 import {
   checkinsForCustomer,
   latestIntakeForCustomer,
@@ -17,6 +23,29 @@ import {
 } from "@/lib/repo";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+const copy = defineCopy({
+  nl: {
+    noDatabase: "Mijn schema's is nog niet beschikbaar (database niet ingesteld).",
+    title: "Mijn schema's",
+    loginText: "Log in met je e-mailadres om je schema's te bekijken.",
+    login: "Inloggen",
+    curious: "Benieuwd hoe het eruitziet?",
+    example: "Bekijk een voorbeeld",
+    noPlan: "Nog geen schema?",
+    start: "Start de vragenlijst",
+  },
+  en: {
+    noDatabase: "My plans isn't available yet (database not configured).",
+    title: "My plans",
+    loginText: "Log in with your email address to view your plans.",
+    login: "Log in",
+    curious: "Curious what it looks like?",
+    example: "See an example",
+    noPlan: "No plan yet?",
+    start: "Start the questionnaire",
+  },
+});
 
 /** Een tabblad van Mijn schema's voor de ingelogde klant. */
 export function AccountPage({ tab, searchParams }: { tab: AccountTab; searchParams?: SearchParams }) {
@@ -32,15 +61,16 @@ export function AccountPage({ tab, searchParams }: { tab: AccountTab; searchPara
 async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchParams?: SearchParams }) {
   // Altijd per verzoek renderen (ingelogde klant, actuele status).
   await connection();
+  const l = await getLocale();
   if (!isDatabaseConfigured()) {
-    return <NotLoggedIn note="Mijn schema's is nog niet beschikbaar (database niet ingesteld)." />;
+    return <NotLoggedIn l={l} note={copy[l].noDatabase} />;
   }
   const customer = await currentCustomer();
-  if (!customer) return <NotLoggedIn />;
+  if (!customer) return <NotLoggedIn l={l} />;
   const sp = (await searchParams) ?? {};
   // Oude links (bijv. uit e-mails) naar het juiste tabblad sturen.
-  if (tab === "overzicht" && sp.opzeggen === "1") redirect("/account/abonnement?opzeggen=1");
-  if (tab === "overzicht" && sp.opgezegd === "1") redirect("/account/abonnement?opgezegd=1");
+  if (tab === "overzicht" && sp.opzeggen === "1") redirect(localePath(l, "/account/abonnement?opzeggen=1"));
+  if (tab === "overzicht" && sp.opgezegd === "1") redirect(localePath(l, "/account/abonnement?opgezegd=1"));
 
   const [orders, plans, checkins, weekly, intake, targets] = await Promise.all([
     ordersForCustomer(customer.id),
@@ -50,7 +80,12 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
     latestIntakeForCustomer(customer.id),
     nutritionTargetHistory(customer.id),
   ]);
+  // Ingeplande trainingen per week: uit de laatste check-in, anders de vragenlijst (alleen met een trainingsschema).
+  const trains = orders.some((o) => products[o.product].includes.includes("training"));
+  const trainingDays = [...checkins].reverse().find((c) => c.data.trainingDays)?.data.trainingDays ?? intake?.data.trainingDays ?? null;
+  const health = isHealthEnabled() ? await loadHealthView(customer.id, trains ? trainingDays : null) : null;
   const view = toAccountView({
+    health,
     name: customer.name,
     orders,
     plans,
@@ -70,25 +105,29 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
           : sp.opzeggen === "1"
             ? "opzeggen"
             : null;
-  return <AccountTabView tab={tab} view={view} base="/account" notice={notice} />;
+  const koppeling = sp.koppeling;
+  const connectionNotice: ConnectionNotice =
+    koppeling === "gekoppeld" || koppeling === "fout" || koppeling === "geannuleerd" ? koppeling : null;
+  return <AccountTabView tab={tab} view={view} base="/account" notice={notice} connectionNotice={connectionNotice} />;
 }
 
-function NotLoggedIn({ note }: { note?: string }) {
+function NotLoggedIn({ l, note }: { l: Locale; note?: string }) {
+  const c = copy[l];
   return (
     <div className="mx-auto max-w-md text-center">
-      <h1 className="heading-lg">Mijn schema&apos;s</h1>
-      <p className="mt-3 text-muted">{note ?? "Log in met je e-mailadres om je schema's te bekijken."}</p>
+      <h1 className="heading-lg">{c.title}</h1>
+      <p className="mt-3 text-muted">{note ?? c.loginText}</p>
       <Link href="/inloggen" className="btn-primary mt-6">
-        Inloggen
+        {c.login}
       </Link>
       <p className="mt-6 text-sm text-muted">
-        Benieuwd hoe het eruitziet?{" "}
+        {c.curious}{" "}
         <Link href="/voorbeeld/mijn-schemas" className="font-semibold text-brand-700 underline">
-          Bekijk een voorbeeld
+          {c.example}
         </Link>{" "}
-        · Nog geen schema?{" "}
+        · {c.noPlan}{" "}
         <Link href="/start" className="font-semibold text-brand-700 underline">
-          Start de vragenlijst
+          {c.start}
         </Link>
       </p>
     </div>
