@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { Menu } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { MobileMenu } from "@/components/MobileMenu";
 
@@ -36,7 +38,16 @@ export function Header() {
           <Link href="/start" className="btn-primary hidden !px-5 !py-2.5 text-[0.9375rem] sm:inline-flex">
             Start je plan
           </Link>
-          <MobileMenu items={mainNav} />
+          {/* Het menu leest het huidige adres; tot dat bekend is, staat er dezelfde knop. */}
+          <Suspense
+            fallback={
+              <span className="grid size-11 place-items-center rounded-full border border-line bg-white lg:hidden" aria-hidden>
+                <Menu className="size-5" />
+              </span>
+            }
+          >
+            <MobileMenu items={mainNav} />
+          </Suspense>
         </div>
       </div>
     </header>

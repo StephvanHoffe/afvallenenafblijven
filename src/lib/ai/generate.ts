@@ -30,20 +30,21 @@ function anthropic(): Anthropic {
 
 export class PlanGenerationError extends Error {}
 
-async function generateStructured<T extends z.ZodType>(
+export async function generateStructured<T extends z.ZodType>(
   schema: T,
   system: string,
   userPrompt: string,
+  options: { effort?: "low" | "medium" | "high"; maxTokens?: number } = {},
 ): Promise<z.infer<T>> {
   const stream = anthropic().beta.messages.stream({
     model: MODEL,
-    max_tokens: 64000,
+    max_tokens: options.maxTokens ?? 64000,
     // Bij een (onterechte) weigering door de veiligheidsfilters probeert de API
     // het verzoek automatisch opnieuw op het aanbevolen fallback-model.
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: betaZodOutputFormat(schema) },
+    output_config: { effort: options.effort ?? "high", format: betaZodOutputFormat(schema) },
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: userPrompt }],
   });

@@ -6,7 +6,8 @@ import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { checkinWindow, type CheckinWindow } from "@/lib/checkin";
-import { subscriptionCheckinOrders, type CheckinData, type OrderStatus, type PlanStatus } from "@/lib/repo";
+import { subscriptionCheckinOrders, weeklyLogsForCustomer, type CheckinData, type OrderStatus, type PlanStatus } from "@/lib/repo";
+import type { WeeklyAdjustment, WeeklyData } from "@/lib/weekly";
 
 export interface AdminOrderRow {
   id: string;
@@ -64,6 +65,7 @@ export interface AdminCustomerDetail {
   plans: AdminPlanRow[];
   intake: { data: Intake; consents: Record<string, unknown>; createdAt: Date } | null;
   checkins: { data: CheckinData; forSeq: number | null; createdAt: Date }[];
+  weekly: { seq: number; week: number; data: WeeklyData; adjustment: WeeklyAdjustment | null; status: string; createdAt: Date }[];
 }
 
 export interface AdminWithdrawalRow {
@@ -327,6 +329,9 @@ const dbAdminData: AdminData = {
       plans: plans.map(toPlan),
       intake: intake ? { data: intake.data, consents: intake.consents, createdAt: intake.created_at } : null,
       checkins: checkins.map((r) => ({ data: r.data, forSeq: r.for_seq, createdAt: r.created_at })),
+      weekly: (await weeklyLogsForCustomer(id))
+        .reverse()
+        .map((w) => ({ seq: w.seq, week: w.week, data: w.data, adjustment: w.adjustment, status: w.status, createdAt: w.created_at })),
     };
   },
 

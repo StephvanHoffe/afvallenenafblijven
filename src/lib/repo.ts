@@ -5,6 +5,7 @@ import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import type { NutritionTargets } from "@/lib/calculations";
 import type { CheckinData } from "@/lib/checkin";
+import type { WeeklyAdjustment, WeeklyData } from "@/lib/weekly";
 
 export type { CheckinData };
 
@@ -17,6 +18,7 @@ export interface Customer {
   name: string;
   stripe_customer_id: string | null;
   marketing_consent: boolean;
+  weekly_reminders: boolean;
   created_at: Date;
 }
 
@@ -44,6 +46,7 @@ export interface Order {
   monthly_cents: number;
   checkin_reminded_seq: number | null;
   checkin_reminders: number;
+  weekly_reminded_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -362,6 +365,106 @@ export async function checkinsForCustomer(customerId: string): Promise<CheckinRo
   return sql<CheckinRow[]>`
     select data, order_id, for_seq, created_at from checkins
     where customer_id = ${customerId} order by created_at desc`;
+}
+
+// ---------- Weegmomenten ----------
+
+export interface WeeklyLogRow {
+  id: string;
+  customer_id: string;
+  order_id: string;
+  seq: number;
+  week: number;
+  data: WeeklyData;
+  adjustment: WeeklyAdjustment | null;
+  status: string;
+  created_at: Date;
+}
+
+/** Slaat een weegmoment op; geeft null als dit weegmoment al was ingevuld. */
+export async function addWeeklyLog(input: {
+  customerId: string;
+  orderId: string;
+  seq: number;
+  week: number;
+  data: WeeklyData;
+  adjustment: WeeklyAdjustment;
+  status: "ready" | "pending";
+}): Promise<string | null> {
+  const sql = await db();
+  const [row] = await sql<{ id: string }[]>`
+    insert into weekly_logs (customer_id, order_id, seq, week, data, adjustment, status)
+    values (${input.customerId}, ${input.orderId}, ${input.seq}, ${input.week}, ${sql.json(input.data as never)},
+            ${sql.json(input.adjustment as never)}, ${input.status})
+    on conflict (order_id, seq, week) do nothing
+    returning id`;
+  return row?.id ?? null;
+}
+
+export async function weeklyLogsForOrder(orderId: string): Promise<WeeklyLogRow[]> {
+  const sql = await db();
+  return sql<WeeklyLogRow[]>`select * from weekly_logs where order_id = ${orderId} order by seq, week`;
+}
+
+export async function weeklyLogsForCustomer(customerId: string): Promise<WeeklyLogRow[]> {
+  const sql = await db();
+  return sql<WeeklyLogRow[]>`select * from weekly_logs where customer_id = ${customerId} order by created_at`;
+}
+
+/** Claimt een weegmoment waarvan de aanwijzingen nog gemaakt moeten worden. */
+export async function claimWeeklyLog(id: string): Promise<WeeklyLogRow | null> {
+  const sql = await db();
+  const [row] = await sql<WeeklyLogRow[]>`
+    update weekly_logs set status = 'generating', started_at = now()
+    where id = ${id} and (status = 'pending' or (status = 'generating' and started_at < now() - interval '5 minutes'))
+    returning *`;
+  return row ?? null;
+}
+
+export async function completeWeeklyLog(id: string, adjustment: WeeklyAdjustment): Promise<void> {
+  const sql = await db();
+  await sql`update weekly_logs set adjustment = ${sql.json(adjustment as never)}, status = 'ready' where id = ${id}`;
+}
+
+export async function pendingWeeklyLogIds(limit: number): Promise<string[]> {
+  const sql = await db();
+  const rows = await sql<{ id: string }[]>`
+    select id from weekly_logs
+    where status = 'pending' or (status = 'generating' and started_at < now() - interval '5 minutes')
+    order by created_at limit ${limit}`;
+  return rows.map((r) => r.id);
+}
+
+export async function setWeeklyReminders(customerId: string, on: boolean): Promise<void> {
+  const sql = await db();
+  await sql`update customers set weekly_reminders = ${on} where id = ${customerId}`;
+}
+
+/**
+ * Bestellingen met een lopende periode, voor de wekelijkse herinnering: met
+ * het begin van de laatste periode en de weegmomenten die al zijn ingevuld.
+ */
+export async function weeklyReminderOrders(): Promise<
+  (Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string })[]
+> {
+  const sql = await db();
+  return sql<(Order & { last_seq: number; last_start: Date; logged_weeks: number[]; email: string; name: string })[]>`
+    select o.*, p.last_seq, p.last_start, c.email, c.name,
+      coalesce((select array_agg(w.week) from weekly_logs w where w.order_id = o.id and w.seq = p.last_seq), '{}') as logged_weeks
+    from orders o
+    join customers c on c.id = o.customer_id and c.weekly_reminders
+    join lateral (
+      select seq as last_seq, min(created_at) as last_start from plans
+      where order_id = o.id group by seq order by seq desc limit 1
+    ) p on true
+    where o.status in ('active', 'completed')
+      and p.last_start > now() - interval '28 days'
+      and (o.weekly_reminded_at is null or o.weekly_reminded_at < now() - interval '5 days')`;
+}
+
+export async function markWeeklyReminded(orderId: string): Promise<void> {
+  const sql = await db();
+  await sql`update orders set weekly_reminded_at = now() where id = ${orderId}`;
 }
 
 // ---------- Herroepingen ----------

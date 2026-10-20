@@ -223,6 +223,7 @@ export const demoAdminData: AdminData = {
         consents: { healthData: true, terms: true, immediateDelivery: true, marketing: customer.marketing },
         createdAt: customer.createdAt,
       },
+      weekly: [],
       checkins: Array.from({ length: Math.max(lastSeq - 1, 0) }, (_, k) => {
         const seq = lastSeq - k;
         const start = ownPlans.find((p) => p.seq === seq)?.createdAt ?? customer.createdAt;

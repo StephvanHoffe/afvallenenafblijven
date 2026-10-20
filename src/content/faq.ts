@@ -49,6 +49,14 @@ export const faq: FaqItem[] = [
   },
   ...guarantee,
   {
+    q: "Hoe lang duurt een periode, en krijg ik elke week een nieuw schema?",
+    a: "Een periode duurt 4 weken. Je krijgt per periode één voedingsschema en/of trainingsschema. Het voedingsschema is een weekmenu van 7 dagen dat je 4 weken volgt, met een boodschappenlijst per week. Het trainingsschema bouwt in 4 weken op, met per week een duidelijke stap. Elke week vul je een weegmoment in; wijkt je voortgang af, dan sturen we het lopende schema meteen bij. Na 4 weken volgt de check-in en maken we je nieuwe schema.",
+  },
+  {
+    q: "Wat gebeurt er met mijn wekelijkse weegmoment?",
+    a: "Je vult je gewicht in en, als je wilt, je taille, energie, honger, hoe goed het schema lukte en hoe zwaar de trainingen voelden. Daalt je gewicht minder snel dan gepland terwijl je het schema goed volgt, dan eet je vanaf dat moment ongeveer 100 kcal per dag minder; gaat het te snel of heb je veel honger, dan juist meer. Vond je de trainingen te licht of te zwaar, dan passen we de gewichten of herhalingen aan. Je ziet precies wat er verandert, bovenaan je schema en in de PDF. We sturen in kleine stappen en nooit onder een veilig minimum.",
+  },
+  {
     q: "Wat als ik niet afval?",
     a: "Aan het einde van elke periode vul je een korte check-in in met je gewicht en hoe het ging (honger, energie, slaap, haalbaarheid). Je volgende schema stellen we daarop bij: valt je gewicht minder snel dan gepland terwijl je het schema goed volgde, dan verlagen we je calorieën iets; gaat het te snel of heb je veel honger, dan juist iets omhoog. In elk voedingsschema staat bovendien hoe je tussentijds zelf kleine aanpassingen doet.",
   },

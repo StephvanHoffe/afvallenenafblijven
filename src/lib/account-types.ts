@@ -1,6 +1,7 @@
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { CheckinData, CheckinWindow } from "@/lib/checkin";
 import type { Intake } from "@/lib/intake";
+import type { WeeklyLog, WeeklyWindow } from "@/lib/weekly";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
 
 /** Wat Mijn schema's van een bestelling toont. */
@@ -17,6 +18,8 @@ export interface DashboardOrder {
   commitmentEndsAt: Date | null;
   /** De verplichte check-in voor de volgende periode (null als die er niet is). */
   checkin: CheckinWindow | null;
+  /** Het wekelijkse weegmoment van de lopende periode (null als er geen is). */
+  weekly: WeeklyWindow | null;
   lastWeightKg: number | null;
 }
 
@@ -42,10 +45,14 @@ export interface AccountView {
   startedAt: Date | null;
   /** Ingevulde check-ins, oudste eerst. */
   checkins: { seq: number | null; date: Date; data: CheckinData }[];
+  /** Wekelijkse weegmomenten, oudste eerst. */
+  weekly: WeeklyLog[];
+  /** Wil de klant een wekelijkse herinnering per e-mail? */
+  weeklyReminders: boolean;
   /** Dagdoelen van elk voedingsschema, oudste eerst. */
   targets: { seq: number; date: Date | null; calories: number; proteinG: number; carbsG: number; fatG: number }[];
 }
 
 export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement";
 
-export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | null;
+export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | null;

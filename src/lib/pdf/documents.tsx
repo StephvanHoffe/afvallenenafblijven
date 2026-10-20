@@ -6,6 +6,7 @@ import { formatDate, formatNumber } from "@/lib/format";
 import { site } from "@/config/site";
 import { pdfText as t } from "@/lib/pdf/text";
 import { isTrainingDay, restLabel, workoutShortName } from "@/lib/plan-format";
+import type { PlanAdjustment } from "@/lib/weekly";
 
 /**
  * PDF-versies van de schema's (A4). Dezelfde inhoud als op de website, maar
@@ -17,6 +18,8 @@ export interface PdfPlan {
   content: PlanContent;
   seq: number;
   generatedAt: Date | null;
+  /** Bijsturingen uit de wekelijkse weegmomenten van deze periode. */
+  adjustments?: PlanAdjustment[];
 }
 
 const c = {
@@ -168,11 +171,41 @@ function Changes({ changes }: { changes: string[] | undefined }) {
   );
 }
 
+function Adjustments({ plan, type }: { plan: PdfPlan; type: "voeding" | "training" }) {
+  const list = (plan.adjustments ?? []).filter((a) => !a.pending);
+  if (list.length === 0) return null;
+  return (
+    <View style={[s.section, s.box, { backgroundColor: c.brand50, borderColor: c.brand200, borderWidth: 1.25 }]} wrap={false}>
+      <Text style={[s.h3, { marginBottom: 2 }]}>{t("Bijgestuurd na je weegmoment")}</Text>
+      <Text style={[s.small, { marginBottom: 5 }]}>{t("Deze aanpassingen gelden voor de rest van deze periode, bovenop het schema.")}</Text>
+      {list.map((a) => (
+        <View key={a.week} style={{ marginBottom: 5 }}>
+          <Text style={{ fontWeight: 700, fontSize: 9 }}>
+            {t(
+              type === "voeding"
+                ? `Week ${a.week}: ${a.kcal > 0 ? "+" : "-"}${Math.abs(a.kcal)} kcal per dag${a.calories ? ` (dagdoel nu ${formatNumber(a.calories)} kcal)` : ""}`
+                : `Week ${a.week}: trainingen ${a.training}`,
+            )}
+          </Text>
+          <Bullets
+            items={
+              type === "voeding"
+                ? (a.nutrition?.swaps ?? []).map((sw) => `${sw.meal}: ${sw.change}`)
+                : (a.trainingPlan?.changes ?? []).map((ch) => `${ch.exercise}: ${ch.change}`)
+            }
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ---------- Voeding ----------
 
-function Targets({ targets }: { targets: NutritionTargets }) {
+function Targets({ targets, adjustedCalories }: { targets: NutritionTargets; adjustedCalories?: number }) {
+  const adjusted = adjustedCalories !== undefined && adjustedCalories !== targets.calories;
   const items = [
-    ["Calorieën", `${formatNumber(targets.calories)} kcal`],
+    [adjusted ? `Calorieën (was ${formatNumber(targets.calories)})` : "Calorieën", `${formatNumber(adjusted ? adjustedCalories : targets.calories)} kcal`],
     ["Eiwit", `${targets.proteinG} g`],
     ["Koolhydraten", `± ${targets.carbsG} g`],
     ["Vet", `± ${targets.fatG} g`],
@@ -341,8 +374,12 @@ function NutritionPages({
         <Running left={running} />
         <Heading title={plan.title} kind="Voedingsschema" name={name} plan={p} />
         <Text style={s.intro}>{t(plan.intro)}</Text>
-        <Targets targets={targets} />
+        <Targets
+          targets={targets}
+          adjustedCalories={p.adjustments?.length ? targets.calories + p.adjustments.reduce((sum, a) => sum + a.kcal, 0) : undefined}
+        />
         <Changes changes={plan.changes} />
+        <Adjustments plan={p} type="voeding" />
         <View style={s.section}>
           <Text style={s.h2}>{t("Zo werkt je schema")}</Text>
           <Bullets items={plan.principles} numbered />
@@ -533,6 +570,7 @@ function TrainingPages({ plan: p, name, fontFamily }: { plan: PdfPlan; name: str
         <Heading title={plan.title} kind="Trainingsschema" name={name} plan={p} />
         <Text style={s.intro}>{t(plan.intro)}</Text>
         <Changes changes={plan.changes} />
+        <Adjustments plan={p} type="training" />
         <View style={s.section}>
           <Text style={s.h2}>{t("Jouw week")}</Text>
         </View>

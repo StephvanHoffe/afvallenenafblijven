@@ -1,15 +1,18 @@
 import { CheckinForm } from "@/app/(site)/account/CheckinForm";
 import { products } from "@/config/pricing";
-import type { AccountView } from "@/lib/account-types";
+import { WeeklyHistory, WeeklySection } from "@/components/account/tabs/WeeklySection";
+import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { describeCheckin } from "@/lib/checkin";
 import { formatDate } from "@/lib/format";
 
-export function CheckinTab({ view, demo }: { view: AccountView; demo: boolean }) {
+export function CheckinTab({ view, base, demo, notice }: { view: AccountView; base: string; demo: boolean; notice: AccountNotice }) {
   const withCheckin = view.orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due") && o.checkin);
   const history = [...view.checkins].reverse();
 
   return (
     <div className="space-y-8">
+      <WeeklySection view={view} base={base} demo={demo} notice={notice} />
+
       {withCheckin.length === 0 && (
         <section className="card p-6 sm:p-8">
           <h2 className="heading-md">Check-in</h2>
@@ -36,6 +39,14 @@ export function CheckinTab({ view, demo }: { view: AccountView; demo: boolean })
                   Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten,
                   zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.
                 </p>
+                {demo && (
+                  <details className="pt-2">
+                    <summary className="cursor-pointer font-bold text-brand-700">Bekijk hoe de check-in eruitziet</summary>
+                    <div className="mt-4 text-ink">
+                      <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo />
+                    </div>
+                  </details>
+                )}
               </div>
             ) : c.status === "submitted" ? (
               <p className="mt-3 text-[0.9375rem] text-muted">Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.</p>
@@ -53,6 +64,8 @@ export function CheckinTab({ view, demo }: { view: AccountView; demo: boolean })
           </section>
         );
       })}
+
+      <WeeklyHistory logs={view.weekly} />
 
       {history.length > 0 && (
         <section>

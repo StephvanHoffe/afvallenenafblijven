@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { DemoBanner } from "@/components/account/DemoBanner";
 import { PlanDocument } from "@/components/plan/PlanDocument";
 import { sampleNutritionPlanFollowUp, sampleTargetsFollowUp } from "@/content/sample-plans";
-import { demoCustomerName, demoPlanDate } from "@/content/demo-account";
+import { DEMO_SEQ, demoCustomerName, demoPlanDate, demoWeekly } from "@/content/demo-account";
+import { adjustmentsFor } from "@/lib/weekly";
 
 export const metadata: Metadata = {
   title: "Voorbeeld: voedingsschema",
@@ -19,6 +20,7 @@ export default function DemoNutritionPage() {
         generatedAt={demoPlanDate}
         backHref="/voorbeeld/mijn-schemas/schemas"
         preview
+        adjustments={adjustmentsFor(demoWeekly, DEMO_SEQ, "voeding")}
         pdfHref="/voorbeeld/pdf/voedingsschema"
         shoppingPdfHref="/voorbeeld/pdf/boodschappenlijst"
         storageKey="afb-boodschappen-voorbeeld"

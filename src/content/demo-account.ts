@@ -1,4 +1,5 @@
 import type { AccountView, DashboardPlan } from "@/lib/account-types";
+import type { WeeklyLog } from "@/lib/weekly";
 import type { Intake } from "@/lib/intake";
 import { sampleTargets, sampleTargetsFollowUp } from "@/content/sample-plans";
 
@@ -62,6 +63,59 @@ const plans: DashboardPlan[] = PERIODS.flatMap((day, i) => {
   }));
 }).reverse();
 
+/** Weegmomenten in periode 4: week 1 op koers, in week 2 bijgestuurd. */
+export const demoWeekly: WeeklyLog[] = [
+  {
+    seq: 4,
+    week: 1,
+    date: at("2027-04-07"),
+    status: "ready",
+    data: { weightKg: 72, energy: "Goed", hunger: "Soms", nutritionAdherence: "Meestal (70-90%)", trainingAdherence: "De meeste", difficulty: "Precies goed" },
+    adjustment: { kcal: 0, calories: 1540, message: "Je ligt op koers. Je schema blijft zoals het is; ga zo door!" },
+  },
+  {
+    seq: 4,
+    week: 2,
+    date: at("2027-04-14"),
+    status: "ready",
+    data: {
+      weightKg: 72.1,
+      waistCm: 86.5,
+      energy: "Goed",
+      hunger: "Bijna nooit",
+      nutritionAdherence: "Bijna altijd (90% of meer)",
+      trainingAdherence: "Alle trainingen",
+      difficulty: "Te licht",
+      comments: "Trainingen gaan steeds makkelijker!",
+    },
+    adjustment: {
+      kcal: -100,
+      calories: 1440,
+      nutritionReason:
+        "Je viel 0,2 kg af, minder dan verwacht (0,9 kg), terwijl je het schema goed volgde. Daarom eet je nu 100 kcal per dag minder.",
+      training: "zwaarder",
+      trainingReason: "Je vond de trainingen te licht. Daarom maken we ze iets zwaarder.",
+      nutrition: {
+        summary: "Je eet vanaf nu ongeveer 100 kcal per dag minder, met dezelfde gerechten.",
+        swaps: [
+          { meal: "Ontbijt: kwarkbowl", change: "Neem 30 g havermout in plaats van 40 g, en 10 g walnoten in plaats van 15 g.", kcal: -60 },
+          { meal: "Avondeten", change: "Neem 150 g krieltjes in plaats van 200 g, of 50 g volkorenrijst (ongekookt) in plaats van 60 g.", kcal: -40 },
+        ],
+      },
+      trainingPlan: {
+        summary: "Je trainingen worden iets zwaarder: een kleine stap per oefening.",
+        changes: [
+          { exercise: "Goblet squat", change: "Pak 2 kg zwaarder, of doe 12 herhalingen in plaats van 10." },
+          { exercise: "Eenarmig roeien met dumbbell", change: "Pak 2 kg zwaarder; houd 10-12 herhalingen per kant aan." },
+          { exercise: "Push-up op verhoging", change: "Kies een lagere verhoging, bijvoorbeeld een stoel in plaats van een tafel." },
+          { exercise: "Roemeense deadlift met dumbbells", change: "Pak 2 kg zwaarder per hand." },
+        ],
+      },
+      message: "We hebben je schema voor de rest van deze periode bijgestuurd.",
+    },
+  },
+];
+
 export const demoAccountView: AccountView = {
   name: demoCustomerName,
   orders: [
@@ -75,13 +129,21 @@ export const demoAccountView: AccountView = {
       createdAt: new Date("2027-01-06T09:12:00+01:00"),
       manageable: true,
       commitmentEndsAt: new Date("2027-07-06T09:12:00+02:00"),
+      // In de demo is het 20 april 2027: weegmoment 3 staat open, de check-in voor periode 5 komt eraan.
       checkin: {
         seq: 5,
-        status: "open",
+        status: "upcoming",
         opensAt: new Date("2027-04-25T09:14:00+02:00"),
         dueAt: new Date("2027-04-28T09:14:00+02:00"),
       },
-      lastWeightKg: 72.3,
+      weekly: {
+        seq: 4,
+        week: 3,
+        status: "open",
+        opensAt: new Date("2027-04-19T09:14:00+02:00"),
+        closesAt: new Date("2027-04-25T09:14:00+02:00"),
+      },
+      lastWeightKg: 72.1,
     },
   ],
   plans,
@@ -136,6 +198,8 @@ export const demoAccountView: AccountView = {
       },
     },
   ],
+  weekly: demoWeekly,
+  weeklyReminders: true,
   targets: [
     { seq: 1, date: at(PERIODS[0]), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
     { seq: 2, date: at(PERIODS[1]), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },

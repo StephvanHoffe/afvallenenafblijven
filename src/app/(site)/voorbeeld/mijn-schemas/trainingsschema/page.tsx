@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { DemoBanner } from "@/components/account/DemoBanner";
 import { PlanDocument } from "@/components/plan/PlanDocument";
 import { sampleTrainingPlanFollowUp } from "@/content/sample-plans";
-import { demoCustomerName, demoPlanDate } from "@/content/demo-account";
+import { DEMO_SEQ, demoCustomerName, demoPlanDate, demoWeekly } from "@/content/demo-account";
+import { adjustmentsFor } from "@/lib/weekly";
 
 export const metadata: Metadata = {
   title: "Voorbeeld: trainingsschema",
@@ -19,6 +20,7 @@ export default function DemoTrainingPage() {
         generatedAt={demoPlanDate}
         backHref="/voorbeeld/mijn-schemas/schemas"
         preview
+        adjustments={adjustmentsFor(demoWeekly, DEMO_SEQ, "training")}
         pdfHref="/voorbeeld/pdf/trainingsschema"
       />
     </section>

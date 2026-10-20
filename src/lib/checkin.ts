@@ -98,9 +98,11 @@ export function calorieAdjustment(input: {
   toKg: number;
   weeks: number;
   checkin: CheckinData;
+  /** Minimale meetperiode in weken; korter is te onbetrouwbaar door schommelingen. */
+  minWeeks?: number;
 }): { kcal: number; reason: string } | null {
-  const { expectedKgPerWeek: expected, fromKg, toKg, weeks, checkin } = input;
-  if (weeks < 2 || !Number.isFinite(fromKg) || !Number.isFinite(toKg)) return null;
+  const { expectedKgPerWeek: expected, fromKg, toKg, weeks, checkin, minWeeks = 2 } = input;
+  if (weeks < minWeeks || !Number.isFinite(fromKg) || !Number.isFinite(toKg)) return null;
   const change = toKg - fromKg;
   const rate = change / weeks;
   const kg = (n: number) => `${formatNumber(Math.abs(n), 1)} kg`;

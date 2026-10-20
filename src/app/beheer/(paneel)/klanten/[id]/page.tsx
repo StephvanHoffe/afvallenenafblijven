@@ -52,7 +52,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const detail = await adminData().customer(id);
   if (!detail) notFound();
-  const { customer: c, orders, plans, intake, checkins } = detail;
+  const { customer: c, orders, plans, intake, checkins, weekly } = detail;
   const here = `/beheer/klanten/${c.id}`;
   const demo = isDemoMode();
 
@@ -212,6 +212,35 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                 </tbody>
               </table>
             </div>
+          </Panel>
+
+          <Panel title="Weegmomenten">
+            {weekly.length === 0 ? (
+              <p className="px-5 py-6 text-sm text-muted">Nog geen weegmomenten.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {weekly.map((w) => (
+                  <li key={`${w.seq}-${w.week}`} className="px-5 py-3 text-sm">
+                    <p className="font-semibold">
+                      Periode {w.seq}, week {w.week} · {formatDate(w.createdAt)} · {String(w.data.weightKg).replace(".", ",")} kg
+                    </p>
+                    <p className="text-muted">
+                      {[w.data.energy && `energie: ${w.data.energy}`, w.data.hunger && `honger: ${w.data.hunger}`, w.data.nutritionAdherence && `voeding: ${w.data.nutritionAdherence}`, w.data.difficulty && `training: ${w.data.difficulty}`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                    <p className="mt-0.5">
+                      {w.status !== "ready"
+                        ? "Aanwijzingen worden gemaakt…"
+                        : w.adjustment && (w.adjustment.kcal || w.adjustment.training)
+                          ? `Bijgestuurd: ${[w.adjustment.kcal ? `${w.adjustment.kcal > 0 ? "+" : ""}${w.adjustment.kcal} kcal` : null, w.adjustment.training ? `training ${w.adjustment.training}` : null].filter(Boolean).join(", ")}`
+                          : "Op koers, niets aangepast"}
+                    </p>
+                    {w.data.comments && <p className="mt-1">&ldquo;{w.data.comments}&rdquo;</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
           </Panel>
 
           <Panel title="Check-ins">

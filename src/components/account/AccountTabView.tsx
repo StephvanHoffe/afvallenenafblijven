@@ -21,13 +21,15 @@ export function AccountTabView({
   demo?: boolean;
   notice?: AccountNotice;
 }) {
-  const checkinOpen = view.orders.some((o) => o.checkin?.status === "open" || o.checkin?.status === "overdue");
+  const checkinOpen = view.orders.some(
+    (o) => o.checkin?.status === "open" || o.checkin?.status === "overdue" || o.weekly?.status === "open",
+  );
   return (
     <AccountShell name={view.name} base={base} active={tab} demo={demo} checkinOpen={checkinOpen}>
       {tab === "overzicht" && <OverviewTab view={view} base={base} demo={demo} notice={notice} />}
       {tab === "schemas" && <SchemasTab view={view} demo={demo} />}
       {tab === "voortgang" && <ProgressTab view={view} base={base} />}
-      {tab === "check-in" && <CheckinTab view={view} demo={demo} />}
+      {tab === "check-in" && <CheckinTab view={view} base={base} demo={demo} notice={notice} />}
       {tab === "gegevens" && <DetailsTab view={view} base={base} />}
       {tab === "abonnement" && <SubscriptionTab view={view} demo={demo} notice={notice} />}
     </AccountShell>

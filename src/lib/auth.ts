@@ -35,7 +35,7 @@ export async function createLoginToken(customerId: string, days = LOGIN_LINK_DAY
 }
 
 /** Persoonlijke inloglink; met `naar` kom je direct op de juiste plek in Mijn schema's. */
-export async function loginUrl(customerId: string, naar?: "opzeggen" | "check-in"): Promise<string> {
+export async function loginUrl(customerId: string, naar?: "opzeggen" | "check-in" | "weegmoment"): Promise<string> {
   const raw = await createLoginToken(customerId);
   return `${site.url}/inloggen/link?token=${encodeURIComponent(raw)}${naar ? `&naar=${naar}` : ""}`;
 }

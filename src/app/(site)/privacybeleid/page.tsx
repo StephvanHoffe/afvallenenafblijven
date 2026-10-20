@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Gezondheidsgegevens (bijzondere persoonsgegevens):</strong> gewicht en lengte, eventuele zwangerschap,
-          eetstoornis, medische aandoeningen, medicatie, blessures en je check-ins.
+          eetstoornis, medische aandoeningen, medicatie, blessures, je check-ins en je wekelijkse weegmomenten.
         </li>
         <li>
           <strong>Bestel- en betaalgegevens:</strong> wat je hebt besteld, bedragen, status van je abonnement en (via
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
         <tbody>
           <tr>
             <td>Je persoonlijke schema maken, leveren en bijsturen</td>
-            <td>Contact-, intake- en gezondheidsgegevens, check-ins</td>
+            <td>Contact-, intake- en gezondheidsgegevens, check-ins en weegmomenten</td>
             <td>
               Uitvoering van de overeenkomst; voor gezondheidsgegevens je uitdrukkelijke toestemming (art. 9 lid 2 sub a
               AVG)

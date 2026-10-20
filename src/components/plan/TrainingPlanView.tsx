@@ -177,7 +177,7 @@ function TipsPanel({ plan }: { plan: TrainingPlan }) {
   );
 }
 
-export function TrainingPlanView({ plan, preview = false }: { plan: TrainingPlan; preview?: boolean }) {
+export function TrainingPlanView({ plan, preview = false, notice }: { plan: TrainingPlan; preview?: boolean; notice?: React.ReactNode }) {
   return (
     <div className="space-y-8">
       <header className="space-y-3">
@@ -187,6 +187,7 @@ export function TrainingPlanView({ plan, preview = false }: { plan: TrainingPlan
 
       <WeekStrip schedule={plan.weekSchedule} />
       <ChangesCard changes={plan.changes} />
+      {notice}
 
       <PlanTabs
         label="Onderdelen van je trainingsschema"

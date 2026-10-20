@@ -92,7 +92,7 @@ ${button(input.link, "Bekijk mijn schema")}
 <ul style="padding-left:20px;">
 <li>Lees eerst de introductie en de kernafspraken.</li>
 <li>Doe je boodschappen met de boodschappenlijst (handig: download het schema als PDF).</li>
-<li>Weeg jezelf 1x per week, op dezelfde dag en hetzelfde tijdstip.</li>
+<li>Weeg jezelf 1x per week, op dezelfde dag en hetzelfde tijdstip, en vul je weegmoment in. Wijkt je voortgang af, dan sturen we je schema meteen bij.</li>
 <li>Na 4 weken vul je een korte check-in in. Daarmee maken we je volgende schema, afgestemd op je voortgang. We sturen je een herinnering.</li>
 </ul>
 <p>Deze link is persoonlijk; deel hem niet met anderen. Is de link verlopen? Via ${site.url}/inloggen vraag je eenvoudig een nieuwe aan.</p>
@@ -143,6 +143,22 @@ ${button(input.link, "Check-in invullen")}
   );
   const text = `Hoi ${input.name},\n\n${intro}\n\nCheck-in invullen: ${input.link}\n\nTeam ${site.name}`;
   return { to: input.to, subject, html, text };
+}
+
+/** Herinnering voor het wekelijkse weegmoment (klant kan dit uitzetten in Mijn schema's). */
+export function weeklyReminderEmail(input: { to: string; name: string; link: string; week: number }): Mail {
+  const subject = `Weegmoment week ${input.week}: hoe gaat het, ${input.name}?`;
+  const intro =
+    "Tijd voor je wekelijkse weegmoment. Vul je gewicht en een paar korte vragen in (1 minuut). Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen.";
+  const html = layout(
+    subject,
+    `<p>Hoi ${escapeHtml(input.name)},</p>
+<p>${escapeHtml(intro)}</p>
+${button(input.link, "Weegmoment invullen")}
+<p style="font-size:14px;color:#5b6b62;">Tip: weeg je op een vaste dag, 's ochtends voor het ontbijt. Geen zin in deze herinneringen? Zet ze uit in Mijn schema's, onder Check-in.</p>
+<p>Team ${escapeHtml(site.name)}</p>`,
+  );
+  return { to: input.to, subject, html, text: `Hoi ${input.name},\n\n${intro}\n\nWeegmoment invullen: ${input.link}\n\nTeam ${site.name}` };
 }
 
 export function loginEmail(input: { to: string; name: string; link: string }): Mail {

@@ -2,8 +2,9 @@ import type { AccountView, DashboardOrder, DashboardPlan } from "@/lib/account-t
 import { durations, isSubscription } from "@/config/pricing";
 import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
+import { weeklyWindow } from "@/lib/weekly";
 import { addMonthsClamped } from "@/lib/dates";
-import { MAX_PLAN_ATTEMPTS, type CheckinRow, type IntakeRow, type Order, type Plan } from "@/lib/repo";
+import { MAX_PLAN_ATTEMPTS, type CheckinRow, type IntakeRow, type Order, type Plan, type WeeklyLogRow } from "@/lib/repo";
 
 /** Zet bestellingen, schema's, check-ins en de vragenlijst om naar wat Mijn schema's toont. */
 export function toAccountView(input: {
@@ -11,6 +12,8 @@ export function toAccountView(input: {
   orders: Order[];
   plans: Plan[];
   checkins: CheckinRow[];
+  weekly: WeeklyLogRow[];
+  weeklyReminders: boolean;
   intake: IntakeRow | null;
   targets: { seq: number; generated_at: Date | null; targets: NutritionTargets | null }[];
 }): AccountView {
@@ -43,7 +46,18 @@ export function toAccountView(input: {
         submittedForNext: checkins.some((c) => c.order_id === o.id && c.for_seq === lastSeq + 1),
         now,
       }),
-      lastWeightKg: checkins.find((c) => c.order_id === o.id && c.data.weightKg)?.data.weightKg ?? null,
+      weekly: weeklyWindow({
+        duration: o.duration,
+        status: o.status,
+        lastSeq,
+        lastPeriodStart: lastStart,
+        loggedWeeks: input.weekly.filter((w) => w.order_id === o.id && w.seq === lastSeq).map((w) => w.week),
+        now,
+      }),
+      lastWeightKg:
+        [...input.weekly].reverse().find((w) => w.order_id === o.id)?.data.weightKg ??
+        checkins.find((c) => c.order_id === o.id && c.data.weightKg)?.data.weightKg ??
+        null,
     };
   });
   const dashboardPlans = plans.map(
@@ -68,6 +82,8 @@ export function toAccountView(input: {
     checkins: [...checkins]
       .sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
       .map((c) => ({ seq: c.for_seq, date: c.created_at, data: c.data })),
+    weekly: input.weekly.map((w) => ({ seq: w.seq, week: w.week, date: w.created_at, data: w.data, adjustment: w.adjustment, status: w.status })),
+    weeklyReminders: input.weeklyReminders,
     targets: input.targets
       .filter((t) => t.targets)
       .map((t) => ({

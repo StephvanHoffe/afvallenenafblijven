@@ -32,6 +32,7 @@ const comparison: { label: string; voeding: boolean; training: boolean }[] = [
   { label: "4 weken progressie met uitleg per oefening", voeding: false, training: true },
   { label: "Rekening met blessures en niveau", voeding: false, training: true },
   { label: "Elke 4 weken een nieuw schema", voeding: true, training: true },
+  { label: "Wekelijks weegmoment en bijsturen", voeding: true, training: true },
   { label: "Check-in en bijsturen", voeding: true, training: true },
   { label: "Downloaden als PDF, met logboek of boodschappenlijst", voeding: true, training: true },
 ];

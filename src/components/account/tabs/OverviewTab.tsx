@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Download, Sparkles } from "lucide-react";
+import { ArrowRight, Download, Scale, SlidersHorizontal, Sparkles } from "lucide-react";
 import { accountHref } from "@/components/account/AccountShell";
 import { PlanStatusRefresher } from "@/components/account/PlanStatusRefresher";
 import { GoalMeter, StatTile } from "@/components/account/charts/Indicators";
 import { TimeChart } from "@/components/account/charts/TimeChart";
 import { Section, nextPlanText } from "@/components/account/shared";
 import { PlanCards, currentPeriod } from "@/components/account/tabs/PlanCards";
+import { weeklyOrder } from "@/components/account/tabs/WeeklySection";
 import { site } from "@/config/site";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -47,6 +48,10 @@ export function OverviewTab({ view, base, demo, notice }: { view: AccountView; b
   const busy = current.some((p) => p.status !== "ready" && !p.failed);
   const next = nextPlanText(mainSub?.checkin ?? null);
   const allPdfHref = demo ? "/voorbeeld/pdf/alles" : `/account/pdf?periode=${latestSeq}`;
+  const weekly = weeklyOrder(view)?.weekly ?? null;
+  const lastChange = [...view.weekly]
+    .reverse()
+    .find((l) => l.seq === latestSeq && l.adjustment && (l.adjustment.kcal !== 0 || l.adjustment.training));
 
   return (
     <div className="space-y-6">
@@ -77,6 +82,23 @@ export function OverviewTab({ view, base, demo, notice }: { view: AccountView; b
           </div>
           <Link href={accountHref(base, "check-in")} className="btn-primary !py-2.5 text-sm">
             Check-in invullen <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </div>
+      )}
+
+      {!openCheckin && weekly?.status === "open" && (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-5 sm:p-6">
+          <div className="flex gap-3">
+            <Scale className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
+            <div>
+              <h2 className="text-lg font-extrabold">Weegmoment week {weekly.week}: hoe gaat het?</h2>
+              <p className="mt-1 text-[0.9375rem]">
+                Vul je gewicht in (1 minuut). Wijkt je voortgang af, dan sturen we je schema meteen bij.
+              </p>
+            </div>
+          </div>
+          <Link href={`${accountHref(base, "check-in")}#weegmoment`} className="btn-primary !py-2.5 text-sm">
+            Weegmoment invullen <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
       )}
@@ -138,6 +160,25 @@ export function OverviewTab({ view, base, demo, notice }: { view: AccountView; b
             <a href={allPdfHref} className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand-700 hover:underline">
               <Download className="size-4" aria-hidden /> {current.length > 1 ? "Alles downloaden als één PDF" : "Download als PDF"}
             </a>
+          )}
+          {lastChange?.adjustment && (
+            <Link
+              href={accountHref(base, "schemas")}
+              className="mt-4 flex items-start gap-2 rounded-2xl bg-brand-50 p-3 text-sm hover:bg-brand-100"
+            >
+              <SlidersHorizontal className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+              <span>
+                <strong>Bijgestuurd na weegmoment week {lastChange.week}:</strong>{" "}
+                {[
+                  lastChange.adjustment.kcal
+                    ? `${lastChange.adjustment.kcal > 0 ? "+" : "−"}${Math.abs(lastChange.adjustment.kcal)} kcal per dag`
+                    : null,
+                  lastChange.adjustment.training ? `trainingen ${lastChange.adjustment.training}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </span>
+            </Link>
           )}
           {mainSub && <p className="mt-4 border-t border-line pt-4 text-sm text-muted">{next.text}</p>}
         </Section>

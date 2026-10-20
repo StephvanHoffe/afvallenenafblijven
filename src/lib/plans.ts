@@ -5,7 +5,7 @@ import { intakeSchema, type Intake } from "@/lib/intake";
 import { loginUrl } from "@/lib/auth";
 import { nutritionTargets, withCalorieOffset } from "@/lib/calculations";
 import { MAX_CALORIE_OFFSET, calorieAdjustment, checkinWindow } from "@/lib/checkin";
-import { adminNotificationEmail, checkinEmail, plansReadyEmail, sendMail } from "@/lib/email";
+import { adminNotificationEmail, checkinEmail, plansReadyEmail, sendMail, weeklyReminderEmail } from "@/lib/email";
 import { generateNutritionPlan, generateTrainingPlan, summarizePlan } from "@/lib/ai/generate";
 import type { ProgressContext } from "@/lib/ai/prompts";
 import type { PlanContent } from "@/lib/ai/schemas";
@@ -25,9 +25,15 @@ import {
   plansForOrder,
   previousReadyPlan,
   subscriptionCheckinOrders,
+  weeklyLogsForOrder,
+  weeklyReminderOrders,
+  markWeeklyReminded,
+  pendingWeeklyLogIds,
   type Order,
   type Plan,
 } from "@/lib/repo";
+import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
+import { processWeeklyLog } from "@/lib/weekly-server";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -49,6 +55,8 @@ export async function processPlan(planId: string): Promise<void> {
     const previous = plan.seq > 1 ? await previousReadyPlan(order.id, plan.type, plan.seq) : null;
     // Check-ins tot en met deze periode; die van deze periode is de aanleiding voor het schema.
     const checkins = (await checkinsForOrder(order.id)).filter((c) => (c.for_seq ?? 0) <= plan.seq);
+    // Weegmomenten uit de vorige periode: het weekverloop en wat er toen al is bijgestuurd.
+    const prevWeekly = (await weeklyLogsForOrder(order.id)).filter((w) => w.seq === plan.seq - 1);
     const current = checkins.find((c) => c.for_seq === plan.seq) ?? null;
     const before = [...checkins].reverse().find((c) => (c.for_seq ?? 0) < plan.seq && c.data.weightKg) ?? null;
     const latest = <K extends keyof NonNullable<typeof current>["data"]>(key: K) =>
@@ -80,6 +88,13 @@ export async function processPlan(planId: string): Promise<void> {
         .filter((c) => c !== current && c.data.injuries)
         .map((c) => c.data.injuries!)
         .slice(-3),
+      weekly: prevWeekly.map((w) => ({
+        week: w.week,
+        weightKg: w.data.weightKg,
+        kcal: w.adjustment?.kcal ?? 0,
+        training: w.adjustment?.training,
+        note: w.data.comments,
+      })),
     };
     const fromKg = before?.data.weightKg ?? intakeRow.data.weightKg;
     const fromDate = before?.created_at ?? order.created_at;
@@ -98,17 +113,24 @@ export async function processPlan(planId: string): Promise<void> {
       const prev = previous?.content?.type === "voeding" ? previous.content : null;
       // Een eerdere bijstelling telt mee, behalve als het doel wezenlijk is veranderd.
       const sameDirection = prev ? Math.sign(Math.round(prev.targets.expectedKgPerWeek * 10)) === Math.sign(Math.round(base.expectedKgPerWeek * 10)) : false;
-      let offset = sameDirection ? (prev?.adjustmentKcal ?? 0) : 0;
+      const clamp = (n: number) => Math.max(-MAX_CALORIE_OFFSET, Math.min(MAX_CALORIE_OFFSET, n));
+      // Bijstellingen uit de weegmomenten tellen mee in de volgende periode.
+      let offset = sameDirection ? clamp((prev?.adjustmentKcal ?? 0) + weeklyKcal(prevWeekly)) : 0;
       if (current && progress.weight && prev && sameDirection) {
+        // Is er tijdens de vorige periode al bijgestuurd, dan beoordelen we alleen de weken daarna.
+        const lastWeeklyChange = [...prevWeekly].reverse().find((w) => (w.adjustment?.kcal ?? 0) !== 0);
+        const ref = lastWeeklyChange
+          ? { kg: lastWeeklyChange.data.weightKg, at: lastWeeklyChange.created_at.getTime() }
+          : { kg: progress.weight.fromKg, at: new Date(fromDate).getTime() };
         const adjustment = calorieAdjustment({
           expectedKgPerWeek: prev.targets.expectedKgPerWeek,
-          fromKg: progress.weight.fromKg,
+          fromKg: ref.kg,
           toKg: progress.weight.toKg,
-          weeks: progress.weight.weeks,
+          weeks: (current.created_at.getTime() - ref.at) / (7 * DAY),
           checkin: current.data,
         });
         if (adjustment) {
-          const next = Math.max(-MAX_CALORIE_OFFSET, Math.min(MAX_CALORIE_OFFSET, offset + adjustment.kcal));
+          const next = clamp(offset + adjustment.kcal);
           if (next !== offset) progress.calorieChange = { kcal: next - offset, reason: adjustment.reason };
           offset = next;
         }
@@ -187,7 +209,9 @@ export async function startNextPeriod(order: Pick<Order, "id" | "customer_id" | 
  * - probeert mislukte of vastgelopen schema's opnieuw.
  * Stopt op tijd om binnen de maximale looptijd van de serverfunctie te blijven.
  */
-export async function runScheduledWork(budgetMs: number): Promise<{ scheduled: number; reminders: number; processed: number }> {
+export async function runScheduledWork(
+  budgetMs: number,
+): Promise<{ scheduled: number; reminders: number; weeklyReminders: number; processed: number }> {
   const started = Date.now();
   let scheduled = 0;
   let reminders = 0;
@@ -230,6 +254,35 @@ export async function runScheduledWork(budgetMs: number): Promise<{ scheduled: n
     }
   }
 
+  // Wekelijkse herinnering voor het weegmoment (klant kan dit uitzetten).
+  let weeklyReminders = 0;
+  for (const order of await weeklyReminderOrders()) {
+    const window = weeklyWindow({
+      duration: order.duration,
+      status: order.status,
+      lastSeq: order.last_seq,
+      lastPeriodStart: order.last_start,
+      loggedWeeks: order.logged_weeks,
+      now: started,
+    });
+    if (window?.status !== "open") continue;
+    try {
+      await sendMail(
+        weeklyReminderEmail({ to: order.email, name: order.name, link: await loginUrl(order.customer_id, "weegmoment"), week: window.week }),
+      );
+      await markWeeklyReminded(order.id);
+      weeklyReminders++;
+    } catch (err) {
+      console.error(`Weegmoment-herinnering voor bestelling ${order.id} mislukt`, err);
+    }
+  }
+
+  // Aanwijzingen bij weegmomenten die nog niet klaar zijn (bijv. na een storing).
+  for (const id of await pendingWeeklyLogIds(10)) {
+    if (Date.now() - started > budgetMs - 230_000) break;
+    await processWeeklyLog(id);
+  }
+
   let processed = 0;
   const queue = await pendingPlanIds(20);
   // Ruwe schatting: een schema kost enkele minuten; begin geen nieuwe batch
@@ -240,7 +293,7 @@ export async function runScheduledWork(budgetMs: number): Promise<{ scheduled: n
     await Promise.all(batch.map((id) => processPlan(id)));
     processed += batch.length;
   }
-  return { scheduled, reminders, processed };
+  return { scheduled, reminders, weeklyReminders, processed };
 }
 
 export function planTitle(plan: Pick<Plan, "type" | "seq">): string {

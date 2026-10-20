@@ -7,7 +7,8 @@ import {
   sampleTrainingPlan,
   sampleTrainingPlanFollowUp,
 } from "@/content/sample-plans";
-import { DEMO_SEQ, demoCustomerName, demoPlanDate } from "@/content/demo-account";
+import { DEMO_SEQ, demoCustomerName, demoPlanDate, demoWeekly } from "@/content/demo-account";
+import { adjustmentsFor } from "@/lib/weekly";
 import { pdfResponse, renderPlansPdf, type PdfPart, type PdfPlan } from "@/lib/pdf/render";
 
 /**
@@ -23,22 +24,22 @@ const files: Record<string, { plans: PdfPlan[]; part?: PdfPart; fileName: string
     fileName: "voorbeeld-schemas-afvallen-en-afblijven.pdf",
   },
   voedingsschema: {
-    plans: [{ content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate }],
+    plans: [{ content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate, adjustments: adjustmentsFor(demoWeekly, DEMO_SEQ, "voeding") }],
     fileName: "voorbeeld-voedingsschema-periode-4.pdf",
   },
   trainingsschema: {
-    plans: [{ content: { type: "training", plan: sampleTrainingPlanFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate }],
+    plans: [{ content: { type: "training", plan: sampleTrainingPlanFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate, adjustments: adjustmentsFor(demoWeekly, DEMO_SEQ, "training") }],
     fileName: "voorbeeld-trainingsschema-periode-4.pdf",
   },
   boodschappenlijst: {
-    plans: [{ content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate }],
+    plans: [{ content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate, adjustments: adjustmentsFor(demoWeekly, DEMO_SEQ, "voeding") }],
     part: "boodschappen",
     fileName: "voorbeeld-boodschappenlijst.pdf",
   },
   alles: {
     plans: [
-      { content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate },
-      { content: { type: "training", plan: sampleTrainingPlanFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate },
+      { content: { type: "voeding", plan: sampleNutritionPlanFollowUp, targets: sampleTargetsFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate, adjustments: adjustmentsFor(demoWeekly, DEMO_SEQ, "voeding") },
+      { content: { type: "training", plan: sampleTrainingPlanFollowUp }, seq: DEMO_SEQ, generatedAt: demoPlanDate, adjustments: adjustmentsFor(demoWeekly, DEMO_SEQ, "training") },
     ],
     fileName: "voorbeeld-schemas-periode-4.pdf",
   },

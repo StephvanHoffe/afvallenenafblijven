@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PlanDocument } from "@/components/plan/PlanDocument";
 import { currentCustomer } from "@/lib/auth";
-import { getPlan } from "@/lib/repo";
+import { getPlan, weeklyLogsForOrder } from "@/lib/repo";
+import { adjustmentsFor } from "@/lib/weekly";
 
 export const metadata: Metadata = {
   title: "Mijn schema",
@@ -44,8 +45,10 @@ async function PlanContent({ params }: Pick<PageProps<"/schema/[id]">, "params">
     );
   }
 
+  const weekly = (await weeklyLogsForOrder(plan.order_id)).map((w) => ({ ...w, date: w.created_at }));
   return (
     <PlanDocument
+      adjustments={adjustmentsFor(weekly, plan.seq, plan.type)}
       content={plan.content}
       customerName={customer.name}
       generatedAt={plan.generated_at}

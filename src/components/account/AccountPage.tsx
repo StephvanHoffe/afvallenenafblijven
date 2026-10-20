@@ -13,6 +13,7 @@ import {
   nutritionTargetHistory,
   ordersForCustomer,
   plansForCustomer,
+  weeklyLogsForCustomer,
 } from "@/lib/repo";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -41,16 +42,34 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   if (tab === "overzicht" && sp.opzeggen === "1") redirect("/account/abonnement?opzeggen=1");
   if (tab === "overzicht" && sp.opgezegd === "1") redirect("/account/abonnement?opgezegd=1");
 
-  const [orders, plans, checkins, intake, targets] = await Promise.all([
+  const [orders, plans, checkins, weekly, intake, targets] = await Promise.all([
     ordersForCustomer(customer.id),
     plansForCustomer(customer.id),
     checkinsForCustomer(customer.id),
+    weeklyLogsForCustomer(customer.id),
     latestIntakeForCustomer(customer.id),
     nutritionTargetHistory(customer.id),
   ]);
-  const view = toAccountView({ name: customer.name, orders, plans, checkins, intake, targets });
+  const view = toAccountView({
+    name: customer.name,
+    orders,
+    plans,
+    checkins,
+    weekly,
+    weeklyReminders: customer.weekly_reminders,
+    intake,
+    targets,
+  });
   const notice: AccountNotice =
-    sp.checkin === "ontvangen" ? "checkin" : sp.opgezegd === "1" ? "opgezegd" : sp.opzeggen === "1" ? "opzeggen" : null;
+    sp.checkin === "ontvangen"
+      ? "checkin"
+      : sp.weegmoment === "opgeslagen"
+        ? "weegmoment"
+        : sp.opgezegd === "1"
+          ? "opgezegd"
+          : sp.opzeggen === "1"
+            ? "opzeggen"
+            : null;
   return <AccountTabView tab={tab} view={view} base="/account" notice={notice} />;
 }
 

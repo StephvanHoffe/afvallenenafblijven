@@ -119,6 +119,22 @@ alter table checkins add column if not exists for_seq integer;
 create unique index if not exists checkins_order_seq_idx on checkins(order_id, for_seq);
 alter table orders add column if not exists checkin_reminded_seq integer;
 alter table orders add column if not exists checkin_reminders integer not null default 0;
+-- Wekelijkse weegmomenten tussen de check-ins
+create table if not exists weekly_logs (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers(id) on delete cascade,
+  order_id uuid not null references orders(id) on delete cascade,
+  seq integer not null,
+  week integer not null,
+  data jsonb not null,
+  adjustment jsonb,
+  status text not null default 'ready',
+  started_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (order_id, seq, week)
+);
+alter table customers add column if not exists weekly_reminders boolean not null default true;
+alter table orders add column if not exists weekly_reminded_at timestamptz;
 create index if not exists intakes_created_idx on intakes(created_at);
 `;
 

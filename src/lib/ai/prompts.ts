@@ -28,6 +28,8 @@ export interface ProgressContext {
   calorieChange?: { kcal: number; reason: string };
   /** Klachten die bij eerdere check-ins zijn gemeld. */
   earlierInjuries?: string[];
+  /** Weegmomenten van de vorige periode, met wat er toen is bijgestuurd. */
+  weekly?: { week: number; weightKg: number; kcal: number; training?: string; note?: string }[];
 }
 
 const WEEKDAYS = "Maandag, Dinsdag, Woensdag, Donderdag, Vrijdag, Zaterdag, Zondag";
@@ -154,6 +156,19 @@ function progressBlock(progress: ProgressContext, kind: "voeding" | "training"):
       ]
         .filter(Boolean)
         .join("\n"),
+    );
+  }
+  if (progress.weekly?.length) {
+    lines.push(
+      [
+        "Wekelijkse weegmomenten in de vorige periode:",
+        ...progress.weekly.map(
+          (w) =>
+            `- Week ${w.week}: ${formatNumber(w.weightKg, 1)} kg${w.kcal ? `, calorieën bijgesteld met ${w.kcal > 0 ? "+" : ""}${w.kcal} kcal per dag` : ""}${
+              w.training ? `, training ${w.training} gemaakt` : ""
+            }${w.note ? ` (opmerking: ${w.note})` : ""}`,
+        ),
+      ].join("\n"),
     );
   }
   if (kind === "training" && progress.earlierInjuries?.length) {

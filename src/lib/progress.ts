@@ -53,11 +53,19 @@ export function buildProgress(view: AccountView): Progress {
       weights.push({ t: new Date(c.date).getTime(), v: c.data.weightKg, label: c.seq ? `Check-in periode ${c.seq}` : "Check-in" });
     }
   }
+  for (const w of view.weekly) {
+    weights.push({ t: new Date(w.date).getTime(), v: w.data.weightKg, label: `Weegmoment week ${w.week} (periode ${w.seq})` });
+  }
   weights.sort((a, b) => a.t - b.t);
 
-  const waist = view.checkins
-    .filter((c) => c.data.waistCm)
-    .map((c) => ({ t: new Date(c.date).getTime(), v: c.data.waistCm!, label: c.seq ? `Check-in periode ${c.seq}` : "Check-in" }));
+  const waist = [
+    ...view.checkins
+      .filter((c) => c.data.waistCm)
+      .map((c) => ({ t: new Date(c.date).getTime(), v: c.data.waistCm!, label: c.seq ? `Check-in periode ${c.seq}` : "Check-in" })),
+    ...view.weekly
+      .filter((w) => w.data.waistCm)
+      .map((w) => ({ t: new Date(w.date).getTime(), v: w.data.waistCm!, label: `Weegmoment week ${w.week} (periode ${w.seq})` })),
+  ].sort((a, b) => a.t - b.t);
 
   let projection: SeriesPoint[] = [];
   if (intake && start !== null) {
@@ -107,9 +115,13 @@ export function currentProfile(view: AccountView): Intake | null {
   if (!view.intake) return null;
   const latest = <K extends "weightKg" | "goal" | "trainingDays">(key: K) =>
     [...view.checkins].reverse().find((c) => c.data[key] !== undefined)?.data[key];
+  const lastWeekly = view.weekly.at(-1);
+  const lastCheckin = [...view.checkins].reverse().find((c) => c.data.weightKg);
+  const weightKg =
+    lastWeekly && (!lastCheckin || new Date(lastWeekly.date) > new Date(lastCheckin.date)) ? lastWeekly.data.weightKg : latest("weightKg");
   return {
     ...view.intake,
-    weightKg: latest("weightKg") ?? view.intake.weightKg,
+    weightKg: weightKg ?? view.intake.weightKg,
     goal: latest("goal") ?? view.intake.goal,
     trainingDays: latest("trainingDays") ?? view.intake.trainingDays,
   };

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, Download, ShoppingCart } from "lucide-react";
 import { NutritionPlanView } from "@/components/plan/NutritionPlanView";
 import { TrainingPlanView } from "@/components/plan/TrainingPlanView";
+import { AdjustmentsCard } from "@/components/plan/AdjustmentsCard";
+import type { PlanAdjustment } from "@/lib/weekly";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { formatDate } from "@/lib/format";
 import { site } from "@/config/site";
@@ -17,6 +19,7 @@ export function PlanDocument({
   pdfHref,
   shoppingPdfHref,
   storageKey,
+  adjustments,
 }: {
   content: PlanContent;
   customerName: string;
@@ -29,7 +32,10 @@ export function PlanDocument({
   /** Download van alleen de boodschappenlijst (voedingsschema). */
   shoppingPdfHref?: string;
   storageKey?: string;
+  /** Bijsturingen uit de wekelijkse weegmomenten van deze periode. */
+  adjustments?: PlanAdjustment[];
 }) {
+  const kcal = (adjustments ?? []).reduce((sum, a) => sum + a.kcal, 0);
   return (
     <div>
       <div className="no-print mb-8 flex flex-wrap items-center justify-between gap-3">
@@ -60,9 +66,11 @@ export function PlanDocument({
           preview={preview}
           storageKey={storageKey}
           shoppingPdfHref={shoppingPdfHref}
+          adjustedCalories={kcal ? content.targets.calories + kcal : undefined}
+          notice={<AdjustmentsCard type="voeding" adjustments={adjustments} />}
         />
       ) : (
-        <TrainingPlanView plan={content.plan} preview={preview} />
+        <TrainingPlanView plan={content.plan} preview={preview} notice={<AdjustmentsCard type="training" adjustments={adjustments} />} />
       )}
       <p className="mt-12 rounded-2xl bg-sand p-4 text-xs leading-relaxed text-muted">
         Dit schema is persoonlijk leefstijladvies op basis van jouw antwoorden. Het is geen medisch advies en geen

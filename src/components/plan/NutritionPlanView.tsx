@@ -12,9 +12,13 @@ type Meal = Day["meals"][number];
 
 const recipeId = (day: string, index: number) => `recept-${day.toLowerCase()}-${index + 1}`;
 
-export function TargetsStrip({ targets }: { targets: NutritionTargets }) {
+export function TargetsStrip({ targets, adjustedCalories }: { targets: NutritionTargets; adjustedCalories?: number }) {
+  const adjusted = adjustedCalories !== undefined && adjustedCalories !== targets.calories;
   const items = [
-    { label: "Calorieën", value: `${formatNumber(targets.calories)} kcal` },
+    {
+      label: adjusted ? `Calorieën (was ${formatNumber(targets.calories)})` : "Calorieën",
+      value: `${formatNumber(adjusted ? adjustedCalories : targets.calories)} kcal`,
+    },
     { label: "Eiwit", value: `${targets.proteinG} g` },
     { label: "Koolhydraten", value: `± ${targets.carbsG} g` },
     { label: "Vet", value: `± ${targets.fatG} g` },
@@ -277,10 +281,16 @@ export function NutritionPlanView({
   preview = false,
   storageKey,
   shoppingPdfHref,
+  notice,
+  adjustedCalories,
 }: {
   plan: NutritionPlan;
   targets: NutritionTargets;
   preview?: boolean;
+  /** Extra blok onder de aanpassingen, bijv. bijsturingen uit de weegmomenten. */
+  notice?: React.ReactNode;
+  /** Caloriedoel na bijsturing in deze periode. */
+  adjustedCalories?: number;
   /** Sleutel waaronder de afgevinkte boodschappen in de browser worden onthouden. */
   storageKey?: string;
   shoppingPdfHref?: string;
@@ -292,8 +302,9 @@ export function NutritionPlanView({
         <p className="max-w-3xl text-lg leading-relaxed text-muted">{plan.intro}</p>
       </header>
 
-      <TargetsStrip targets={targets} />
+      <TargetsStrip targets={targets} adjustedCalories={adjustedCalories} />
       <ChangesCard changes={plan.changes} />
+      {notice}
 
       <PlanTabs
         label="Onderdelen van je voedingsschema"
