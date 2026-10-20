@@ -107,9 +107,9 @@ export const SUBSCRIPTION_DURATIONS: SubscriptionDurationId[] = ["1m", "3m", "6m
  * één los schema (4 weken, geen abonnement).
  */
 export const monthlyPrices: Record<ProductId, Record<DurationId, number>> = {
-  voeding: { "1m": 1295, "3m": 995, "6m": 895, "12m": 795, eenmalig: 1995 },
-  training: { "1m": 1195, "3m": 895, "6m": 795, "12m": 695, eenmalig: 1795 },
-  bundel: { "1m": 1795, "3m": 1395, "6m": 1195, "12m": 995, eenmalig: 2795 },
+  voeding: { "1m": 1495, "3m": 1195, "6m": 1095, "12m": 995, eenmalig: 2295 },
+  training: { "1m": 1395, "3m": 1095, "6m": 995, "12m": 895, eenmalig: 1995 },
+  bundel: { "1m": 2195, "3m": 1795, "6m": 1595, "12m": 1395, eenmalig: 3295 },
 };
 
 export const DEFAULT_PRODUCT: ProductId = "bundel";

@@ -7,7 +7,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 **Verkoop en conversie**
 - Homepage, productpagina's (voeding, training, bundel), prijzen, hoe het werkt, voorbeeldschema (inclusief een voorbeeld van Mijn schema's), over ons en contact met veelgestelde vragen.
 - Vragenlijst in stappen (`/start`). De bezoeker ziet direct een persoonlijk resultaat: calorie- en macrodoel en een prognose met streefdatum. Daarna volgen de plankeuze en de betaling.
-- Prijstabel met looptijd-schakelaar (vanaf € 6,95 per maand), kortingslabels, "Meest gekozen"-bundel en een losse aankoop als alternatief.
+- Prijstabel met looptijd-schakelaar (vanaf € 8,95 per maand), kortingslabels, "Meest gekozen"-bundel en een losse aankoop als alternatief.
 - Lanceringsactie (automatische korting op de eerste maand, alleen binnen de ingestelde data).
 - Tevredenheidsgarantie (aan/uit te zetten).
 - Vaste startknop onderin op mobiel.
