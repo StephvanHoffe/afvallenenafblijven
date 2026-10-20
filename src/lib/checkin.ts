@@ -1,6 +1,6 @@
 import { site } from "@/config/site";
 import { isSubscription, type DurationId } from "@/config/pricing";
-import type { Intake } from "@/lib/intake";
+import { goalOptions, type Intake } from "@/lib/intake";
 import { formatNumber } from "@/lib/format";
 
 /**
@@ -149,3 +149,24 @@ export function calorieAdjustment(input: {
 
 /** Totale bijstelling blijft binnen deze grenzen, zodat het schema verantwoord blijft. */
 export const MAX_CALORIE_OFFSET = 300;
+
+/** Check-in-antwoorden als leesbare regels (alleen ingevulde velden). */
+export function describeCheckin(c: CheckinData): [string, string][] {
+  const rows: [string, string | number | undefined][] = [
+    ["Gewicht", c.weightKg ? `${String(c.weightKg).replace(".", ",")} kg` : undefined],
+    ["Taille", c.waistCm ? `${c.waistCm} cm` : undefined],
+    ["Energie", c.energy],
+    ["Slaap", c.sleep],
+    ["Voeding gevolgd", c.nutritionAdherence],
+    ["Honger", c.hunger],
+    ["Vond je lekker", c.likedMeals],
+    ["Wil je anders", c.dislikedMeals],
+    ["Trainingen gedaan", c.trainingAdherence],
+    ["Zwaarte", c.difficulty],
+    ["Trainingsdagen", c.trainingDays ? `${c.trainingDays}x per week` : undefined],
+    ["Klachten", c.injuries],
+    ["Nieuw doel", c.goal ? (goalOptions[c.goal]?.label ?? c.goal) : undefined],
+    ["Opmerkingen", c.comments],
+  ];
+  return rows.filter((r): r is [string, string | number] => r[1] !== undefined && r[1] !== "").map(([k, v]) => [k, String(v)]);
+}

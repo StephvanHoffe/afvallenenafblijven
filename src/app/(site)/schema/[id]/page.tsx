@@ -37,7 +37,7 @@ async function PlanContent({ params }: Pick<PageProps<"/schema/[id]">, "params">
         <p className="mt-3 text-muted">
           Dit duurt meestal een paar minuten. Je ontvangt een e-mail zodra het klaar is.
         </p>
-        <Link href="/account" className="btn-secondary mt-6">
+        <Link href="/account/schemas" className="btn-secondary mt-6">
           Terug naar Mijn schema&apos;s
         </Link>
       </div>

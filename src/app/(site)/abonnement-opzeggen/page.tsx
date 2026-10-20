@@ -29,7 +29,7 @@ export default function OpzeggenPage() {
             <li>Je ontvangt altijd een bevestiging van je opzegging per e-mail.</li>
           </ul>
           <p>
-            Ben je ingelogd? Ga dan naar <Link href="/account?opzeggen=1">Mijn schema&apos;s</Link> en klik op
+            Ben je ingelogd? Ga dan naar <Link href="/account/abonnement?opzeggen=1">Mijn schema&apos;s</Link> en klik op
             &quot;Opzeggen&quot;. Niet ingelogd? Vul hiernaast je e-mailadres in; je ontvangt dan direct een link waarmee
             je opzegt.
           </p>

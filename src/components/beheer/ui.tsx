@@ -152,7 +152,7 @@ export function DemoNote() {
 
 /** Gedeelde tabelstijl. */
 export const table = {
-  wrap: "overflow-x-auto",
+  wrap: "relative overflow-x-auto",
   table: "w-full min-w-[40rem] text-left text-sm",
   th: "border-b border-line bg-sand/60 px-5 py-2.5 text-xs font-bold tracking-wide text-muted uppercase",
   td: "border-b border-line px-5 py-3 align-middle",

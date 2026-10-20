@@ -198,7 +198,7 @@ export async function retrieveCheckoutSession(sessionId: string) {
 }
 
 /** Link naar het Stripe-klantportaal: betaalgegevens en facturen. Opzeggen regelen we zelf. */
-export async function billingPortalUrl(stripeCustomerId: string, returnPath = "/account"): Promise<string> {
+export async function billingPortalUrl(stripeCustomerId: string, returnPath = "/account/abonnement"): Promise<string> {
   const session = await stripe().billingPortal.sessions.create({
     customer: stripeCustomerId,
     locale: "nl",

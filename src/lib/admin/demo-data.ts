@@ -1,7 +1,7 @@
 import "server-only";
 import { monthlyPrice, products, type DurationId, type ProductId } from "@/config/pricing";
 import { sampleNutritionPlan, sampleTargets, sampleTrainingPlan } from "@/content/sample-plans";
-import type { Intake } from "@/lib/intake";
+import { demoIntake } from "@/content/demo-account";
 import { checkinWindow, type CheckinData } from "@/lib/checkin";
 import type { OrderStatus } from "@/lib/repo";
 import type {
@@ -132,35 +132,6 @@ const withdrawals: AdminWithdrawalRow[] = [
   },
 ];
 
-const demoIntake: Intake = {
-  product: "bundel",
-  goal: "afvallen_strakker",
-  sex: "vrouw",
-  age: 34,
-  heightCm: 168,
-  weightKg: 78,
-  targetWeightKg: 68,
-  pace: "gemiddeld",
-  activity: "zittend",
-  diet: "alles",
-  allergies: [],
-  otherAllergies: undefined,
-  dislikes: "champignons",
-  mealsPerDay: 4,
-  cookingTime: "normaal",
-  budget: "normaal",
-  location: "thuis_materiaal",
-  experience: "beginner",
-  trainingDays: 3,
-  sessionMinutes: 45,
-  injuries: undefined,
-  pregnant: false,
-  eatingDisorder: false,
-  conditions: [],
-  medication: undefined,
-  doctorApproval: false,
-  notes: undefined,
-};
 
 const within30 = (d: Date) => TODAY - d.getTime() < 30 * DAY;
 

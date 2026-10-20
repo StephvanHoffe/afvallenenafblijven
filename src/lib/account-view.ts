@@ -1,15 +1,20 @@
-import type { DashboardOrder, DashboardPlan } from "@/components/account/AccountDashboard";
+import type { AccountView, DashboardOrder, DashboardPlan } from "@/lib/account-types";
 import { durations, isSubscription } from "@/config/pricing";
+import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
 import { addMonthsClamped } from "@/lib/dates";
-import { MAX_PLAN_ATTEMPTS, type CheckinRow, type Order, type Plan } from "@/lib/repo";
+import { MAX_PLAN_ATTEMPTS, type CheckinRow, type IntakeRow, type Order, type Plan } from "@/lib/repo";
 
-/** Zet bestellingen, schema's en check-ins om naar wat Mijn schema's toont. */
-export function toDashboard(
-  orders: Order[],
-  plans: Plan[],
-  checkins: CheckinRow[],
-): { dashboardOrders: DashboardOrder[]; dashboardPlans: DashboardPlan[] } {
+/** Zet bestellingen, schema's, check-ins en de vragenlijst om naar wat Mijn schema's toont. */
+export function toAccountView(input: {
+  name: string;
+  orders: Order[];
+  plans: Plan[];
+  checkins: CheckinRow[];
+  intake: IntakeRow | null;
+  targets: { seq: number; generated_at: Date | null; targets: NutritionTargets | null }[];
+}): AccountView {
+  const { orders, plans, checkins } = input;
   const now = Date.now();
   const dashboardOrders = orders.map((o): DashboardOrder => {
     const own = plans.filter((p) => p.order_id === o.id);
@@ -38,7 +43,7 @@ export function toDashboard(
         submittedForNext: checkins.some((c) => c.order_id === o.id && c.for_seq === lastSeq + 1),
         now,
       }),
-      lastWeightKg: [...checkins].find((c) => c.order_id === o.id && c.data.weightKg)?.data.weightKg ?? null,
+      lastWeightKg: checkins.find((c) => c.order_id === o.id && c.data.weightKg)?.data.weightKg ?? null,
     };
   });
   const dashboardPlans = plans.map(
@@ -53,5 +58,25 @@ export function toDashboard(
       pdfHref: `/schema/${p.id}/pdf`,
     }),
   );
-  return { dashboardOrders, dashboardPlans };
+  const firstOrder = orders.reduce<Date | null>((min, o) => (!min || o.created_at < min ? o.created_at : min), null);
+  return {
+    name: input.name,
+    orders: dashboardOrders,
+    plans: dashboardPlans,
+    intake: input.intake?.data ?? null,
+    startedAt: firstOrder ?? input.intake?.created_at ?? null,
+    checkins: [...checkins]
+      .sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
+      .map((c) => ({ seq: c.for_seq, date: c.created_at, data: c.data })),
+    targets: input.targets
+      .filter((t) => t.targets)
+      .map((t) => ({
+        seq: t.seq,
+        date: t.generated_at,
+        calories: t.targets!.calories,
+        proteinG: t.targets!.proteinG,
+        carbsG: t.targets!.carbsG,
+        fatG: t.targets!.fatG,
+      })),
+  };
 }

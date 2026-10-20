@@ -11,7 +11,7 @@ export function PlanDocument({
   content,
   customerName,
   generatedAt,
-  backHref = "/account",
+  backHref = "/account/schemas",
   backLabel = "Mijn schema's",
   preview = false,
   pdfHref,

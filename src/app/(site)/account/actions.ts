@@ -45,14 +45,14 @@ export async function cancelSubscription(formData: FormData): Promise<void> {
       endsAt: periodEnd ? new Date(periodEnd * 1000) : null,
     }),
   ).catch((err) => console.error("Opzegbevestiging versturen mislukt", err));
-  redirect("/account?opgezegd=1");
+  redirect("/account/abonnement?opgezegd=1");
 }
 
 export async function undoCancellation(formData: FormData): Promise<void> {
   const { subscriptionId } = await ownSubscriptionOrder(formData);
   const subscription = await resumeSubscription(subscriptionId);
   await syncSubscription(subscription);
-  redirect("/account");
+  redirect("/account/abonnement");
 }
 
 const choice = (options: readonly string[]) => z.enum(options as [string, ...string[]]);

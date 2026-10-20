@@ -411,30 +411,31 @@ export const sampleTrainingPlan: TrainingPlan = {
 };
 
 /**
- * Dezelfde voorbeelden als tweede periode, zoals ze na een check-in in Mijn
- * schema's staan: met de aanpassingen bovenaan.
+ * Dezelfde voorbeelden als vervolgschema (periode 4), zoals ze na een
+ * check-in in Mijn schema's staan: met de aanpassingen bovenaan.
  */
-export const sampleNutritionPlanPeriod2: NutritionPlan = {
+export const sampleTargetsFollowUp: NutritionTargets = { ...sampleTargets, calories: 1540, carbsG: 150 };
+
+export const sampleNutritionPlanFollowUp: NutritionPlan = {
   ...sampleNutritionPlan,
-  title: "Jouw voedingsschema – periode 2",
+  title: "Jouw voedingsschema – periode 4",
   intro:
-    "Goed bezig, Sanne! Je bent in 4 weken 2,4 kilo afgevallen en je volgde het schema bijna altijd. We houden de basis hetzelfde en brengen variatie aan in je lunches, zoals je vroeg.",
+    "Goed bezig, Sanne! Je bent sinds de start 5,7 kilo afgevallen en je volgt het schema heel goed. We houden de basis hetzelfde en brengen variatie aan in je lunches.",
   changes: [
-    "Je viel 2,4 kg af, precies in het geplande tempo. Je caloriedoel blijft daarom gelijk.",
-    "Je had 's middags soms honger: elke dag staat er nu een eiwitrijk tussendoortje in, zoals skyr met appel.",
-    "Meer variatie in je lunches, zoals je vroeg, met gerechten die in 10 minuten klaar zijn.",
-    "Je ontbijt blijft hetzelfde, want dat beviel je goed.",
+    "Je viel deze periode 1,7 kg af, mooi in het geplande tempo. Omdat je lichter bent, gaat je dagdoel licht omlaag naar 1.540 kcal.",
+    "Je had bijna nooit meer honger. De eiwitrijke tussendoortjes houden we daarom vast.",
+    "Je vond de kwarkbowl en de roerbak lekker: die komen terug, met nieuwe lunches voor variatie.",
   ],
 };
 
-export const sampleTrainingPlanPeriod2: TrainingPlan = {
+export const sampleTrainingPlanFollowUp: TrainingPlan = {
   ...sampleTrainingPlan,
-  title: "Jouw trainingsschema – periode 2",
+  title: "Jouw trainingsschema – periode 4",
   intro:
-    "Sterk gedaan, Sanne! Je hebt bijna alle trainingen gedaan en ze voelden goed. Daarom maken we de oefeningen in deze periode iets uitdagender.",
+    "Sterk gedaan, Sanne! Je traint nu drie maanden en wordt merkbaar sterker. In deze periode bouwen we rustig verder op.",
   changes: [
-    "Je vond de trainingen goed te doen: bij de goblet squat en het roeien pak je een zwaarder gewicht.",
-    "Je knie zeurde soms: daarom de reverse lunge (vriendelijker voor je knieën) en extra heupoefeningen in de warming-up.",
+    "Je deed de meeste trainingen en ze voelden precies goed: bij de goblet squat en het roeien pak je een iets zwaarder gewicht.",
+    "Je knie zeurde eerder na het wandelen: we houden de reverse lunge aan, die is vriendelijker voor je knieën.",
     "Nieuw: training A sluit af met de farmer's walk voor je grip en core.",
   ],
 };

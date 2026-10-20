@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
+import type { NutritionTargets } from "@/lib/calculations";
 import type { CheckinData } from "@/lib/checkin";
 
 export type { CheckinData };
@@ -83,6 +84,14 @@ export async function createIntake(input: {
 export async function getIntake(id: string): Promise<IntakeRow | null> {
   const sql = await db();
   const [row] = await sql<IntakeRow[]>`select * from intakes where id = ${id}`;
+  return row ?? null;
+}
+
+/** De meest recente vragenlijst van een klant (de basis van het eerste schema). */
+export async function latestIntakeForCustomer(customerId: string): Promise<IntakeRow | null> {
+  const sql = await db();
+  const [row] = await sql<IntakeRow[]>`
+    select * from intakes where customer_id = ${customerId} order by created_at desc limit 1`;
   return row ?? null;
 }
 
@@ -252,6 +261,17 @@ export async function readyPlansForPeriod(customerId: string, seq?: number): Pro
     where customer_id = ${customerId} and status = 'ready'
       and seq = ${seq ?? sql`(select max(seq) from plans where customer_id = ${customerId} and status = 'ready')`}
     order by type`;
+}
+
+/** De dagdoelen van alle klare voedingsschema's van een klant, oudste eerst. */
+export async function nutritionTargetHistory(
+  customerId: string,
+): Promise<{ seq: number; generated_at: Date | null; targets: NutritionTargets | null }[]> {
+  const sql = await db();
+  return sql<{ seq: number; generated_at: Date | null; targets: NutritionTargets | null }[]>`
+    select seq, generated_at, content -> 'targets' as targets from plans
+    where customer_id = ${customerId} and type = 'voeding' and status = 'ready'
+    order by seq asc, generated_at asc`;
 }
 
 export async function previousReadyPlan(orderId: string, type: PlanType, seq: number): Promise<Plan | null> {

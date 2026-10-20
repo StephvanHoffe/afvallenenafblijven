@@ -183,7 +183,7 @@ export function CheckinForm({
       </Section>
 
       <FormStatus state={state} />
-      <button type="submit" disabled={pending} className="btn-primary w-full sm:w-auto">
+      <button type="submit" disabled={pending} className="btn-primary w-full !whitespace-normal text-center sm:w-auto">
         {pending && <Loader2 className="size-5 animate-spin" aria-hidden />}
         Versturen en mijn nieuwe schema maken
       </button>

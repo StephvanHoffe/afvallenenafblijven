@@ -8,5 +8,5 @@ export async function GET(request: NextRequest) {
   if (!customerId) redirect("/inloggen?verlopen=1");
   await startSession(customerId);
   const naar = request.nextUrl.searchParams.get("naar");
-  redirect(naar === "opzeggen" ? "/account?opzeggen=1" : naar === "check-in" ? "/account#check-in" : "/account");
+  redirect(naar === "opzeggen" ? "/account/abonnement?opzeggen=1" : naar === "check-in" ? "/account/check-in" : "/account");
 }
