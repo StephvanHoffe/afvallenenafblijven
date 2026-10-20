@@ -187,6 +187,7 @@ export function orderConfirmationEmail(input: {
   durationLabel: string;
   amountPaid: string;
   renewal: string;
+  incassoNote?: string;
 }): Mail {
   const subject = `Orderbevestiging ${input.orderNumber}`;
   const rows: [string, string][] = [
@@ -205,11 +206,12 @@ export function orderConfirmationEmail(input: {
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:15px;">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5b6b62;">${escapeHtml(k)}</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${escapeHtml(v)}</td></tr>`).join("")}
 </table>
+${input.incassoNote ? `<p style="font-size:14px;color:#5b6b62;">${escapeHtml(input.incassoNote)}</p>` : ""}
 <p style="font-size:14px;color:#5b6b62;">${escapeHtml(consent)}</p>
 <p style="font-size:14px;color:#5b6b62;">Op je bestelling zijn onze <a href="${site.url}/algemene-voorwaarden" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${site.url}/abonnement-opzeggen" style="color:#1c7a45;">${site.url.replace(/^https?:\/\//, "")}/abonnement-opzeggen</a>. Je factuur ontvang je apart van onze betaalpartner Stripe.</p>
 <p>Team ${escapeHtml(site.name)}</p>`,
   );
-  const text = `Hoi ${input.name},\n\nBedankt voor je bestelling!\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${consent}\n\nAlgemene voorwaarden: ${site.url}/algemene-voorwaarden\nOpzeggen: ${site.url}/abonnement-opzeggen\n\nTeam ${site.name}`;
+  const text = `Hoi ${input.name},\n\nBedankt voor je bestelling!\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${consent}\n\nAlgemene voorwaarden: ${site.url}/algemene-voorwaarden\nOpzeggen: ${site.url}/abonnement-opzeggen\n\nTeam ${site.name}`;
   return { to: input.to, subject, html, text };
 }
 

@@ -8,7 +8,6 @@ export const mainNav = [
   { href: "/bundel", label: "Bundel" },
   { href: "/prijzen", label: "Prijzen" },
   { href: "/hoe-werkt-het", label: "Hoe werkt het" },
-  { href: "/veelgestelde-vragen", label: "Vragen" },
 ];
 
 export function Header() {

@@ -8,7 +8,6 @@ import {
   durations,
   isSubscription,
   monthlyPrice,
-  periodTotal,
   products,
   type DurationId,
   type ProductId,
@@ -33,7 +32,7 @@ import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
 import { trackEvent } from "@/lib/consent";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { startCheckout, type CheckoutState } from "@/app/start/actions";
+import { startCheckout, type CheckoutState } from "@/app/(site)/start/actions";
 
 type StepId =
   | "doel"
@@ -407,13 +406,16 @@ export function Quiz({
           <Step title="Vertel iets over jezelf" subtitle="Dit hebben we nodig om je energiebehoefte te berekenen.">
             <fieldset>
               <legend className="label">Geslacht</legend>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(sexOptions) as Intake["sex"][]).map((x) => (
                   <ChoiceChip key={x} selected={a.sex === x} onClick={() => update({ sex: x })}>
                     {sexOptions[x]}
                   </ChoiceChip>
                 ))}
               </div>
+              <p className="mt-2 text-sm text-muted">
+                Mannen en vrouwen hebben een andere energiebehoefte. Daarom hebben we dit nodig voor een goede berekening.
+              </p>
             </fieldset>
             <NumberField label="Leeftijd" suffix="jaar" value={a.age} onChange={(v) => update({ age: v })} placeholder="35" />
             <NextButton onClick={() => next()} />
@@ -806,7 +808,8 @@ function CheckoutBox({
 }) {
   const product = state.product!;
   const d = durations[state.duration];
-  const total = periodTotal(product, state.duration);
+  const subscription = isSubscription(state.duration);
+  const total = monthlyPrice(product, state.duration);
   const first = launch.active ? applyPercentOff(total, launch.percentOff) : total;
   const c = state.consents;
   const ready = c.healthData && c.terms && c.immediateDelivery;
@@ -833,9 +836,13 @@ function CheckoutBox({
       <dl className="mt-5 space-y-3 text-[0.9375rem]">
         <div className="flex justify-between gap-4">
           <dt className="font-semibold">
-            {products[product].name} · {d.label}
+            {products[product].name} ·{" "}
+            {!subscription ? "los schema" : d.months === 1 ? "per maand" : `minimaal ${d.label}`}
           </dt>
-          <dd className="font-semibold">{euro(total)}</dd>
+          <dd className="font-semibold">
+            {euro(total)}
+            {subscription ? " p/m" : ""}
+          </dd>
         </div>
         {launch.active && (
           <div className="flex justify-between gap-4 text-brand-700">
@@ -844,14 +851,14 @@ function CheckoutBox({
           </div>
         )}
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-extrabold">
-          <dt>Nu te betalen</dt>
+          <dt>{subscription ? "Nu te betalen (eerste maand)" : "Nu te betalen"}</dt>
           <dd>{euro(first)}</dd>
         </div>
         <p className="text-sm text-muted">
-          {isSubscription(state.duration)
+          {subscription
             ? d.months === 1
-              ? `Daarna ${euro(monthlyPrice(product, state.duration))} per maand. Maandelijks opzegbaar.`
-              : `Na ${d.label} loopt je abonnement door voor ${euro(monthlyPrice(product, state.duration))} per maand en is het maandelijks opzegbaar.`
+              ? `Daarna schrijven we elke maand ${euro(total)} af via automatische incasso. Maandelijks opzegbaar.`
+              : `Daarna schrijven we elke maand ${euro(total)} af via automatische incasso. Minimale looptijd ${d.label}, daarna maandelijks opzegbaar.`
             : "Eenmalige betaling, geen abonnement."}{" "}
           Inclusief 21% btw.
         </p>
@@ -923,7 +930,10 @@ function CheckoutBox({
         )}
       </button>
       <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-sm text-muted">
-        <ShieldCheck className="size-4 text-brand-600" aria-hidden /> Betalen via Stripe met iDEAL | Wero, Bancontact of creditcard
+        <ShieldCheck className="size-4 text-brand-600" aria-hidden />
+        {subscription
+          ? "Eerste maand met iDEAL | Wero, Bancontact of IBAN; daarna automatische SEPA-incasso"
+          : "Betalen via Stripe met iDEAL | Wero, Bancontact of creditcard"}
       </p>
     </form>
   );

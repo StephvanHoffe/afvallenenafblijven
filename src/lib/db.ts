@@ -108,6 +108,12 @@ create table if not exists withdrawals (
   message text,
   created_at timestamptz not null default now()
 );
+
+-- Latere uitbreidingen (veilig om vaker uit te voeren)
+alter table orders add column if not exists monthly_cents integer not null default 0;
+alter table withdrawals add column if not exists handled_at timestamptz;
+create index if not exists orders_status_idx on orders(status);
+create index if not exists intakes_created_idx on intakes(created_at);
 `;
 
 /** Geeft de SQL-client terug nadat het schema gegarandeerd bestaat. */

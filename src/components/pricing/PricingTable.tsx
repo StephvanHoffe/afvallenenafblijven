@@ -10,7 +10,7 @@ import {
   bundleSavings,
   durations,
   monthlyPrice,
-  periodTotal,
+  commitmentTotal,
   products,
   savingsPercent,
   type DurationId,
@@ -129,10 +129,10 @@ function PriceCard({
   const p = products[product];
   const d = durations[duration];
   const perMonth = monthlyPrice(product, duration);
-  const total = periodTotal(product, duration);
+  const total = commitmentTotal(product, duration);
   const save = savingsPercent(product, duration);
   const oneOff = d.months === 0;
-  const launchPrice = launch?.active ? applyPercentOff(total, launch.percentOff) : null;
+  const launchPrice = launch?.active ? applyPercentOff(perMonth, launch.percentOff) : null;
 
   const cta = `Kies ${p.shortName.toLowerCase() === "bundel" ? "de bundel" : p.shortName.toLowerCase()}`;
   const href = `/start?plan=${product}&looptijd=${duration}`;
@@ -163,10 +163,11 @@ function PriceCard({
         {oneOff ? (
           "Eén schema voor 4 weken. Geen abonnement."
         ) : d.months === 1 ? (
-          "Per maand, maandelijks opzegbaar."
+          "Maandelijks afgeschreven via automatische incasso. Maandelijks opzegbaar."
         ) : (
           <>
-            {euro(total)} per {d.label}, daarna {euro(perMonth)} per maand en maandelijks opzegbaar.
+            Maandelijks afgeschreven via automatische incasso. Minimaal {d.label} (samen {euro(total)}), daarna
+            maandelijks opzegbaar.
           </>
         )}
       </p>
@@ -186,7 +187,7 @@ function PriceCard({
 
       {launchPrice !== null && (
         <p className={`mt-3 rounded-2xl px-3 py-2 text-sm font-semibold ${featured ? "bg-lime-glow/15 text-lime-glow" : "bg-accent-50 text-accent-600"}`}>
-          Lanceringsactie: eerste betaling {euro(launchPrice)} in plaats van {euro(total)}
+          Lanceringsactie: {oneOff ? "nu" : "eerste maand"} {euro(launchPrice)} in plaats van {euro(perMonth)}
         </p>
       )}
 

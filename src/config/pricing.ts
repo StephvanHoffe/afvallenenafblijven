@@ -34,7 +34,7 @@ export interface Product {
 export interface Duration {
   id: DurationId;
   label: string;
-  /** Aantal maanden in de eerste periode (0 = eenmalig, geen abonnement). */
+  /** Minimale looptijd in maanden (0 = eenmalig, geen abonnement). Afschrijving is altijd per maand. */
   months: number;
   badge?: string;
 }
@@ -101,13 +101,15 @@ export const durations: Record<DurationId, Duration> = {
 export const SUBSCRIPTION_DURATIONS: SubscriptionDurationId[] = ["1m", "3m", "6m", "12m"];
 
 /**
- * Prijs per maand (in centen) per product en looptijd. Voor "eenmalig" is
- * dit de prijs van één los schema (4 weken, geen abonnement).
+ * Prijs per maand (in centen) per product en minimale looptijd. Abonnementen
+ * worden altijd per maand afgeschreven (SEPA-incasso); een langere minimale
+ * looptijd geeft een lagere maandprijs. Voor "eenmalig" is dit de prijs van
+ * één los schema (4 weken, geen abonnement).
  */
 export const monthlyPrices: Record<ProductId, Record<DurationId, number>> = {
-  voeding: { "1m": 1995, "3m": 1695, "6m": 1495, "12m": 1295, eenmalig: 2995 },
-  training: { "1m": 1795, "3m": 1495, "6m": 1295, "12m": 1095, eenmalig: 2495 },
-  bundel: { "1m": 2995, "3m": 2495, "6m": 2195, "12m": 1795, eenmalig: 4495 },
+  voeding: { "1m": 1295, "3m": 995, "6m": 895, "12m": 795, eenmalig: 1995 },
+  training: { "1m": 1195, "3m": 895, "6m": 795, "12m": 695, eenmalig: 1795 },
+  bundel: { "1m": 1795, "3m": 1395, "6m": 1195, "12m": 995, eenmalig: 2795 },
 };
 
 export const DEFAULT_PRODUCT: ProductId = "bundel";
@@ -130,10 +132,15 @@ export function monthlyPrice(product: ProductId, duration: DurationId): number {
   return monthlyPrices[product][duration];
 }
 
-/** Totaalbedrag van de eerste periode in centen. */
-export function periodTotal(product: ProductId, duration: DurationId): number {
+/** Wat een abonnement minimaal kost over de hele minimale looptijd (of de losse prijs). */
+export function commitmentTotal(product: ProductId, duration: DurationId): number {
   const d = durations[duration];
   return d.months === 0 ? monthlyPrice(product, duration) : monthlyPrice(product, duration) * d.months;
+}
+
+/** De laagste maandprijs op de hele site, voor "vanaf"-teksten. */
+export function lowestMonthlyPrice(): number {
+  return Math.min(...PRODUCT_IDS.flatMap((p) => SUBSCRIPTION_DURATIONS.map((d) => monthlyPrice(p, d))));
 }
 
 /** Besparing in procenten t.o.v. het maandabonnement (afgerond). */
@@ -153,9 +160,14 @@ export function applyPercentOff(cents: number, percentOff: number): number {
   return Math.round(cents * (1 - percentOff / 100));
 }
 
+/** Hoogste besparing (in procenten) van een langere looptijd t.o.v. per maand. */
+export function maxSavingsPercent(): number {
+  return Math.max(...PRODUCT_IDS.flatMap((p) => SUBSCRIPTION_DURATIONS.map((d) => savingsPercent(p, d))));
+}
+
 export function billingDescription(duration: DurationId): string {
   const d = durations[duration];
   if (d.months === 0) return "Eenmalige betaling, geen abonnement";
-  if (d.months === 1) return "Per maand, maandelijks opzegbaar";
-  return `Per ${d.months} maanden vooruit, daarna maandelijks opzegbaar`;
+  if (d.months === 1) return "Maandelijks via automatische incasso, maandelijks opzegbaar";
+  return `Maandelijks via automatische incasso, minimaal ${d.months} maanden`;
 }

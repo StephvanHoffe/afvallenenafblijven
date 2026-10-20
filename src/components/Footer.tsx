@@ -20,7 +20,7 @@ const columns = [
     links: [
       { href: "/hoe-werkt-het", label: "Hoe werkt het" },
       { href: "/over-ons", label: "Over Afvallen & Afblijven" },
-      { href: "/veelgestelde-vragen", label: "Veelgestelde vragen" },
+      { href: "/contact#veelgestelde-vragen", label: "Veelgestelde vragen" },
       { href: "/contact", label: "Contact" },
       { href: "/account", label: "Mijn schema's" },
     ],

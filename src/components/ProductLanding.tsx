@@ -98,7 +98,7 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
             intro={
               content.pricingProducts.length > 1
                 ? "Tip: met de bundel krijg je voeding én training en betaal je per maand minder dan los."
-                : "Hoe langer de looptijd, hoe voordeliger. Na de eerste periode maandelijks opzegbaar."
+                : "Je betaalt per maand via automatische incasso. Hoe langer de minimale looptijd, hoe lager je maandprijs."
             }
           />
           <PricingTable only={content.pricingProducts} launch={launch} highlight="bundel" />

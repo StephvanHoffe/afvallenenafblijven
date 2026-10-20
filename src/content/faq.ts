@@ -24,16 +24,12 @@ export const faq: FaqItem[] = [
     a: "Heel persoonlijk. Je beantwoordt vragen over je doel, lengte, gewicht, leeftijd, dagelijkse activiteit, eetvoorkeuren, allergieën, kooktijd, budget, trainingsplek, ervaring en eventuele blessures. Op basis daarvan berekenen we jouw persoonlijke calorie- en eiwitdoel en wordt elk gerecht en elke oefening op jou afgestemd.",
   },
   {
-    q: "Wie of wat maakt de schema's?",
-    a: "Je schema wordt gemaakt met Claude, de AI van Anthropic, aan de hand van onze instructies en de Richtlijnen goede voeding van de Gezondheidsraad. Jouw energie- en eiwitdoelen rekenen we vooraf zelf uit met erkende formules. Daarna controleert ons systeem elk voedingsschema automatisch op calorieën, eiwit en het aantal maaltijden; voldoet een schema niet, dan wordt het opnieuw gemaakt. Zo krijg je in een paar minuten een schema dat volledig op jou is afgestemd, voor een fractie van de prijs van persoonlijke begeleiding. Een schema van ons is geen medisch advies.",
-  },
-  {
     q: "Hoe werkt een abonnement van 3, 6 of 12 maanden?",
-    a: "Je betaalt de eerste periode in één keer vooruit tegen een lagere maandprijs. In die periode krijg je elke 4 weken een nieuw schema, afgestemd op je voortgang. Na de eerste periode loopt je abonnement per maand door tegen dezelfde maandprijs, en kun je het op elk moment opzeggen met een opzegtermijn van maximaal een maand.",
+    a: "Je betaalt altijd per maand via automatische incasso. Kies je een minimale looptijd van 3, 6 of 12 maanden, dan krijg je een lagere maandprijs. Elke 4 weken krijg je een nieuw schema, afgestemd op je voortgang. Na de minimale looptijd loopt je abonnement door tegen dezelfde maandprijs, en kun je het op elk moment opzeggen met een opzegtermijn van maximaal een maand.",
   },
   {
     q: "Kan ik makkelijk opzeggen?",
-    a: "Ja. Je zegt op via 'Mijn schema's' of via de pagina 'Abonnement opzeggen', in een paar klikken. Een maandabonnement is maandelijks opzegbaar; bij een langere looptijd zeg je op tegen het einde van die periode en daarna maandelijks. Je houdt toegang tot alle schema's die je al hebt ontvangen.",
+    a: "Ja. Je zegt op via 'Mijn schema's' of via de pagina 'Abonnement opzeggen', in een paar klikken. Een maandabonnement is maandelijks opzegbaar. Heb je een minimale looptijd gekozen, dan stopt je abonnement aan het einde daarvan; daarna is het maandelijks opzegbaar. Je houdt toegang tot alle schema's die je al hebt ontvangen.",
   },
   {
     q: "Ik ben vegetariër, veganist of heb een allergie. Kan dat?",
@@ -49,7 +45,7 @@ export const faq: FaqItem[] = [
   },
   {
     q: "Hoe kan ik betalen?",
-    a: "Je betaalt veilig via Stripe met iDEAL | Wero, Bancontact, creditcard of SEPA-incasso. Je ontvangt automatisch een factuur per e-mail.",
+    a: "Een abonnement betaal je per maand via automatische incasso (SEPA). De eerste maand betaal je met iDEAL | Wero, Bancontact of je IBAN; daarmee geef je meteen toestemming voor de maandelijkse afschrijving. Een los schema betaal je eenmalig met iDEAL | Wero, Bancontact of creditcard. Alle betalingen lopen veilig via Stripe en je ontvangt automatisch een factuur per e-mail.",
   },
   ...guarantee,
   {

@@ -7,7 +7,7 @@ import {
   monthlyPrice,
   products,
 } from "@/config/pricing";
-import { adminNotificationEmail, orderConfirmationEmail, sendMail } from "@/lib/email";
+import { orderConfirmationEmail, sendMail } from "@/lib/email";
 import { euro } from "@/lib/format";
 import {
   createOrder,
@@ -19,7 +19,7 @@ import {
   type Order,
   type OrderStatus,
 } from "@/lib/repo";
-import { retrieveCheckoutSession, scheduleMonthlyContinuation, type Stripe } from "@/lib/stripe";
+import { retrieveCheckoutSession, type Stripe } from "@/lib/stripe";
 
 /**
  * Verwerkt een afgeronde Stripe-checkout: klant en bestelling vastleggen en
@@ -27,10 +27,13 @@ import { retrieveCheckoutSession, scheduleMonthlyContinuation, type Stripe } fro
  * aanroep voor dezelfde checkout doet niets.
  */
 export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): Promise<Order | null> {
-  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
-    // Bijv. SEPA-incasso: we wachten op checkout.session.async_payment_succeeded.
-    return null;
-  }
+  const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+  // Een abonnement met SEPA-incasso is rond zodra de machtiging is afgegeven; de
+  // afschrijving zelf duurt een paar werkdagen. De klant krijgt het schema dan
+  // direct. Mislukt de incasso, dan stopt het abonnement vanzelf (via de
+  // subscription-webhooks). Een losse aankoop leveren we pas na betaling.
+  const mandateGiven = session.mode === "subscription" && session.status === "complete";
+  if (!paid && !mandateGiven) return null;
 
   const existing = await getOrderBySession(session.id);
   if (existing) return existing;
@@ -62,42 +65,32 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
     stripeSubscriptionId: subscriptionId,
     status: isSubscription(duration) ? "active" : "completed",
     amountCents: session.amount_total ?? 0,
+    monthlyCents: isSubscription(duration) ? monthlyPrice(product, duration) : 0,
   });
   if (!order) return getOrderBySession(session.id);
 
   await createPlans(order.id, customer.id, products[product].includes, 1);
 
   const d = durations[duration];
+  const monthly = euro(monthlyPrice(product, duration));
   await sendMail(
     orderConfirmationEmail({
       to: customer.email,
       name: customer.name,
       orderNumber: order.id.slice(0, 8).toUpperCase(),
       productName: products[product].name,
-      durationLabel: d.label,
+      durationLabel: !isSubscription(duration) ? "Los schema (4 weken)" : d.months === 1 ? "Per maand" : `Minimaal ${d.label}`,
       amountPaid: euro(order.amount_cents),
       renewal: !isSubscription(duration)
         ? "Geen, eenmalige aankoop"
-        : `Daarna ${euro(monthlyPrice(product, duration))} per maand, maandelijks opzegbaar`,
+        : d.months === 1
+          ? `${monthly} per maand via SEPA-incasso, maandelijks opzegbaar`
+          : `${monthly} per maand via SEPA-incasso; na ${d.label} maandelijks opzegbaar`,
+      incassoNote: isSubscription(duration)
+        ? `We schrijven elke maand ${monthly} af via SEPA-incasso, rond dezelfde datum als je eerste betaling. Deze e-mail geldt als vooraankondiging van die afschrijvingen. Op je bankafschrift staat de afschrijving van onze betaalpartner Stripe.`
+        : undefined,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));
-
-  if (subscriptionId && isSubscription(duration)) {
-    try {
-      await scheduleMonthlyContinuation(subscriptionId, product, duration);
-    } catch (err) {
-      console.error("Omzetten naar maandelijkse doorloop mislukt", err);
-      await sendMail(
-        adminNotificationEmail("Actie nodig: abonnement niet omgezet naar maandelijkse doorloop", {
-          Abonnement: subscriptionId,
-          Klant: customer.email,
-          Fout: err instanceof Error ? err.message : String(err),
-          "Wat te doen":
-            "Zet dit abonnement in Stripe handmatig om zodat het na de eerste periode per maand doorloopt (zie README).",
-        }),
-      ).catch(() => {});
-    }
-  }
 
   return order;
 }

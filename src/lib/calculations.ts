@@ -34,12 +34,10 @@ export function bmi(weightKg: number, heightCm: number): number {
   return weightKg / (m * m);
 }
 
-/** Mifflin-St Jeor. Bij "anders" nemen we het gemiddelde van beide formules. */
+/** Ruststofwisseling volgens Mifflin-St Jeor; de formule verschilt voor mannen en vrouwen. */
 export function bmr(intake: Pick<Intake, "sex" | "weightKg" | "heightCm" | "age">): number {
   const base = 10 * intake.weightKg + 6.25 * intake.heightCm - 5 * intake.age;
-  if (intake.sex === "man") return base + 5;
-  if (intake.sex === "vrouw") return base - 161;
-  return base - 78;
+  return intake.sex === "man" ? base + 5 : base - 161;
 }
 
 export function activityFactor(intake: Pick<Intake, "activity" | "trainingDays" | "product">): number {

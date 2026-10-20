@@ -4,18 +4,23 @@ import {
   durations,
   isSubscription,
   monthlyPrice,
-  periodTotal,
   products,
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
 import { isLaunchOfferActive, site } from "@/config/site";
+import { addMonthsClamped } from "@/lib/dates";
 
 /**
  * Stripe-koppeling. Producten, prijzen en de lanceringskorting worden
  * automatisch (en idempotent) in Stripe aangemaakt op basis van
  * src/config/pricing.ts. Je hoeft in het Stripe-dashboard dus geen producten
- * te maken; alleen betaalmethoden (iDEAL, Bancontact, kaart) aanzetten.
+ * te maken; alleen de betaalmethoden aanzetten (iDEAL | Wero, Bancontact,
+ * SEPA-incasso en voor losse aankopen ook kaart).
+ *
+ * Abonnementen worden altijd per maand afgeschreven. De eerste betaling gaat
+ * via iDEAL, Bancontact of SEPA; Stripe zet iDEAL en Bancontact daarna
+ * automatisch om in een SEPA-incassomachtiging voor de maandelijkse termijnen.
  */
 
 let client: Stripe | null = null;
@@ -52,42 +57,30 @@ async function ensureProduct(product: ProductId): Promise<string> {
   return id;
 }
 
-export type PriceKind = "initial" | "continuation";
-
 const priceCache = new Map<string, string>();
 
 /**
- * Geeft de Stripe-prijs voor een product en looptijd. "initial" is de eerste
- * periode (bijv. 3 maanden vooruit), "continuation" de maandprijs waarmee een
- * abonnement na de eerste periode doorloopt (maandelijks opzegbaar).
+ * Geeft de Stripe-prijs voor een product en looptijd: een maandprijs voor
+ * abonnementen, of een eenmalige prijs voor een los schema.
  */
-export async function ensurePrice(product: ProductId, duration: DurationId, kind: PriceKind): Promise<string> {
-  const amount = kind === "initial" ? periodTotal(product, duration) : monthlyPrice(product, duration);
-  const lookupKey = `afb_${product}_${duration}_${kind}_${amount}`;
+export async function ensurePrice(product: ProductId, duration: DurationId): Promise<string> {
+  const amount = monthlyPrice(product, duration);
+  const lookupKey = `afb_${product}_${duration}_maand_${amount}`;
   const cached = priceCache.get(lookupKey);
   if (cached) return cached;
 
   const existing = await stripe().prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
   let priceId = existing.data[0]?.id;
   if (!priceId) {
-    const months = durations[duration].months;
-    const recurring =
-      !isSubscription(duration)
-        ? undefined
-        : kind === "continuation"
-          ? { interval: "month" as const, interval_count: 1 }
-          : months === 12
-            ? { interval: "year" as const, interval_count: 1 }
-            : { interval: "month" as const, interval_count: months };
     const price = await stripe().prices.create({
       product: await ensureProduct(product),
       currency: "eur",
       unit_amount: amount,
       tax_behavior: "inclusive",
       lookup_key: lookupKey,
-      nickname: `${products[product].name} – ${durations[duration].label}${kind === "continuation" ? " (doorloop per maand)" : ""}`,
-      recurring,
-      metadata: { product, duration, kind },
+      nickname: `${products[product].name} – ${durations[duration].label}`,
+      recurring: isSubscription(duration) ? { interval: "month", interval_count: 1 } : undefined,
+      metadata: { product, duration },
     });
     priceId = price.id;
   }
@@ -121,7 +114,7 @@ export interface CheckoutInput {
 }
 
 export async function createCheckoutSession(input: CheckoutInput): Promise<string> {
-  const price = await ensurePrice(input.product, input.duration, "initial");
+  const price = await ensurePrice(input.product, input.duration);
   const subscription = isSubscription(input.duration);
   const metadata = {
     intake_id: input.intakeId,
@@ -142,7 +135,12 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
     client_reference_id: input.intakeId,
     metadata,
     ...(subscription
-      ? { subscription_data: { metadata } }
+      ? {
+          // Maandelijkse afschrijving via SEPA-incasso; iDEAL en Bancontact
+          // leveren bij de eerste betaling automatisch een incassomachtiging op.
+          payment_method_types: ["ideal", "bancontact", "sepa_debit"],
+          subscription_data: { metadata },
+        }
       : {
           customer_creation: "always" as const,
           invoice_creation: { enabled: true, invoice_data: { metadata } },
@@ -151,7 +149,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
     custom_text: {
       submit: {
         message: subscription
-          ? "Je schema wordt direct na betaling gemaakt. Na de eerste periode loopt je abonnement per maand door en is het maandelijks opzegbaar."
+          ? `Je betaalt nu de eerste maand. Daarna schrijven we elke maand automatisch af via SEPA-incasso.${durations[input.duration].months > 1 ? ` De minimale looptijd is ${durations[input.duration].months} maanden, daarna is je abonnement maandelijks opzegbaar.` : " Je abonnement is maandelijks opzegbaar."} Je schema wordt direct gemaakt.`
           : "Je schema wordt direct na betaling gemaakt. Dit is een eenmalige aankoop, geen abonnement.",
       },
     },
@@ -161,68 +159,38 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
 }
 
 /**
- * Nederlandse regels: na de eerste looptijd mag een abonnement alleen
- * stilzwijgend doorlopen voor onbepaalde tijd met maximaal een maand
- * opzegtermijn. Daarom zetten we abonnementen van 3, 6 of 12 maanden om naar
- * een schema: eerst de vooruitbetaalde periode, daarna per maand.
+ * Einde van de minimale looptijd: het aantal maanden na de start van de
+ * afschrijvingen, op dezelfde manier geteld als Stripe de maanden telt.
  */
-export async function scheduleMonthlyContinuation(
-  subscriptionId: string,
-  product: ProductId,
-  duration: DurationId,
-): Promise<void> {
-  if (!isSubscription(duration) || duration === "1m") return;
-  const continuationPrice = await ensurePrice(product, duration, "continuation");
-  const subscription = await stripe().subscriptions.retrieve(subscriptionId);
-  if (subscription.schedule) return; // al omgezet
-
-  const schedule = await stripe().subscriptionSchedules.create({ from_subscription: subscriptionId });
-  const current = schedule.phases[0];
-  await stripe().subscriptionSchedules.update(schedule.id, {
-    end_behavior: "release",
-    proration_behavior: "none",
-    phases: [
-      {
-        items: current.items.map((item) => ({
-          price: typeof item.price === "string" ? item.price : item.price.id,
-          quantity: item.quantity ?? 1,
-        })),
-        start_date: current.start_date,
-        end_date: current.end_date,
-        metadata: { product, duration, phase: "initial" },
-      },
-      {
-        items: [{ price: continuationPrice, quantity: 1 }],
-        duration: { interval: "month", interval_count: 1 },
-        metadata: { product, duration, phase: "monthly" },
-      },
-    ],
-  });
+export function commitmentEnd(subscription: Stripe.Subscription, months: number): Date {
+  return addMonthsClamped(new Date(subscription.billing_cycle_anchor * 1000), months);
 }
 
 /**
- * Zegt een abonnement op tegen het einde van de lopende (betaalde) periode.
- * Een eventueel schema voor de maandelijkse doorloop wordt eerst losgekoppeld,
- * zodat het abonnement na deze periode echt stopt.
+ * Zegt een abonnement op. Binnen de minimale looptijd stopt het aan het eind
+ * van die looptijd; daarna aan het eind van de lopende maand.
  */
-export async function cancelSubscriptionAtPeriodEnd(subscriptionId: string): Promise<Stripe.Subscription> {
-  const current = await stripe().subscriptions.retrieve(subscriptionId);
-  if (current.schedule) {
-    const scheduleId = typeof current.schedule === "string" ? current.schedule : current.schedule.id;
-    await stripe().subscriptionSchedules.release(scheduleId);
+export async function cancelSubscription(subscriptionId: string, duration: DurationId): Promise<Stripe.Subscription> {
+  const subscription = await stripe().subscriptions.retrieve(subscriptionId);
+  const months = durations[duration].months;
+  const periodEnd = subscription.items.data[0]?.current_period_end ?? 0;
+  if (months > 1) {
+    // Een uur marge, zodat er nooit een extra maand wordt aangemaakt.
+    const end = Math.floor(commitmentEnd(subscription, months).getTime() / 1000) - 3600;
+    if (end > periodEnd) {
+      return stripe().subscriptions.update(subscriptionId, { cancel_at: end, proration_behavior: "none" });
+    }
   }
   return stripe().subscriptions.update(subscriptionId, { cancel_at_period_end: true });
 }
 
-/** Trekt een opzegging in en zet de maandelijkse doorloop (indien nodig) opnieuw klaar. */
-export async function resumeSubscription(
-  subscriptionId: string,
-  product: ProductId,
-  duration: DurationId,
-): Promise<Stripe.Subscription> {
-  const updated = await stripe().subscriptions.update(subscriptionId, { cancel_at_period_end: false });
-  await scheduleMonthlyContinuation(subscriptionId, product, duration);
-  return updated;
+/** Trekt een opzegging in. */
+export async function resumeSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+  const subscription = await stripe().subscriptions.retrieve(subscriptionId);
+  if (subscription.cancel_at_period_end) {
+    return stripe().subscriptions.update(subscriptionId, { cancel_at_period_end: false });
+  }
+  return stripe().subscriptions.update(subscriptionId, { cancel_at: "" });
 }
 
 export async function retrieveCheckoutSession(sessionId: string) {

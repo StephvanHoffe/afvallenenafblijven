@@ -17,7 +17,6 @@ export const goalOptions = {
 export const sexOptions = {
   vrouw: "Vrouw",
   man: "Man",
-  anders: "Anders / zeg ik liever niet",
 } as const;
 
 export const paceOptions = {

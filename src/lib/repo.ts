@@ -37,7 +37,9 @@ export interface Order {
   status: OrderStatus;
   cancel_at: Date | null;
   amount_cents: number;
+  monthly_cents: number;
   created_at: Date;
+  updated_at: Date;
 }
 
 export interface Plan {
@@ -131,12 +133,13 @@ export async function createOrder(input: {
   stripeSubscriptionId: string | null;
   status: OrderStatus;
   amountCents: number;
+  monthlyCents: number;
 }): Promise<Order | null> {
   const sql = await db();
   const [row] = await sql<Order[]>`
-    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents)
+    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents)
     values (${input.customerId}, ${input.intakeId}, ${input.product}, ${input.duration}, ${input.stripeSessionId},
-            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents})
+            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents})
     on conflict (stripe_session_id) do nothing
     returning *`;
   if (row) {
