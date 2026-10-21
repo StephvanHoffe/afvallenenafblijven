@@ -1,3 +1,4 @@
+import { describeCampaign } from "@/lib/campaign";
 import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
@@ -51,7 +52,7 @@ async function Orders({ searchParams }: Pick<PageProps<"/beheer/bestellingen">, 
               <tr>
                 <th className={table.th}>Bestelling</th>
                 <th className={table.th}>Klant</th>
-                <th className={table.th}>Plan</th>
+                <th className={table.th}>Plan · bron</th>
                 <th className={table.th}>Status</th>
                 <th className={`${table.th} text-right`}>Eerste betaling</th>
                 <th className={`${table.th} text-right`}>Per maand</th>
@@ -69,7 +70,10 @@ async function Orders({ searchParams }: Pick<PageProps<"/beheer/bestellingen">, 
                     </Link>
                     <span className="block text-xs text-muted">{o.customerEmail}</span>
                   </td>
-                  <td className={table.td}>{planName(o.product, o.duration)}</td>
+                  <td className={table.td}>
+                    {planName(o.product, o.duration)}
+                    {o.campaign && <span className="block text-xs text-muted">{describeCampaign(o.campaign)}</span>}
+                  </td>
                   <td className={table.td}>
                     <OrderStatusBadge status={o.status} cancelAt={o.cancelAt} />
                   </td>

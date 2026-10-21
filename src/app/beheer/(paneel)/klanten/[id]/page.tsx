@@ -1,3 +1,4 @@
+import { describeCampaign } from "@/lib/campaign";
 import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { notFound } from "next/navigation";
@@ -107,6 +108,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                       <td className={table.td}>
                         <span className="font-semibold">{planName(o.product, o.duration)}</span>
                         <span className="block text-xs text-muted">#{o.reference}</span>
+                        {o.campaign && <span className="block text-xs text-muted">Via {describeCampaign(o.campaign)}</span>}
                       </td>
                       <td className={table.td}>
                         <OrderStatusBadge status={o.status} cancelAt={o.cancelAt} />

@@ -3,6 +3,7 @@ import { db, isDatabaseConfigured } from "@/lib/db";
 import { isDemoMode } from "@/lib/admin/auth";
 import { demoAdminData } from "@/lib/admin/demo-data";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
+import type { Campaign } from "@/lib/campaign";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { checkinWindow, type CheckinWindow } from "@/lib/checkin";
@@ -23,6 +24,8 @@ export interface AdminOrderRow {
   monthlyCents: number;
   createdAt: Date;
   stripeSubscriptionId: string | null;
+  /** Via welke campagne (utm) en landingspagina de bestelling binnenkwam. */
+  campaign: Campaign | null;
   /** Alleen gevuld in de klantdetails: de check-in voor de volgende periode. */
   checkin?: CheckinWindow | null;
 }
@@ -94,7 +97,18 @@ export interface AdminOverview {
   checkinsOverdue: number;
   ordersPerDay: { date: string; count: number }[];
   productMix: { product: ProductId; duration: DurationId; count: number }[];
+  /** Gestarte betalingen en bestellingen per campagne in de laatste 30 dagen. */
+  campaigns: AdminCampaignRow[];
   recentOrders: AdminOrderRow[];
+}
+
+export interface AdminCampaignRow {
+  /** utm_source; null = geen campagne (direct, zoekmachine, ...). */
+  source: string | null;
+  campaign: string | null;
+  started: number;
+  orders: number;
+  firstPaymentsCents: number;
 }
 
 export interface AdminData {
@@ -123,6 +137,7 @@ type OrderSql = {
   monthly_cents: number;
   created_at: Date;
   stripe_subscription_id: string | null;
+  campaign: Campaign | null;
 };
 
 const toOrder = (r: OrderSql): AdminOrderRow => ({
@@ -133,6 +148,7 @@ const toOrder = (r: OrderSql): AdminOrderRow => ({
   customerEmail: r.customer_email,
   product: r.product,
   duration: r.duration,
+  campaign: r.campaign ?? null,
   status: r.status,
   cancelAt: r.cancel_at,
   amountCents: r.amount_cents,
@@ -232,9 +248,15 @@ const dbAdminData: AdminData = {
       select product, duration, count(*)::int as count from orders
       where status = 'active' and duration <> 'eenmalig'
       group by product, duration order by count desc`;
+    const campaigns = await sql<{ source: string | null; campaign: string | null; started: number; orders: number; amount: number }[]>`
+      select i.campaign->>'source' as source, i.campaign->>'campaign' as campaign,
+             count(distinct i.id)::int as started, count(o.id)::int as orders, coalesce(sum(o.amount_cents), 0)::int as amount
+      from intakes i left join orders o on o.intake_id = i.id
+      where i.created_at > now() - interval '30 days'
+      group by 1, 2 order by orders desc, started desc limit 12`;
     const recent = await sql<OrderSql[]>`
-      select o.*, c.name as customer_name, c.email as customer_email
-      from orders o join customers c on c.id = o.customer_id
+      select o.*, c.name as customer_name, c.email as customer_email, i.campaign
+      from orders o join customers c on c.id = o.customer_id left join intakes i on i.id = o.intake_id
       order by o.created_at desc limit 8`;
     const now = Date.now();
     const windows = (await subscriptionCheckinOrders()).map((o) =>
@@ -263,6 +285,7 @@ const dbAdminData: AdminData = {
       openWithdrawals: withdrawals.open,
       ordersPerDay: perDay,
       productMix: mix,
+      campaigns: campaigns.map((r) => ({ source: r.source, campaign: r.campaign, started: r.started, orders: r.orders, firstPaymentsCents: r.amount })),
       recentOrders: recent.map(toOrder),
     };
   },
@@ -292,8 +315,8 @@ const dbAdminData: AdminData = {
       from customers c where c.id = ${id}`;
     if (!c) return null;
     const orders = await sql<OrderSql[]>`
-      select o.*, c.name as customer_name, c.email as customer_email
-      from orders o join customers c on c.id = o.customer_id
+      select o.*, c.name as customer_name, c.email as customer_email, i.campaign
+      from orders o join customers c on c.id = o.customer_id left join intakes i on i.id = o.intake_id
       where o.customer_id = ${id} order by o.created_at desc`;
     const plans = await sql<PlanSql[]>`
       select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at,
@@ -338,8 +361,8 @@ const dbAdminData: AdminData = {
   async orders(status) {
     const sql = await db();
     const rows = await sql<OrderSql[]>`
-      select o.*, c.name as customer_name, c.email as customer_email
-      from orders o join customers c on c.id = o.customer_id
+      select o.*, c.name as customer_name, c.email as customer_email, i.campaign
+      from orders o join customers c on c.id = o.customer_id left join intakes i on i.id = o.intake_id
       ${status ? sql`where o.status = ${status}` : sql``}
       order by o.created_at desc limit 300`;
     return rows.map(toOrder);

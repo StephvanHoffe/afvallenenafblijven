@@ -141,6 +141,9 @@ create index if not exists intakes_created_idx on intakes(created_at);
 alter table intakes add column if not exists locale text not null default 'nl';
 alter table customers add column if not exists locale text not null default 'nl';
 
+-- Via welke campagne (utm) en landingspagina de klant binnenkwam.
+alter table intakes add column if not exists campaign jsonb;
+
 -- Gekoppelde gezondheidsapps (Withings direct, overige via een aggregator).
 create table if not exists health_connections (
   id uuid primary key default gen_random_uuid(),

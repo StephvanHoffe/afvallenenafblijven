@@ -123,6 +123,43 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
         </Panel>
       </div>
 
+      <Panel title="Campagnes (laatste 30 dagen)" className="mt-6">
+        {o.campaigns.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-muted">Nog geen gestarte betalingen in de laatste 30 dagen.</p>
+        ) : (
+          <div className={table.wrap}>
+            <table className={table.table}>
+              <thead>
+                <tr>
+                  <th className={table.th}>Bron</th>
+                  <th className={table.th}>Campagne</th>
+                  <th className={`${table.th} text-right`}>Betaalstap gestart</th>
+                  <th className={`${table.th} text-right`}>Bestellingen</th>
+                  <th className={`${table.th} text-right`}>Conversie</th>
+                  <th className={`${table.th} text-right`}>Eerste betalingen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.campaigns.map((r) => (
+                  <tr key={`${r.source}|${r.campaign}`}>
+                    <td className={`${table.td} font-semibold`}>{r.source ?? <span className="font-normal text-muted">Geen campagne</span>}</td>
+                    <td className={table.td}>{r.campaign ?? "–"}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{formatNumber(r.started)}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{formatNumber(r.orders)}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{r.started > 0 ? `${Math.round((r.orders / r.started) * 100)}%` : "–"}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{euro(r.firstPaymentsCents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="border-t border-line px-5 py-3 text-xs text-muted">
+          Op basis van de utm-parameters in je advertentielinks. &quot;Geen campagne&quot; is direct verkeer, zoekmachines en links zonder utm.
+          Gebruik voor advertenties de landingspagina&apos;s /lp, /lp/voeding en /lp/training (zie README).
+        </p>
+      </Panel>
+
       <Panel
         title="Laatste bestellingen"
         className="mt-6"

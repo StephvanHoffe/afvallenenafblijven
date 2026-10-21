@@ -6,6 +6,7 @@ import { site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
+import { goalOptions } from "@/lib/intake";
 import { launchOfferActive } from "@/lib/launch";
 
 const copy = defineCopy({
@@ -39,12 +40,14 @@ async function QuizLoader({ searchParams }: Pick<PageProps<"/[lang]/start">, "se
   const sp = await searchParams;
   const plan = typeof sp.plan === "string" && isProductId(sp.plan) ? sp.plan : null;
   const duration = typeof sp.looptijd === "string" && isDurationId(sp.looptijd) ? sp.looptijd : DEFAULT_DURATION;
+  const goal = typeof sp.doel === "string" && sp.doel in goalOptions ? (sp.doel as keyof typeof goalOptions) : null;
   const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
   return (
     <Quiz
-      key={`${plan ?? "geen"}-${duration}`}
+      key={`${plan ?? "geen"}-${duration}-${goal ?? ""}`}
       initialProduct={plan}
       initialDuration={duration}
+      initialGoal={goal}
       startAtPlan={sp.stap === "plan"}
       launch={launch}
     />

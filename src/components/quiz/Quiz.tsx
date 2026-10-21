@@ -31,6 +31,7 @@ import { nutritionTargets, weightProjection } from "@/lib/calculations";
 import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
 import { trackEvent } from "@/lib/consent";
+import { campaignFromParams, type Campaign } from "@/lib/campaign";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { startCheckout, type CheckoutState } from "@/app/[lang]/(site)/start/actions";
 import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
@@ -536,11 +537,14 @@ function validateStep(step: StepId, s: QuizState, l: Locale): string | null {
 export function Quiz({
   initialProduct,
   initialDuration,
+  initialGoal = null,
   startAtPlan,
   launch,
 }: {
   initialProduct: ProductId | null;
   initialDuration: DurationId;
+  /** Doel dat al op een landingspagina is gekozen: dan begint de vragenlijst bij de tweede vraag. */
+  initialGoal?: Intake["goal"] | null;
   startAtPlan: boolean;
   launch: { active: boolean; percentOff: number };
 }) {
@@ -548,16 +552,23 @@ export function Quiz({
   const c = copy[l];
   const labels = intakeLabels(l);
   const presetProduct = initialProduct !== null;
-  const [s, setS] = useState<QuizState>({
-    product: initialProduct,
-    duration: initialDuration,
-    step: "doel",
-    answered: [],
-    answers: initialAnswers,
-    name: "",
-    email: "",
-    consents: { healthData: false, terms: false, immediateDelivery: false, marketing: false },
+  const [s, setS] = useState<QuizState>(() => {
+    const start: QuizState = {
+      product: initialProduct,
+      duration: initialDuration,
+      step: "doel",
+      answered: [],
+      answers: initialAnswers,
+      name: "",
+      email: "",
+      consents: { healthData: false, terms: false, immediateDelivery: false, marketing: false },
+    };
+    if (!initialGoal) return start;
+    const withGoal = { ...start, answers: { ...initialAnswers, goal: initialGoal }, answered: ["doel" as StepId] };
+    return { ...withGoal, step: visibleSteps(withGoal, presetProduct)[1] ?? "doel" };
   });
+  // Campagnebron uit de advertentielink (utm), alleen in het geheugen; gaat mee met de bestelling.
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
   const restored = useRef(false);
@@ -574,6 +585,7 @@ export function Quiz({
       const parsed = JSON.parse(saved) as QuizState;
       const next: QuizState = {
         ...parsed,
+        answers: initialGoal ? { ...parsed.answers, goal: initialGoal } : parsed.answers,
         product: initialProduct ?? parsed.product,
         duration: presetProduct ? initialDuration : parsed.duration,
         step: startAtPlan && parsed.answered.includes("gezondheid") ? "plan" : parsed.answered.length ? parsed.step : "doel",
@@ -584,7 +596,15 @@ export function Quiz({
     } catch {
       /* geen opgeslagen voortgang */
     }
-  }, [initialProduct, initialDuration, presetProduct, startAtPlan]);
+  }, [initialProduct, initialDuration, initialGoal, presetProduct, startAtPlan]);
+
+  useEffect(() => {
+    // De adresbalk is pas in de browser te lezen.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCampaign(campaignFromParams(new URLSearchParams(window.location.search)));
+    // Met een doel van de landingspagina is de eerste vraag al beantwoord.
+    if (initialGoal) trackEvent("quiz_start", { goal: initialGoal });
+  }, [initialGoal]);
 
   useEffect(() => {
     if (!restored.current) return;
@@ -673,6 +693,7 @@ export function Quiz({
     consents: s.consents,
     product: s.product,
     duration: s.duration,
+    campaign,
   });
 
   const a = s.answers;

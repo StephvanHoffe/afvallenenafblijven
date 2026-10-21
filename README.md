@@ -27,6 +27,17 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - **Wekelijks weegmoment** (rond dag 7, 14 en 21 van elke periode, ook bij een los schema): gewicht en een paar korte vragen. Vaste regels beslissen of het lopende schema wordt bijgestuurd: ±100 kcal per dag als het gewicht anders verloopt dan gepland (pas na ongeveer 2 weken, of meteen bij veel honger en weinig energie), en zwaarder, lichter of eenvoudiger trainen. Claude zet dat om in concrete aanpassingen binnen het bestaande schema (met een vaste tekst als terugval). De bijsturing staat bovenaan het schema en in de PDF, en telt mee in het volgende schema. Herinnering per e-mail (uit te zetten door de klant). Logica: `src/lib/weekly.ts`.
 - Is het streefgewicht bereikt, dan schakelt het schema automatisch over naar een onderhoudsplan ("afblijven").
 
+**Campagnes en landingspagina's**
+- Voor advertenties zijn er drie landingspagina's zonder afleidend menu, in het Nederlands en Engels (`/en/lp`, ...). Kies de pagina die past bij de belofte in je advertentie:
+  - `/lp`: afvallen met voeding én training (de klant kiest zelf het plan);
+  - `/lp/voeding`: voedingsschema (de vragenlijst begint met het voedingsschema);
+  - `/lp/training`: trainingsschema, thuis of in de sportschool.
+- Bovenaan kiest de bezoeker meteen een doel; de vragenlijst begint dan bij de tweede vraag (`/start?doel=afvallen`). Verder: wat je krijgt, herkenbare problemen met de oplossing, een echt voorbeeld uit een schema, de wekelijkse bijsturing met een voorbeeldgrafiek, een vergelijking, de prijzen, garantie, veelgestelde vragen en een vaste startknop op mobiel. De lanceringsactie verschijnt vanzelf zolang die loopt.
+- De pagina's staan niet in zoekmachines (noindex) en niet in de sitemap; de gewone pagina's zijn voor SEO.
+- Zet utm-parameters in je advertentielinks, bijvoorbeeld `https://afvallenenafblijven.nl/lp/voeding?utm_source=meta&utm_medium=paid_social&utm_campaign=lancering-januari&utm_content=video-1`. De parameters gaan mee naar de vragenlijst en worden bij de bestelling opgeslagen (er wordt niets in de browser bewaard). In het beheer zie je per campagne hoeveel mensen de betaalstap startten, hoeveel er bestelden en wat dat opleverde; bij elke bestelling staat de bron.
+- Meting (na cookietoestemming): `view_promotion` bij het openen, `select_promotion` bij een klik op een startknop of doel, daarna de bestaande gebeurtenissen (`quiz_start` = Meta Lead, `begin_checkout`, `purchase`).
+- Teksten per variant: `src/content/landing.ts`; opbouw: `src/components/campaign/CampaignLanding.tsx`.
+
 **Twee talen: Nederlands en Engels**
 - Nederlands staat zonder voorvoegsel (`/prijzen`), Engels onder `/en` (`/en/prijzen`). De taalwisselaar staat in de kopbalk, het mobiele menu en de footer en houdt je op dezelfde pagina. Zoekmachines krijgen per pagina beide versies door (hreflang en sitemap).
 - Alles is vertaald: pagina's, vragenlijst, prijzen, FAQ, Mijn schema's, voorbeelden, PDF's en e-mails. De juridische teksten zijn ook in het Engels, met de vermelding dat de Nederlandse versie voorgaat.

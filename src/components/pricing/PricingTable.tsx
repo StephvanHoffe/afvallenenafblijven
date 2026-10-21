@@ -69,7 +69,7 @@ const copy = defineCopy({
 });
 
 interface Props {
-  /** Toon alleen deze producten (standaard alle drie). */
+  /** Toon alleen deze producten, in deze volgorde (standaard alle drie). */
   only?: ProductId[];
   initialDuration?: DurationId;
   launch?: { active: boolean; percentOff: number };
@@ -140,7 +140,8 @@ export function DurationToggle({
 
 export function PricingTable({ only, initialDuration = "3m", launch, onSelect, selectedProduct, highlight = "bundel" }: Props) {
   const [duration, setDuration] = useState<DurationId>(initialDuration);
-  const list = ORDER.filter((p) => !only || only.includes(p));
+  // Met `only` in de opgegeven volgorde (het product van de pagina eerst), anders de vaste volgorde.
+  const list = only ? only.filter((p) => ORDER.includes(p)) : ORDER;
 
   return (
     <div className="space-y-10">

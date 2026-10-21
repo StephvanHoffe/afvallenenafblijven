@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DURATION_IDS, PRODUCT_IDS } from "@/config/pricing";
 import { consentSchema, customerSchema, intakeMessage, intakeSchema } from "@/lib/intake";
+import { campaignSchema } from "@/lib/campaign";
 import { checkSafety } from "@/lib/safety";
 import { isDatabaseConfigured } from "@/lib/db";
 import { createIntake } from "@/lib/repo";
@@ -40,6 +41,7 @@ const payloadSchema = z.object({
   consents: consentSchema,
   product: z.enum(PRODUCT_IDS),
   duration: z.enum(DURATION_IDS),
+  campaign: campaignSchema.nullish().catch(null),
 });
 
 export async function startCheckout(_prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
@@ -77,6 +79,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
       data: intake.data,
       consents: { ...consents, acceptedAt: new Date().toISOString() },
       locale,
+      campaign: payload.data.campaign ?? null,
     });
     url = await createCheckoutSession({ intakeId, product, duration, email: customer.email, name: customer.name, locale });
   } catch (err) {

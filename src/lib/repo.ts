@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import type { DurationId, PlanType, ProductId } from "@/config/pricing";
 import type { Locale } from "@/i18n/config";
+import type { Campaign } from "@/lib/campaign";
 import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import type { NutritionTargets } from "@/lib/calculations";
@@ -33,6 +34,7 @@ export interface IntakeRow {
   data: Intake;
   consents: Record<string, unknown>;
   locale: string;
+  campaign: Campaign | null;
   created_at: Date;
 }
 
@@ -80,11 +82,13 @@ export async function createIntake(input: {
   data: Intake;
   consents: Record<string, unknown>;
   locale: Locale;
+  campaign?: Campaign | null;
 }): Promise<string> {
   const sql = await db();
   const [row] = await sql<{ id: string }[]>`
-    insert into intakes (email, name, data, consents, locale)
-    values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)}, ${input.locale})
+    insert into intakes (email, name, data, consents, locale, campaign)
+    values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)}, ${input.locale},
+            ${input.campaign ? sql.json(input.campaign as never) : null})
     returning id`;
   return row.id;
 }

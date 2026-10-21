@@ -4,7 +4,9 @@ import { sampleNutritionPlan, sampleTargets, sampleTrainingPlan } from "@/conten
 import { demoIntake } from "@/content/demo-account";
 import { checkinWindow, type CheckinData } from "@/lib/checkin";
 import type { OrderStatus } from "@/lib/repo";
+import type { Campaign } from "@/lib/campaign";
 import type {
+  AdminCampaignRow,
   AdminCustomerRow,
   AdminData,
   AdminOrderRow,
@@ -24,6 +26,17 @@ const FIRST = ["Sanne", "Lisa", "Mark", "Eva", "Daan", "Fleur", "Kim", "Tom", "I
 const LAST = ["de Vries", "Jansen", "Bakker", "Visser", "Smit", "Meijer", "de Boer", "Mulder", "Bos", "Vos", "Peters", "Hendriks"];
 const PRODUCT_CYCLE: ProductId[] = ["bundel", "voeding", "bundel", "training", "bundel", "voeding", "bundel", "voeding", "training", "bundel"];
 const DURATION_CYCLE: DurationId[] = ["3m", "1m", "12m", "3m", "6m", "3m", "1m", "12m", "3m", "eenmalig", "3m", "1m"];
+const CAMPAIGN_CYCLE: (Campaign | null)[] = [
+  { source: "meta", medium: "paid_social", campaign: "lancering-januari", content: "video-sanne", landing: "lp" },
+  null,
+  { source: "google", medium: "cpc", campaign: "voedingsschema-zoekwoorden", landing: "lp/voeding" },
+  { source: "meta", medium: "paid_social", campaign: "lancering-januari", content: "carrousel-recepten", landing: "lp/voeding" },
+  { source: "tiktok", medium: "paid_social", campaign: "thuis-trainen", landing: "lp/training" },
+  null,
+  { source: "meta", medium: "paid_social", campaign: "lancering-januari", content: "video-sanne", landing: "lp" },
+];
+/** Hoeveel bezoekers per bestelling de betaalstap starten, per bron (voor een realistisch ogend overzicht). */
+const STARTS_PER_ORDER: Record<string, number> = { meta: 2.8, google: 2.1, tiktok: 3.6, "": 2.4 };
 
 function id(prefix: string, n: number): string {
   // Geldig ogende UUID, zodat links en referenties werken zoals in het echt.
@@ -63,6 +76,7 @@ for (let i = 0; i < 48; i++) {
     monthlyCents: subscription ? monthlyPrice(product, duration) : 0,
     createdAt,
     stripeSubscriptionId: subscription ? `sub_demo${String(i + 1).padStart(4, "0")}` : null,
+    campaign: CAMPAIGN_CYCLE[i % CAMPAIGN_CYCLE.length],
   });
 
   const ageDays = Math.floor((TODAY - createdAt.getTime()) / DAY);
@@ -184,7 +198,19 @@ export const demoAdminData: AdminData = {
       mix.set(k, { product: o.product, duration: o.duration, count: (mix.get(k)?.count ?? 0) + 1 });
     }
     const windows = orders.map(orderCheckin);
+    const byCampaign = new Map<string, AdminCampaignRow>();
+    for (const o of recent) {
+      const key = `${o.campaign?.source ?? ""}|${o.campaign?.campaign ?? ""}`;
+      const row = byCampaign.get(key) ?? { source: o.campaign?.source ?? null, campaign: o.campaign?.campaign ?? null, started: 0, orders: 0, firstPaymentsCents: 0 };
+      row.orders++;
+      row.firstPaymentsCents += o.amountCents;
+      byCampaign.set(key, row);
+    }
+    const campaigns = [...byCampaign.values()]
+      .map((r) => ({ ...r, started: Math.round(r.orders * (STARTS_PER_ORDER[r.source ?? ""] ?? 2.5)) }))
+      .sort((a, b) => b.orders - a.orders);
     return {
+      campaigns,
       checkinsOpen: windows.filter((w) => w?.status === "open" || w?.status === "overdue").length,
       checkinsOverdue: windows.filter((w) => w?.status === "overdue").length,
       activeSubscriptions: active.length,
@@ -192,7 +218,7 @@ export const demoAdminData: AdminData = {
       pendingCancellations: active.filter((o) => o.cancelAt).length,
       newOrders30: recent.length,
       firstPayments30Cents: recent.reduce((s, o) => s + o.amountCents, 0),
-      checkoutStarts30: Math.round(recent.length * 2.6),
+      checkoutStarts30: campaigns.reduce((sum, r) => sum + r.started, 0),
       plansReady30: plans.filter((p) => p.status === "ready" && p.generatedAt && within30(p.generatedAt)).length,
       plansFailed: plans.filter((p) => p.status === "failed").length,
       plansInProgress: plans.filter((p) => p.status === "generating" || p.status === "pending").length,

@@ -70,7 +70,9 @@ function Nl() {
         </li>
         <li>
           <strong>Bestel- en betaalgegevens:</strong> wat je hebt besteld, bedragen, status van je abonnement en (via
-          Stripe) je betaalmethode en factuurgegevens. Wij ontvangen geen volledige bank- of creditcardnummers.
+          Stripe) je betaalmethode en factuurgegevens. Wij ontvangen geen volledige bank- of creditcardnummers. Kwam je
+          binnen via een advertentie, dan bewaren we bij je bestelling ook de campagnegegevens uit de link (zoals bron en
+          naam van de campagne) en de landingspagina.
         </li>
         <li>
           <strong>Je schema&apos;s:</strong> de voedings- en trainingsschema&apos;s die we voor je maken.
@@ -141,6 +143,11 @@ function Nl() {
             <td>
               Toestemming via de cookiebanner (zie <Link href="/cookiebeleid">cookiebeleid</Link>)
             </td>
+          </tr>
+          <tr>
+            <td>Meten welke campagnes tot bestellingen leiden</td>
+            <td>Campagnegegevens uit de link bij je bestelling (geen cookies)</td>
+            <td>Gerechtvaardigd belang</td>
           </tr>
           <tr>
             <td>Beveiliging en misbruik voorkomen</td>
@@ -363,7 +370,8 @@ function En() {
         <li>
           <strong>Order and payment details:</strong> what you have ordered, amounts, the status of your subscription
           and (via Stripe) your payment method and billing details. We do not receive full bank account or credit card
-          numbers.
+          numbers. If you came to us through an advert, we also store the campaign details from the link (such as the
+          source and campaign name) and the landing page with your order.
         </li>
         <li>
           <strong>Your plans:</strong> the nutrition and workout plans we create for you.
@@ -431,6 +439,11 @@ function En() {
             <td>
               Consent via the cookie banner (see <Link href="/cookiebeleid">cookie policy</Link>)
             </td>
+          </tr>
+          <tr>
+            <td>Measuring which campaigns lead to orders</td>
+            <td>Campaign details from the link, stored with your order (no cookies)</td>
+            <td>Legitimate interest</td>
           </tr>
           <tr>
             <td>Security and preventing misuse</td>
