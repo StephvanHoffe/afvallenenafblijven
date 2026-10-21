@@ -7,6 +7,8 @@ import {
   ChefHat,
   Dumbbell,
   Flame,
+  HeartCrack,
+  Hourglass,
   House,
   LineChart,
   ListChecks,
@@ -19,6 +21,7 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  Wallet,
   Watch,
   X,
 } from "lucide-react";
@@ -30,7 +33,7 @@ import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
 import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
 import { launchOfferEndLabel, site } from "@/config/site";
 import { demoAccountViewFor } from "@/content/demo-account";
-import { faqFor } from "@/content/faq";
+import { faqInOrder } from "@/content/faq";
 import { landingCopy, variantSettings, type LandingVariant } from "@/content/landing";
 import { samplePlansFor } from "@/content/sample-plans";
 import type { Locale } from "@/i18n/config";
@@ -57,6 +60,9 @@ const getIcons: Record<LandingVariant, (typeof Target)[]> = {
 };
 
 const guideIcons = [Scale, CalendarDays, LineChart];
+
+/** Geld, tijd en vertrouwen: wat het kost om zo door te gaan. */
+const costIcons = [Wallet, Hourglass, HeartCrack];
 
 /** Adres van de vragenlijst, met het doel en (per variant) het plan al ingevuld. */
 function startHref(variant: LandingVariant, goal?: Intake["goal"]): string {
@@ -119,6 +125,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   const health = isHealthEnabled();
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
+  const price = fromPrice(variant);
 
   return (
     <>
@@ -169,7 +176,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
             </div>
 
             <p className="mt-5 text-[0.9375rem] font-semibold text-ink/80">
-              <span className="text-brand-700">{c.priceFrom(euro(fromPrice(variant), l))}</span> · {c.priceNote}
+              <span className="text-brand-700">{c.priceFrom(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> · {c.priceNote}
             </p>
             <div className="mt-5">
               <TrustRow />
@@ -238,40 +245,89 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
         </div>
       </section>
 
-      {/* WAT JE KRIJGT */}
-      <section className="container-page pt-6 pb-14">
-        <SectionHeading eyebrow={c.getsEyebrow} title={c.getsTitle} />
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {v.gets.map((g, i) => {
-            const Icon = getIcons[variant][i] ?? Target;
-            return (
-              <li key={g.title} className="card p-4 sm:p-5">
-                <Icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600 sm:size-10" aria-hidden />
-                <h3 className="mt-3 leading-snug font-bold sm:mt-4">{g.title}</h3>
-                <p className="mt-1 text-sm text-muted sm:text-[0.9375rem]">{g.text}</p>
-              </li>
-            );
-          })}
+      {/* HERKEN JE DIT? Eerst het probleem, dan wat het kost, dan de uitweg. */}
+      <section className="bg-sand py-16">
+        <div className="container-page">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
+            <div>
+              <p className="eyebrow mb-3">{c.painsEyebrow}</p>
+              <h2 className="heading-lg">{v.painTitle}</h2>
+              <ul className="mt-6 space-y-3.5">
+                {v.painPoints.map((p) => (
+                  <li key={p} className="flex gap-3 text-[1.0625rem] leading-relaxed">
+                    <X className="mt-1 size-5 shrink-0 text-accent-500" aria-hidden />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="self-start rounded-[var(--radius-card)] bg-brand-950 p-6 text-white sm:p-8">
+              <h3 className="text-xl font-extrabold">{c.costTitle}</h3>
+              <ul className="mt-6 space-y-5">
+                {v.costs.map((x, i) => {
+                  const Icon = costIcons[i] ?? Hourglass;
+                  return (
+                    <li key={x.title} className="flex gap-4">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-lime-glow">
+                        <Icon className="size-5" aria-hidden />
+                      </span>
+                      <span>
+                        <span className="block font-bold">{x.title}</span>
+                        <span className="mt-0.5 block text-[0.9375rem] text-white/70">{x.text}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+          <div className="mx-auto mt-12 max-w-3xl text-center">
+            <h2 className="heading-md">{v.reframe.title}</h2>
+            <p className="mt-3 text-lg leading-relaxed text-muted">{v.reframe.text}</p>
+            <Link href={mainHref} data-lp-cta="pijn" className="btn-primary mt-7 text-lg">
+              {c.painCta} <ArrowRight className="size-5" aria-hidden />
+            </Link>
+            <p className="mt-3 text-sm text-muted">{c.painCtaNote}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ZO PAKKEN WE HET ANDERS AAN */}
+      <section className="container-page py-16">
+        <SectionHeading eyebrow={c.fixEyebrow} title={c.fixTitle} />
+        <ul className="grid gap-5 sm:grid-cols-2">
+          {v.fixes.map((f) => (
+            <li key={f.pain} className="card flex flex-col p-6">
+              <p className="text-xs font-bold tracking-wide text-muted uppercase">{c.fixLabels[0]}</p>
+              <p className="mt-1.5 flex gap-3 text-muted">
+                <X className="mt-0.5 size-5 shrink-0 text-accent-500" aria-hidden />
+                {f.pain}
+              </p>
+              <p className="mt-4 border-t border-line pt-4 text-xs font-bold tracking-wide text-brand-600 uppercase">{c.fixLabels[1]}</p>
+              <p className="mt-1.5 flex gap-3 font-semibold">
+                <Check className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+                {f.answer}
+              </p>
+            </li>
+          ))}
         </ul>
       </section>
 
-      {/* HERKEN JE DIT? */}
-      <section className="bg-sand py-16">
+      {/* WAT JE KRIJGT */}
+      <section className="bg-sand py-14">
         <div className="container-page">
-          <SectionHeading eyebrow={c.painsEyebrow} title={c.painsTitle} />
-          <ul className="grid gap-5 md:grid-cols-3">
-            {v.pains.map((p) => (
-              <li key={p.pain} className="card flex flex-col p-6">
-                <p className="flex gap-3 text-muted">
-                  <X className="mt-0.5 size-5 shrink-0 text-accent-500" aria-hidden />
-                  {p.pain}
-                </p>
-                <p className="mt-4 flex gap-3 border-t border-line pt-4 font-semibold">
-                  <Check className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-                  {p.answer}
-                </p>
-              </li>
-            ))}
+          <SectionHeading eyebrow={c.getsEyebrow} title={c.getsTitle} />
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {v.gets.map((g, i) => {
+              const Icon = getIcons[variant][i] ?? Target;
+              return (
+                <li key={g.title} className="card p-4 sm:p-5">
+                  <Icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600 sm:size-10" aria-hidden />
+                  <h3 className="mt-3 leading-snug font-bold sm:mt-4">{g.title}</h3>
+                  <p className="mt-1 text-sm text-muted sm:text-[0.9375rem]">{g.text}</p>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </section>
@@ -456,7 +512,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
                     {row.values.map((val, i) => (
                       <td key={i} className={`px-3 py-3.5 text-center sm:px-4 ${i === 0 ? "bg-brand-50" : ""} ${i === 2 ? "hidden sm:table-cell" : ""}`}>
                         {ri === c.compareRows.length - 1 && i === 0 ? (
-                          <span className="text-sm font-extrabold text-brand-800">{c.compareFrom(euro(fromPrice(variant), l))}</span>
+                          <span className="text-sm font-extrabold text-brand-800">{c.compareFrom(euro(price, l))}</span>
                         ) : (
                           <Value value={val} l={l} />
                         )}
@@ -489,10 +545,15 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
       {/* FAQ */}
       <section className="container-page pb-6">
         <SectionHeading eyebrow={c.faqEyebrow} title={c.faqTitle} />
-        <FaqList items={faqFor(l, settings.faq)} />
+        <FaqList items={faqInOrder(l, settings.faq)} />
       </section>
 
-      <CtaBanner title={v.finalTitle} text={v.finalText} href={mainHref} label={v.ctaLabel} />
+      <CtaBanner
+        title={v.finalTitle}
+        text={v.finalText + (site.guarantee.enabled ? c.finalRisk(site.guarantee.days) : "")}
+        href={mainHref}
+        label={v.ctaLabel}
+      />
       <StickyCta href={mainHref} label={v.ctaLabel} />
     </>
   );

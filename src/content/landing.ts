@@ -21,6 +21,7 @@ export interface VariantSettings {
   goals: Goal[];
   /** Producten in de prijstabel en welk product uitgelicht is. */
   pricing: { only?: ProductId[]; highlight: ProductId };
+  /** Veelgestelde vragen in deze volgorde: de twijfels die het afsluiten tegenhouden eerst. */
   faq: FaqId[];
   image: { src: string; position: string };
   /** Welke voorbeelden uit het schema we laten zien. */
@@ -32,7 +33,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: null,
     goals: ["afvallen", "afvallen_strakker", "afblijven", "sterker"],
     pricing: { highlight: "bundel" },
-    faq: ["snel", "persoonlijk", "opzeggen", "niet-afvallen", "resultaat", "medisch", "betalen"],
+    faq: ["opzeggen", "garantie", "abonnement", "persoonlijk", "niet-afvallen", "resultaat", "medisch", "betalen"],
     image: { src: "/images/hero-workout-home.jpg", position: "object-[68%_50%]" },
     preview: ["voeding", "training"],
   },
@@ -40,7 +41,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: "voeding",
     goals: ["afvallen", "afvallen_strakker", "afblijven", "sterker"],
     pricing: { only: ["voeding", "bundel"], highlight: "voeding" },
-    faq: ["snel", "persoonlijk", "allergie", "opzeggen", "niet-afvallen", "resultaat", "betalen"],
+    faq: ["opzeggen", "garantie", "persoonlijk", "allergie", "abonnement", "niet-afvallen", "resultaat"],
     image: { src: "/images/bowl-salmon.jpg", position: "object-center" },
     preview: ["voeding"],
   },
@@ -48,7 +49,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: "training",
     goals: ["sterker", "afvallen_strakker", "afvallen", "afblijven"],
     pricing: { only: ["training", "bundel"], highlight: "training" },
-    faq: ["snel", "thuis", "opzeggen", "resultaat", "medisch", "betalen"],
+    faq: ["opzeggen", "garantie", "thuis", "abonnement", "resultaat", "medisch"],
     image: { src: "/images/woman-overhead-press.jpg", position: "object-[60%_40%]" },
     preview: ["training"],
   },
@@ -63,7 +64,15 @@ interface VariantCopy {
   heroAlt: string;
   /** Wat je krijgt, in vier korte punten. */
   gets: { title: string; text: string }[];
-  pains: { pain: string; answer: string }[];
+  /** Herkenbare problemen: zo voelt het nu. */
+  painTitle: string;
+  painPoints: string[];
+  /** Wat het kost om zo door te gaan (geld, tijd, vertrouwen). */
+  costs: { title: string; text: string }[];
+  /** Het ligt niet aan jou, maar aan je aanpak. */
+  reframe: { title: string; text: string };
+  /** Hoe het meestal gaat, en hoe wij het doen. */
+  fixes: { pain: string; answer: string }[];
   ctaLabel: string;
   finalTitle: string;
   finalText: string;
@@ -75,12 +84,17 @@ interface SharedCopy {
   pickTitle: string;
   pickNote: string;
   orStart: string;
-  priceFrom: (price: string) => string;
+  priceFrom: (price: string, perWeek: string) => string;
   priceNote: string;
   getsEyebrow: string;
   getsTitle: string;
   painsEyebrow: string;
-  painsTitle: string;
+  costTitle: string;
+  painCta: string;
+  painCtaNote: string;
+  fixEyebrow: string;
+  fixTitle: string;
+  fixLabels: [string, string];
   previewEyebrow: string;
   previewTitle: string;
   previewIntro: string;
@@ -119,6 +133,8 @@ interface SharedCopy {
   safeText: string;
   faqEyebrow: string;
   faqTitle: string;
+  /** Achter de slottekst, als de garantie aan staat. */
+  finalRisk: (days: number) => string;
 }
 
 export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<LandingVariant, VariantCopy> }>({
@@ -129,12 +145,17 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pickTitle: "Waar wil je aan werken?",
       pickNote: "Kies je doel en beantwoord nog een paar vragen. Duurt ongeveer 2 minuten; je betaalt pas als je een plan kiest.",
       orStart: "Of start direct",
-      priceFrom: (price) => `Vanaf ${price} per maand`,
+      priceFrom: (price, perWeek) => `Vanaf ${price} per maand (${perWeek} per week)`,
       priceNote: "maandelijks opzegbaar na de minimale looptijd",
       getsEyebrow: "Wat je krijgt",
       getsTitle: "Binnen enkele minuten in je mailbox",
       painsEyebrow: "Herken je dit?",
-      painsTitle: "Het ligt niet aan jou. Het ligt aan plannen die niet bij je passen.",
+      costTitle: "Wat het je kost om zo door te gaan",
+      painCta: "Doorbreek het patroon",
+      painCtaNote: "2 minuten · je betaalt pas als je een plan kiest",
+      fixEyebrow: "Zo pakken we het anders aan",
+      fixTitle: "Een plan dat zich aanpast aan jou, niet andersom",
+      fixLabels: ["Meestal", "Bij ons"],
       previewEyebrow: "Een kijkje in je schema",
       previewTitle: "Concreet, overzichtelijk en meteen te gebruiken",
       previewIntro: "Uit een echt voorbeeldschema. Jouw schema maken we op basis van jouw antwoorden.",
@@ -153,9 +174,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       previewFull: "Bekijk het volledige voorbeeldschema",
       previewAccount: "Zo ziet Mijn schema's eruit",
       guideEyebrow: "Niet alleen een schema",
-      guideTitle: "Elke week bijgestuurd, op weg naar je doel",
+      guideTitle: "Je staat er niet meer alleen voor",
       guideIntro:
-        "Een schema dat niet meebeweegt, houd je niet vol. Daarom kijk je elke week kort met ons mee en passen we je plan aan op wat er echt gebeurt.",
+        "Een los schema houdt je niet bij en stuurt niet bij als het tegenzit. Wij wel: elke week kijk je kort met ons mee, en we passen je plan aan op wat er echt gebeurt.",
       guidePoints: [
         { title: "Wekelijks weegmoment", text: "Gewicht en een paar vragen in 1 minuut. Wijkt je voortgang af, dan sturen we je calorieën of training meteen bij." },
         { title: "Elke 4 weken een nieuw schema", text: "Na een korte check-in maken we je volgende schema: wat werkte blijft, wat niet werkte gaat eruit." },
@@ -169,7 +190,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       guideChartNote: "Voorbeeld van een fictieve klant in Mijn schema's. Je eigen verloop is anders.",
       stepsEyebrow: "Zo werkt het",
       stepsTitle: "In 3 stappen naar je persoonlijke plan",
-      compareEyebrow: "Waarom dit wél werkt",
+      compareEyebrow: "Waarom dit anders is",
       compareTitle: "Persoonlijk als een coach, voor de prijs van een app",
       compareCols: ["Afvallen & Afblijven", "Standaard dieet of app", "Losse afspraken bij een coach"],
       compareRows: [
@@ -177,26 +198,28 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         { label: "Voeding en training op elkaar afgestemd", values: [true, false, "Vaak apart"] },
         { label: "Elke week bijgestuurd op je voortgang", values: [true, false, "Alleen bij een afspraak"] },
         { label: "Vandaag nog beginnen", values: [true, true, "Vaak een wachttijd"] },
-        { label: "Kosten", values: ["", "Wisselend", "Per afspraak"] },
+        { label: "Kosten", values: ["", "Wisselend", "Tientallen euro's per afspraak"] },
       ],
       compareFrom: (price) => `Vanaf ${price} per maand`,
       pricingEyebrow: "Prijzen",
-      pricingTitle: "Kies je plan",
-      pricingIntro: "Maandelijks via automatische incasso. Hoe langer de looptijd, hoe lager je maandprijs.",
+      pricingTitle: "Kies je plan en begin vandaag",
+      pricingIntro:
+        "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
       safeTitle: "Veilig en verantwoord",
       safeText:
         "We werken met een realistisch tempo, voldoende eiwit en nooit onder een veilig minimum aan calorieën. Bij zwangerschap, een eetstoornis of een ongezond streefgewicht maken we geen schema, en bij medische aandoeningen vragen we eerst om overleg met je arts.",
       faqEyebrow: "Veelgestelde vragen",
       faqTitle: "Nog twijfels?",
+      finalRisk: (days) => ` Ben je niet tevreden, dan vraag je binnen ${days} dagen je eerste betaling terug.`,
     },
     variants: {
       afvallen: {
         metaTitle: "Afvallen met een persoonlijk voedings- en trainingsschema",
         metaDescription:
           "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen enkele minuten in je mailbox.",
-        title: ["Eindelijk een afvalplan dat ", "écht", " bij je past"],
+        title: ["Klaar met diëten die ", "na drie weken", " alweer stranden?"],
         intro:
-          "Je persoonlijke voedings- en trainingsschema, berekend op jouw lichaam, smaak en agenda. Zonder crashdieet of honger, elke week bijgestuurd op je voortgang, en binnen enkele minuten in je mailbox.",
+          "Je wéét wat gezond is. Maar met een standaard dieet val je steeds terug in hetzelfde patroon. Wij maken een voedings- en trainingsschema op jouw lichaam, smaak en agenda, en sturen het elke week bij. Zonder crashdieet of honger, en binnen enkele minuten in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
         gets: [
           { title: "Jouw dagdoelen", text: "Calorieën en eiwit, berekend voor jouw lichaam en doel." },
@@ -204,14 +227,33 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Trainingsschema", text: "Thuis of in de sportschool, opgebouwd over 4 weken." },
           { title: "Wekelijkse bijsturing", text: "We passen je plan aan op hoe het echt gaat." },
         ],
-        pains: [
-          { pain: "Je hebt al zoveel diëten geprobeerd, en de kilo's kwamen steeds terug.", answer: "Een realistisch tekort met genoeg eiwit: verantwoord afvallen, met minder kans op een jojo-effect." },
-          { pain: "Je hebt vaak honger of trek, en houdt het daardoor niet vol.", answer: "Verzadigende maaltijden met eiwit, vezels en volume. Bij honger sturen we bij." },
-          { pain: "Je hebt weinig tijd en geen zin in ingewikkeld koken.", answer: "Recepten binnen jouw bereidingstijd, slim hergebruik en een complete boodschappenlijst." },
+        painTitle: "Maandag begin je. Alweer.",
+        painPoints: [
+          "Je begint vol goede moed, en na een paar weken sluipen de oude gewoontes er weer in.",
+          "Je hebt al van alles geprobeerd: calorieën tellen, shakes, koolhydraatarm. Het werkt even, en dan niet meer.",
+          "De kilo's die eraf gingen, kwamen er net zo makkelijk weer bij.",
+          "Door alle tegenstrijdige adviezen weet je niet meer wat je nou wel en niet moet eten.",
+          "Je hebt honger, mist wat je lekker vindt en voelt je schuldig bij elk koekje.",
+          "En stiekem ben je gaan denken dat het aan jou ligt.",
         ],
-        ctaLabel: "Start je persoonlijke plan",
-        finalTitle: "Zet vandaag de eerste stap",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke plan.",
+        costs: [
+          { title: "Geld", text: "Elke nieuwe poging kost weer geld: apps, shakes, boeken en abonnementen die je na een maand niet meer gebruikt." },
+          { title: "Tijd", text: "Elke keer begin je weer bij nul. Zo worden een paar maanden al snel een paar jaar." },
+          { title: "Vertrouwen in jezelf", text: "Elke poging die strandt, maakt de volgende zwaarder. Tot je niet meer gelooft dat het jou kan lukken." },
+        ],
+        reframe: {
+          title: "Het ligt niet aan jou. Het ligt aan je aanpak.",
+          text: "Een standaard dieet is voor iedereen hetzelfde, en past dus bij niemand echt. Te streng, niet afgestemd op je leven, en niemand die bijstuurt als het tegenzit. Dan hangt alles af van wilskracht, en die raakt op.",
+        },
+        fixes: [
+          { pain: "Een crashdieet met een groot tekort: het gaat snel, en komt net zo snel terug.", answer: "Een realistisch tekort met genoeg eiwit: verantwoord afvallen, met minder kans op een jojo-effect." },
+          { pain: "Honger en trek, tot je wilskracht op is.", answer: "Verzadigende maaltijden met eiwit, vezels en volume. Heb je toch honger, dan sturen we bij." },
+          { pain: "Recepten die niet in je drukke week passen.", answer: "Recepten binnen jouw bereidingstijd, slim hergebruik en een complete boodschappenlijst." },
+          { pain: "Niemand die ziet dat het misgaat.", answer: "Elke week een weegmoment. Wijkt je voortgang af, dan passen we je plan meteen aan." },
+        ],
+        ctaLabel: "Maak mijn persoonlijke plan",
+        finalTitle: "Wacht niet weer tot maandag",
+        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke plan. Je betaalt pas als je een plan kiest.",
       },
       voeding: {
         metaTitle: "Persoonlijk voedingsschema: afvallen met eten dat je lekker vindt",
@@ -219,7 +261,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           "Een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak en allergieën. Binnen enkele minuten in je mailbox.",
         title: ["Afvallen met eten dat je ", "wél", " lekker vindt"],
         intro:
-          "Een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak, allergieën en tijd om te koken. Geen honger, geen saaie lijstjes, en elke week bijgestuurd.",
+          "Elke dag kipfilet met broccoli? Geen wonder dat je het niet volhoudt. Je krijgt een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak, allergieën en tijd om te koken. Elke week bijgestuurd, en binnen enkele minuten in je mailbox.",
         heroAlt: "Bowl met zalm, ei en verse groente",
         gets: [
           { title: "Jouw calorie- en eiwitdoel", text: "Berekend voor jouw lichaam, activiteit en tempo." },
@@ -227,22 +269,40 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Boodschappenlijst", text: "Per afdeling in de supermarkt, om af te vinken." },
           { title: "Vervangopties", text: "Voor elke maaltijd een alternatief met vergelijkbare waarden." },
         ],
-        pains: [
-          { pain: "Je weet niet wat en hoeveel je moet eten om af te vallen.", answer: "Exacte hoeveelheden per maaltijd, uitgerekend op jouw dagdoel." },
-          { pain: "Dieetmenu's zijn saai, en je eet al snel weer wat je altijd at.", answer: "Gerechten op basis van wat jij lekker vindt, met genoeg variatie." },
-          { pain: "Allergieën of een eetpatroon maken standaardschema's onbruikbaar.", answer: "Rekening met allergieën, vegetarisch of veganistisch, en wat je niet lust." },
+        painTitle: "Je eet 'gezond'. En toch schiet het niet op.",
+        painPoints: [
+          "Je weet niet of je genoeg, te veel of juist te weinig eet.",
+          "Dieetmenu's zijn zo saai dat je na een week alweer eet wat je altijd at.",
+          "Om vijf uur sta je nog te bedenken wat je vanavond gaat eten.",
+          "Je allergie, je eetpatroon of wat je niet lust past nooit in een standaardschema.",
+          "Overdag gaat het goed, maar 's avonds slaat de honger toe.",
         ],
-        ctaLabel: "Start je voedingsschema",
-        finalTitle: "Volgende week al eten volgens jouw plan",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke weekmenu.",
+        costs: [
+          { title: "Geld", text: "Dure 'light'-producten, eten dat je weggooit, en toch nog vaak de bezorger aan de deur." },
+          { title: "Tijd", text: "Elke dag opnieuw bedenken wat je eet, en zonder lijstje door de supermarkt dwalen." },
+          { title: "Plezier in eten", text: "Het gevoel dat afvallen alleen lukt met eten dat je eigenlijk niet lekker vindt." },
+        ],
+        reframe: {
+          title: "Het ligt niet aan jou. Het ligt aan je menu.",
+          text: "Een menu dat niet past bij wat jij lekker vindt, hoeveel tijd je hebt en wat je lichaam nodig heeft, is bijna niet vol te houden. Daar helpt geen wilskracht tegen. Een beter plan wel.",
+        },
+        fixes: [
+          { pain: "Gissen wat en hoeveel je moet eten.", answer: "Exacte hoeveelheden per maaltijd, uitgerekend op jouw dagdoel." },
+          { pain: "Saaie dieetmenu's die je na een week zat bent.", answer: "Gerechten op basis van wat jij lekker vindt, met genoeg variatie." },
+          { pain: "Standaardschema's die geen rekening houden met je allergie of eetpatroon.", answer: "Rekening met allergieën, vegetarisch of veganistisch, en wat je niet lust." },
+          { pain: "Honger in de avond, tot het toch misgaat.", answer: "Verzadigende maaltijden met eiwit en vezels. Heb je toch honger, dan sturen we bij." },
+        ],
+        ctaLabel: "Maak mijn voedingsschema",
+        finalTitle: "Weet vanavond al wat je morgen eet",
+        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke weekmenu. Je betaalt pas als je een plan kiest.",
       },
       training: {
         metaTitle: "Persoonlijk trainingsschema voor thuis of de sportschool",
         metaDescription:
           "Een persoonlijk trainingsschema met duidelijke uitleg, opgebouwd over 4 weken en afgestemd op jouw niveau, materiaal en blessures.",
-        title: ["Sterker en strakker, ", "thuis of in de sportschool", ""],
+        title: ["Stop met trainen ", "zonder plan", ""],
         intro:
-          "Een persoonlijk trainingsschema met duidelijke uitleg per oefening, opgebouwd over 4 weken en afgestemd op jouw niveau, materiaal, tijd en eventuele blessures. Elke week bijgestuurd op hoe het voelt.",
+          "Elke keer dezelfde oefeningen, twijfelen wat je moet doen en weinig vooruitgang: zonde van je tijd. Je krijgt een persoonlijk trainingsschema met uitleg per oefening, opgebouwd over 4 weken en afgestemd op jouw niveau, materiaal, tijd en eventuele blessures. Thuis of in de sportschool.",
         heroAlt: "Vrouw doet een schouderpress met dumbbells",
         gets: [
           { title: "Schema voor jouw situatie", text: "Thuis zonder of met materiaal, of in de sportschool." },
@@ -250,14 +310,32 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Uitleg per oefening", text: "Sets, herhalingen, rust en techniektips, plus een alternatief." },
           { title: "Wekelijkse bijsturing", text: "Te zwaar of te licht? Dan passen we het meteen aan." },
         ],
-        pains: [
-          { pain: "Je staat in de sportschool en weet niet goed wat je moet doen.", answer: "Een vast schema met per oefening sets, herhalingen, rust en uitleg." },
-          { pain: "Je traint wel, maar je ziet weinig vooruitgang.", answer: "Een opbouw over 4 weken met progressie, afgestemd op je doel." },
-          { pain: "Je bent bang voor blessures, of hebt al last van iets.", answer: "Rekening met je klachten en niveau, met een alternatief voor elke oefening." },
+        painTitle: "Je traint wel. Maar het schiet niet op.",
+        painPoints: [
+          "Je staat in de sportschool en weet niet goed wat je moet doen, dus doe je maar wat.",
+          "Je doet al maanden dezelfde oefeningen, met dezelfde gewichten.",
+          "Je zweet, maar je merkt niet dat je sterker wordt.",
+          "Je twijfelt over je techniek en bent bang voor een blessure.",
+          "Na een paar weken zakt je motivatie in, want waar doe je het eigenlijk voor?",
         ],
-        ctaLabel: "Start je trainingsschema",
-        finalTitle: "Je eerste training kan vandaag al",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke trainingsschema.",
+        costs: [
+          { title: "Geld", text: "Een sportschoolabonnement dat je amper benut, of thuismateriaal dat stof verzamelt." },
+          { title: "Tijd", text: "Uren trainen zonder opbouw: veel moeite, weinig vooruitgang." },
+          { title: "Motivatie", text: "Het gevoel dat sporten gewoon niets voor jou is." },
+        ],
+        reframe: {
+          title: "Het ligt niet aan jou. Je mist een plan.",
+          text: "Zonder opbouw, duidelijke uitleg en iemand die bijstuurt, blijf je hangen op hetzelfde niveau. Met een schema dat elke week een stap verder gaat, weet je bij elke training precies wat je moet doen.",
+        },
+        fixes: [
+          { pain: "Maar wat doen in de sportschool.", answer: "Een vast schema met per oefening sets, herhalingen, rust en uitleg." },
+          { pain: "Maandenlang dezelfde oefeningen en gewichten.", answer: "Een opbouw over 4 weken met progressie, afgestemd op je doel." },
+          { pain: "Twijfel over je techniek, of last van een blessure.", answer: "Rekening met je klachten en niveau, met een alternatief voor elke oefening." },
+          { pain: "Niemand die ziet of het te zwaar of te licht is.", answer: "Elke week bijgestuurd: we passen gewichten of herhalingen aan op hoe het voelt." },
+        ],
+        ctaLabel: "Maak mijn trainingsschema",
+        finalTitle: "Maak je volgende training de eerste mét plan",
+        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke trainingsschema. Je betaalt pas als je een plan kiest.",
       },
     },
   },
@@ -268,12 +346,17 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pickTitle: "What would you like to work on?",
       pickNote: "Choose your goal and answer a few more questions. Takes about 2 minutes; you only pay once you choose a plan.",
       orStart: "Or start straight away",
-      priceFrom: (price) => `From ${price} a month`,
+      priceFrom: (price, perWeek) => `From ${price} a month (${perWeek} a week)`,
       priceNote: "cancel monthly after the minimum term",
       getsEyebrow: "What you get",
       getsTitle: "In your inbox within minutes",
       painsEyebrow: "Sound familiar?",
-      painsTitle: "It's not you. It's plans that don't fit you.",
+      costTitle: "What carrying on like this costs you",
+      painCta: "Break the cycle",
+      painCtaNote: "2 minutes · you only pay once you choose a plan",
+      fixEyebrow: "How we do things differently",
+      fixTitle: "A plan that adapts to you, not the other way round",
+      fixLabels: ["Usually", "With us"],
       previewEyebrow: "A look inside your plan",
       previewTitle: "Practical, clear and ready to use",
       previewIntro: "Taken from a real sample plan. We create yours based on your answers.",
@@ -292,9 +375,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       previewFull: "See the full sample plan",
       previewAccount: "See what My plans looks like",
       guideEyebrow: "Not just a plan",
-      guideTitle: "Adjusted every week, on the way to your goal",
+      guideTitle: "You're no longer on your own",
       guideIntro:
-        "A plan that doesn't adapt is hard to stick to. That's why you check in briefly every week, and we adjust your plan to what's really happening.",
+        "A one-off plan doesn't keep track of you or adjust when things get tough. We do: every week you check in briefly, and we adapt your plan to what's really happening.",
       guidePoints: [
         { title: "Weekly weigh-in", text: "Your weight and a few questions in 1 minute. If your progress is off track, we adjust your calories or training straight away." },
         { title: "A new plan every 4 weeks", text: "After a short check-in we create your next plan: what worked stays, what didn't goes." },
@@ -308,7 +391,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       guideChartNote: "Example of a fictional customer in My plans. Your own progress will be different.",
       stepsEyebrow: "How it works",
       stepsTitle: "Your personal plan in 3 steps",
-      compareEyebrow: "Why this works",
+      compareEyebrow: "Why this is different",
       compareTitle: "As personal as a coach, for the price of an app",
       compareCols: ["Afvallen & Afblijven", "Standard diet or app", "Separate sessions with a coach"],
       compareRows: [
@@ -316,26 +399,28 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         { label: "Nutrition and training aligned", values: [true, false, "Often separate"] },
         { label: "Adjusted to your progress every week", values: [true, false, "Only at an appointment"] },
         { label: "Start today", values: [true, true, "Often a waiting time"] },
-        { label: "Cost", values: ["", "Varies", "Per session"] },
+        { label: "Cost", values: ["", "Varies", "Tens of euros per session"] },
       ],
       compareFrom: (price) => `From ${price} a month`,
       pricingEyebrow: "Pricing",
-      pricingTitle: "Choose your plan",
-      pricingIntro: "Monthly by direct debit. The longer the term, the lower your monthly price.",
+      pricingTitle: "Choose your plan and start today",
+      pricingIntro:
+        "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
       safeTitle: "Safe and responsible",
       safeText:
         "We work at a realistic pace, with enough protein, and never below a safe minimum of calories. We don't create a plan during pregnancy, with an eating disorder or for an unhealthy target weight, and with medical conditions we first ask you to check with your doctor.",
       faqEyebrow: "Frequently asked questions",
       faqTitle: "Still unsure?",
+      finalRisk: (days) => ` Not satisfied? Request your first payment back within ${days} days.`,
     },
     variants: {
       afvallen: {
         metaTitle: "Lose weight with a personal nutrition and workout plan",
         metaDescription:
           "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within minutes.",
-        title: ["Finally, a weight-loss plan that ", "really", " fits you"],
+        title: ["Tired of diets that fall apart ", "after three weeks", "?"],
         intro:
-          "Your personal nutrition and workout plan, calculated for your body, taste and schedule. No crash diet, no going hungry, adjusted to your progress every week, and in your inbox within minutes.",
+          "You know what healthy looks like. But with a standard diet, you keep slipping back into the same pattern. We create a nutrition and workout plan around your body, taste and schedule, and adjust it every week. No crash diet, no going hungry, and in your inbox within minutes.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
         gets: [
           { title: "Your daily targets", text: "Calories and protein, calculated for your body and goal." },
@@ -343,14 +428,33 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Workout plan", text: "At home or at the gym, built up over 4 weeks." },
           { title: "Weekly adjustments", text: "We adapt your plan to how things are really going." },
         ],
-        pains: [
-          { pain: "You've tried so many diets, and the kilos kept coming back.", answer: "A realistic deficit with enough protein: losing weight responsibly, with less risk of the yo-yo effect." },
-          { pain: "You're often hungry or craving snacks, so you can't keep it up.", answer: "Filling meals with protein, fibre and volume. If you're hungry, we adjust." },
-          { pain: "You're short on time and don't fancy complicated cooking.", answer: "Recipes within your cooking time, smart leftovers and a complete shopping list." },
+        painTitle: "Starting again on Monday. Again.",
+        painPoints: [
+          "You start full of good intentions, and after a few weeks the old habits creep back in.",
+          "You've tried it all: counting calories, shakes, low-carb. It works for a while, and then it doesn't.",
+          "The kilos that came off went straight back on.",
+          "With all the conflicting advice, you no longer know what you should and shouldn't eat.",
+          "You're hungry, you miss the food you love and you feel guilty about every biscuit.",
+          "And deep down, you've started to think it's your fault.",
         ],
-        ctaLabel: "Start your personal plan",
-        finalTitle: "Take the first step today",
-        finalText: "Answer a few questions and receive your personal plan within minutes.",
+        costs: [
+          { title: "Money", text: "Every new attempt costs money again: apps, shakes, books and subscriptions you stop using after a month." },
+          { title: "Time", text: "Every time, you start from zero. A few months easily turns into a few years." },
+          { title: "Self-belief", text: "Every attempt that falls apart makes the next one harder. Until you stop believing you can do it." },
+        ],
+        reframe: {
+          title: "It's not you. It's your approach.",
+          text: "A standard diet is the same for everyone, so it doesn't truly fit anyone. Too strict, not built around your life, and nobody to adjust it when things get tough. Then everything depends on willpower, and willpower runs out.",
+        },
+        fixes: [
+          { pain: "A crash diet with a big deficit: it goes fast, and comes back just as fast.", answer: "A realistic deficit with enough protein: losing weight responsibly, with less risk of the yo-yo effect." },
+          { pain: "Hunger and cravings, until your willpower runs out.", answer: "Filling meals with protein, fibre and volume. Still hungry? Then we adjust." },
+          { pain: "Recipes that don't fit your busy week.", answer: "Recipes within your cooking time, smart leftovers and a complete shopping list." },
+          { pain: "Nobody notices when it's going wrong.", answer: "A weekly weigh-in. If your progress is off track, we adjust your plan straight away." },
+        ],
+        ctaLabel: "Create my personal plan",
+        finalTitle: "Don't wait for Monday again",
+        finalText: "Answer a few questions and receive your personal plan within minutes. You only pay once you choose a plan.",
       },
       voeding: {
         metaTitle: "Personal nutrition plan: lose weight eating food you enjoy",
@@ -358,7 +462,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           "A personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste and allergies. In your inbox within minutes.",
         title: ["Lose weight eating food you ", "actually", " enjoy"],
         intro:
-          "A personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste, allergies and cooking time. No going hungry, no boring lists, and adjusted every week.",
+          "Chicken and broccoli every day? No wonder you can't keep it up. You get a personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste, allergies and cooking time. Adjusted every week, and in your inbox within minutes.",
         heroAlt: "Bowl with salmon, egg and fresh vegetables",
         gets: [
           { title: "Your calorie and protein target", text: "Calculated for your body, activity and pace." },
@@ -366,22 +470,40 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Shopping list", text: "Sorted by supermarket aisle, ready to tick off." },
           { title: "Swap options", text: "An alternative for every meal with similar values." },
         ],
-        pains: [
-          { pain: "You don't know what or how much to eat to lose weight.", answer: "Exact quantities per meal, calculated to your daily target." },
-          { pain: "Diet menus are boring, and you soon go back to your old meals.", answer: "Dishes based on what you enjoy, with plenty of variety." },
-          { pain: "Allergies or your way of eating make standard plans useless.", answer: "We account for allergies, vegetarian or vegan eating, and foods you dislike." },
+        painTitle: "You're eating 'healthily'. And still not getting anywhere.",
+        painPoints: [
+          "You don't know whether you're eating enough, too much or too little.",
+          "Diet menus are so boring that within a week you're back to your usual meals.",
+          "At five o'clock you're still wondering what to have for dinner.",
+          "Your allergy, your way of eating or the foods you dislike never fit a standard plan.",
+          "The day goes fine, but in the evening the hunger kicks in.",
         ],
-        ctaLabel: "Start your nutrition plan",
-        finalTitle: "Eating to your own plan by next week",
-        finalText: "Answer a few questions and receive your personal weekly meal plan within minutes.",
+        costs: [
+          { title: "Money", text: "Pricey 'light' products, food you throw away, and still the delivery driver at your door." },
+          { title: "Time", text: "Working out what to eat every single day, and wandering round the supermarket without a list." },
+          { title: "Enjoying food", text: "The feeling that losing weight only works with food you don't actually like." },
+        ],
+        reframe: {
+          title: "It's not you. It's your menu.",
+          text: "A menu that doesn't match what you enjoy, how much time you have and what your body needs is almost impossible to stick to. Willpower won't fix that. A better plan will.",
+        },
+        fixes: [
+          { pain: "Guessing what and how much to eat.", answer: "Exact quantities per meal, calculated to your daily target." },
+          { pain: "Boring diet menus you're sick of within a week.", answer: "Dishes based on what you enjoy, with plenty of variety." },
+          { pain: "Standard plans that ignore your allergy or way of eating.", answer: "We account for allergies, vegetarian or vegan eating, and foods you dislike." },
+          { pain: "Evening hunger, until it goes wrong after all.", answer: "Filling meals with protein and fibre. Still hungry? Then we adjust." },
+        ],
+        ctaLabel: "Create my nutrition plan",
+        finalTitle: "Know tonight what you'll eat tomorrow",
+        finalText: "Answer a few questions and receive your personal weekly meal plan within minutes. You only pay once you choose a plan.",
       },
       training: {
         metaTitle: "Personal workout plan for home or the gym",
         metaDescription:
           "A personal workout plan with clear instructions, built up over 4 weeks and tailored to your level, equipment and injuries.",
-        title: ["Stronger and more toned, ", "at home or at the gym", ""],
+        title: ["Stop training ", "without a plan", ""],
         intro:
-          "A personal workout plan with clear instructions for every exercise, built up over 4 weeks and tailored to your level, equipment, time and any injuries. Adjusted every week to how it feels.",
+          "The same exercises every time, unsure what to do and little progress: a waste of your time. You get a personal workout plan with instructions for every exercise, built up over 4 weeks and tailored to your level, equipment, time and any injuries. At home or at the gym.",
         heroAlt: "Woman doing a shoulder press with dumbbells",
         gets: [
           { title: "A plan for your situation", text: "At home with or without equipment, or at the gym." },
@@ -389,14 +511,32 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Instructions for every exercise", text: "Sets, reps, rest and technique tips, plus an alternative." },
           { title: "Weekly adjustments", text: "Too hard or too easy? We adjust it straight away." },
         ],
-        pains: [
-          { pain: "You're at the gym and not quite sure what to do.", answer: "A set plan with sets, reps, rest and instructions for every exercise." },
-          { pain: "You do train, but you're not seeing much progress.", answer: "A 4-week build-up with progression, matched to your goal." },
-          { pain: "You're worried about injuries, or something already bothers you.", answer: "We account for your complaints and level, with an alternative for every exercise." },
+        painTitle: "You do train. But you're not getting anywhere.",
+        painPoints: [
+          "You're at the gym, not quite sure what to do, so you just do something.",
+          "You've been doing the same exercises with the same weights for months.",
+          "You sweat, but you don't notice yourself getting any stronger.",
+          "You're unsure about your technique and worried about getting injured.",
+          "After a few weeks your motivation drops, because what are you actually doing it for?",
         ],
-        ctaLabel: "Start your workout plan",
-        finalTitle: "Your first workout can be today",
-        finalText: "Answer a few questions and receive your personal workout plan within minutes.",
+        costs: [
+          { title: "Money", text: "A gym membership you barely use, or home equipment gathering dust." },
+          { title: "Time", text: "Hours of training without a build-up: lots of effort, little progress." },
+          { title: "Motivation", text: "The feeling that exercise just isn't for you." },
+        ],
+        reframe: {
+          title: "It's not you. You're missing a plan.",
+          text: "Without a build-up, clear instructions and someone to adjust things, you stay stuck at the same level. With a plan that moves a step forward every week, you know exactly what to do at every workout.",
+        },
+        fixes: [
+          { pain: "Just doing something at the gym.", answer: "A set plan with sets, reps, rest and instructions for every exercise." },
+          { pain: "The same exercises and weights for months.", answer: "A 4-week build-up with progression, matched to your goal." },
+          { pain: "Doubts about your technique, or an injury that bothers you.", answer: "We account for your complaints and level, with an alternative for every exercise." },
+          { pain: "Nobody checking whether it's too hard or too easy.", answer: "Adjusted every week: we change the weights or reps based on how it feels." },
+        ],
+        ctaLabel: "Create my workout plan",
+        finalTitle: "Make your next workout the first one with a plan",
+        finalText: "Answer a few questions and receive your personal workout plan within minutes. You only pay once you choose a plan.",
       },
     },
   },

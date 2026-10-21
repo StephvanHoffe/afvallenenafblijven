@@ -194,4 +194,10 @@ export function faqFor(l: Locale = "nl", ids?: FaqId[]): FaqItem[] {
   );
 }
 
+/** Deze vragen in precies de gegeven volgorde (bijv. de grootste twijfels eerst). */
+export function faqInOrder(l: Locale, ids: FaqId[]): FaqItem[] {
+  const shown = new Set(faqFor(l, ids));
+  return ids.map((id) => items[l][id]).filter((item) => shown.has(item));
+}
+
 export const faq: FaqItem[] = faqFor("nl");
