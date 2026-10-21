@@ -134,10 +134,49 @@ ANTHROPIC_API_KEY=sk-ant-... npm run schema:test voeding
 
 Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwit. Elke run kost API-tegoed: enkele tientallen eurocenten per schema met Claude Opus 5.5. Wil je de instructies verbeteren, pas dan `src/lib/ai/prompts.ts` aan en test opnieuw.
 
+## Live zetten met Vimexx, Vercel en Neon (stap voor stap)
+
+De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro), de database bij Neon. Alle drie in Europa: Vercel draait de website in Frankfurt (`"regions": ["fra1"]` in `vercel.json`), kies bij Neon ook Frankfurt.
+
+**1. Database (Neon)**
+1. Maak een account op [neon.tech](https://neon.tech) en een nieuw project. Kies als regio **AWS Europe Central 1 (Frankfurt)**.
+2. Kopieer de connection string (de "pooled" variant is prima). Die wordt `DATABASE_URL`. De tabellen worden bij de eerste aanvraag automatisch aangemaakt.
+3. Sluit de verwerkersovereenkomst (DPA) van Neon af.
+
+**2. E-mailadres voor de website (Vimexx)**
+1. Maak in DirectAdmin een mailbox aan, bijv. `info@jouwdomein.nl` (Vimexx-hulp: "Hoe kan ik een e-mail account aanmaken in DirectAdmin?").
+2. De SMTP-gegevens voor de website:
+   - `SMTP_HOST=mail.jouwdomein.nl`
+   - `SMTP_PORT=465` (SSL; lukt dat niet, gebruik dan `587`)
+   - `SMTP_USER=info@jouwdomein.nl`
+   - `SMTP_PASS=` het wachtwoord van die mailbox
+   - `EMAIL_FROM="Afvallen & Afblijven <info@jouwdomein.nl>"` en `ADMIN_EMAIL=` het adres waar jij de meldingen wilt ontvangen
+3. Controleer in DirectAdmin (DNS-beheer) dat er een SPF-record is en dat DKIM aanstaat, zodat de mails niet in de spam belanden. Bij een Vimexx-pakket staat dit meestal al goed.
+4. Vraag bij Vimexx na hoeveel mails per uur je mag versturen. Voor de start is dat ruim genoeg; worden het er veel, stap dan over op een maildienst zoals Brevo of Postmark (alleen de SMTP-gegevens veranderen).
+
+**3. Website (Vercel)**
+1. Maak een account op [vercel.com](https://vercel.com) en kies **Pro** (nodig voor een commerciële site en voor de taak die elke 5 minuten draait).
+2. Kies "Add New → Project" en importeer de GitHub-repository. Vercel herkent Next.js vanzelf.
+3. Zet bij Settings → Environment Variables alle waarden uit `.env.example`: de database, de SMTP-gegevens hierboven, Stripe, `ANTHROPIC_API_KEY`, `CRON_SECRET` (een lange willekeurige tekst), `ADMIN_PASSWORD` en `NEXT_PUBLIC_SITE_URL=https://jouwdomein.nl`.
+4. Deploy. Controleer bij Settings → Functions dat de regio Frankfurt (`fra1`) is.
+5. Open `/beheer/instellingen` op het `.vercel.app`-adres en stuur een testmail. Alle koppelingen moeten groen zijn.
+
+**4. Domeinnaam naar Vercel laten wijzen (Vimexx)**
+1. Voeg bij Vercel → Settings → Domains `jouwdomein.nl` en `www.jouwdomein.nl` toe. Vercel laat zien welke records je moet zetten: meestal een **A-record** voor het hoofddomein (`76.76.21.21`) en een **CNAME** voor `www` (de waarde die Vercel toont).
+2. Ga bij Vimexx naar het DNS-beheer van je domein (in Mijn Vimexx of in DirectAdmin onder DNS Management):
+   - Verwijder de bestaande A-records voor `@` en `www` die naar de Vimexx-hosting wijzen. Een bestaand record kun je in DirectAdmin niet bewerken: verwijderen en opnieuw toevoegen.
+   - Voeg toe: A-record, naam `@`, waarde `76.76.21.21` (of wat Vercel toont).
+   - Voeg toe: CNAME, naam `www`, waarde van Vercel **met een punt aan het eind** (anders plakt Vimexx je eigen domein erachter).
+   - **Laat de MX-, SPF- en DKIM-records en `mail.jouwdomein.nl` staan**: daarmee blijft je e-mail bij Vimexx werken.
+3. Het duurt 2 tot 6 uur voordat de wijziging overal zichtbaar is. Vercel regelt daarna zelf het HTTPS-certificaat.
+4. Staat er nu een oude website op je Vimexx-pakket, dan zien bezoekers die niet meer zodra de DNS is aangepast. Het pakket zelf blijft nodig voor je e-mail.
+
+**5. Daarna**: werk de checklist hieronder af (Stripe-webhook naar `https://jouwdomein.nl/api/webhooks/stripe`, bedrijfsgegevens, testen in Stripe-testmodus).
+
 ## Live zetten (checklist)
 
 1. **Bedrijfsgegevens** invullen in `src/config/site.ts`: naam, adres, KvK, btw en e-mailadressen. Deze verschijnen in de footer, de voorwaarden en de e-mails.
-2. **Hosting**: zet het project op [Vercel](https://vercel.com), op het **Pro**-abonnement. De geplande taak in `vercel.json` draait elke 5 minuten (schema's vrijgeven en mailen, mislukte schema's opnieuw proberen); de herinneringen en het opruimen gebeuren één keer per dag vanaf 08:00. Op het gratis Hobby-abonnement mag een geplande taak maar één keer per dag draaien en mislukt de deploy met deze instelling; Hobby is bovendien alleen voor niet-commercieel gebruik. Wil je toch Hobby gebruiken, zet dan in `vercel.json` een dagelijkse planning en laat een externe dienst (bijv. cron-job.org) elke 5 minuten `GET /api/cron` aanroepen met de header `Authorization: Bearer <CRON_SECRET>`. Zet de omgevingsvariabelen uit `.env.example`.
+2. **Hosting**: zet het project op [Vercel](https://vercel.com), op het **Pro**-abonnement (zie het stappenplan hierboven). De website draait in Frankfurt (`regions` in `vercel.json`). De geplande taak in `vercel.json` draait elke 5 minuten (schema's vrijgeven en mailen, mislukte schema's opnieuw proberen); de herinneringen en het opruimen gebeuren één keer per dag vanaf 08:00. Op het gratis Hobby-abonnement mag een geplande taak maar één keer per dag draaien en mislukt de deploy met deze instelling; Hobby is bovendien alleen voor niet-commercieel gebruik. Wil je toch Hobby gebruiken, zet dan in `vercel.json` een dagelijkse planning en laat een externe dienst (bijv. cron-job.org) elke 5 minuten `GET /api/cron` aanroepen met de header `Authorization: Bearer <CRON_SECRET>`. Zet de omgevingsvariabelen uit `.env.example`.
 3. **Database**: maak een PostgreSQL-database aan in een EU-regio (bijv. Neon of Supabase) en zet `DATABASE_URL`. De tabellen worden automatisch aangemaakt.
 4. **Stripe**
    - Zet in het dashboard de betaalmethoden aan: iDEAL | Wero, Bancontact en SEPA-incasso (voor abonnementen) en kaart (voor losse schema's). Stripe zet iDEAL en Bancontact bij abonnementen automatisch om in een SEPA-machtiging.

@@ -266,11 +266,16 @@ function Nl() {
           verwerking zelf verantwoordelijk, zie het privacybeleid van Stripe.
         </li>
         <li>
-          <strong>Hosting- en databasepartij</strong> – het hosten van de website en het veilig opslaan van gegevens,
-          waar mogelijk binnen de EU (verwerker).
+          <strong>Vercel</strong> (VS) – het hosten van de website; de website draait in een datacenter in Frankfurt
+          (verwerker).
         </li>
         <li>
-          <strong>E-maildienst</strong> – het versturen van je schema&apos;s, inloglinks en bevestigingen (verwerker).
+          <strong>Neon</strong> (VS) – de database waarin je gegevens versleuteld worden opgeslagen, in een datacenter in
+          Frankfurt (verwerker).
+        </li>
+        <li>
+          <strong>Vimexx</strong> (Nederland) – onze domeinnaam en e-mail, ook het versturen van je schema&apos;s,
+          inloglinks en bevestigingen (verwerker).
         </li>
         <li>
           <strong>Junction</strong> (Vital Technologies Inc., VS) – alleen als je een gezondheidsapp koppelt: het ophalen
@@ -588,11 +593,16 @@ function En() {
           (controller) for part of the processing; see Stripe&apos;s privacy policy.
         </li>
         <li>
-          <strong>Hosting and database provider</strong> – hosting the website and storing data securely, within the EU
-          where possible (processor).
+          <strong>Vercel</strong> (US) – hosting the website; the website runs in a data centre in Frankfurt
+          (processor).
         </li>
         <li>
-          <strong>Email service</strong> – sending your plans, login links and confirmations (processor).
+          <strong>Neon</strong> (US) – the database in which your data is stored encrypted, in a data centre in
+          Frankfurt (processor).
+        </li>
+        <li>
+          <strong>Vimexx</strong> (Netherlands) – our domain name and email, including sending your plans, login links
+          and confirmations (processor).
         </li>
         <li>
           <strong>Junction</strong> (Vital Technologies Inc., US) – only if you connect a health app: collecting your
