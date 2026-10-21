@@ -39,6 +39,7 @@ import {
 import { deliveryDeadline } from "@/lib/delivery";
 import { formatDateTime } from "@/lib/format";
 import { planApprovalRequired } from "@/lib/settings";
+import { sendCheckoutReminders } from "@/lib/checkout-reminders";
 import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
 import { newPeriodStartsAt } from "@/lib/schedule";
 import { processWeeklyLog } from "@/lib/weekly-server";
@@ -112,6 +113,7 @@ export async function processPlan(planId: string): Promise<void> {
 
     const progress: ProgressContext = {
       periodNumber: plan.seq,
+      instruction: plan.admin_instruction ?? undefined,
       previousSummary: previous?.content ? summarizePlan(previous.content) : undefined,
       checkin: current?.data,
       earlierInjuries: checkins
@@ -340,7 +342,15 @@ export async function startNextPeriod(
 export async function runScheduledWork(
   budgetMs: number,
   { daily }: { daily: boolean },
-): Promise<{ released: number; scheduled: number; reminders: number; weeklyReminders: number; healthSynced: number; processed: number }> {
+): Promise<{
+  released: number;
+  scheduled: number;
+  reminders: number;
+  weeklyReminders: number;
+  checkoutReminders: number;
+  healthSynced: number;
+  processed: number;
+}> {
   const started = Date.now();
   let scheduled = 0;
   let reminders = 0;
@@ -427,6 +437,12 @@ export async function runScheduledWork(
     }
   }
 
+  // Herinnering bij een niet-afgeronde betaling (als dat aanstaat, alleen met toestemming).
+  const checkoutReminders = await sendCheckoutReminders().catch((err) => {
+    console.error("Herinneringen voor afrekenen mislukt", err);
+    return 0;
+  });
+
   // Gekoppelde gezondheidsapps bijwerken (vangnet naast de meldingen/webhooks).
   const healthSynced = daily
     ? await syncAllConnections(started + Math.min(60_000, budgetMs / 4)).catch((err) => {
@@ -454,7 +470,7 @@ export async function runScheduledWork(
   released += await releaseAndNotify();
   // Vangnet: vrijgegeven schema's waarvan de klaar-mail niet is verstuurd (bijv. na een storing bij het mailen).
   await notifyReleased(await releasedUnmailedPeriods(20));
-  return { released, scheduled, reminders, weeklyReminders, healthSynced, processed };
+  return { released, scheduled, reminders, weeklyReminders, checkoutReminders, healthSynced, processed };
 }
 
 const planTitleCopy = defineCopy({

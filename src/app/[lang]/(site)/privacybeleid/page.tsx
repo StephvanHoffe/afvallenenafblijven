@@ -82,7 +82,20 @@ function Nl() {
           serverlogs) en, alleen met je toestemming, analytische en marketinggegevens via cookies.
         </li>
         <li>
+          <strong>Websitegebruik (zonder cookies):</strong> welke pagina&apos;s en stappen van de vragenlijst een bezoek
+          bekijkt, het soort apparaat (mobiel, tablet of computer), de taal en de campagnegegevens uit de link. We gebruiken
+          hiervoor een willekeurig bezoeknummer dat alleen in het tabblad van je browser staat (sessionStorage) en verdwijnt als
+          je het tabblad sluit. We slaan geen IP-adres op en volgen je niet op andere websites. Staat &quot;Do Not Track&quot; of
+          &quot;Global Privacy Control&quot; aan in je browser, dan meten we niets. Bestel je, dan koppelen we de meting van dat
+          bezoek aan je bestelling.
+        </li>
+        <li>
           <strong>Berichten:</strong> wat je ons stuurt via het contactformulier, e-mail, de herroepingsfunctie of een garantie-aanvraag.
+        </li>
+        <li>
+          <strong>Klantenservice:</strong> korte notities over contact dat je met ons hebt gehad, en een overzicht van de
+          e-mails die we je stuurden (soort, onderwerp en tijdstip, niet de inhoud), zodat we kunnen nagaan of een mail is
+          aangekomen.
         </li>
       </ul>
 
@@ -129,13 +142,21 @@ function Nl() {
           </tr>
           <tr>
             <td>Klantenservice, klachten, herroepingen en garantie-aanvragen</td>
-            <td>Contactgegevens, berichten</td>
+            <td>Contactgegevens, berichten, notities, overzicht van verstuurde e-mails</td>
             <td>Uitvoering van de overeenkomst; wettelijke verplichting</td>
           </tr>
           <tr>
             <td>Nieuwsbrief met tips en aanbiedingen</td>
             <td>Voornaam, e-mailadres</td>
             <td>Toestemming (altijd in te trekken)</td>
+          </tr>
+          <tr>
+            <td>
+              Eén herinnering als je de vragenlijst invult maar de betaling niet afrondt, met een link waarin je antwoorden al
+              klaarstaan
+            </td>
+            <td>Voornaam, e-mailadres, je antwoorden in de vragenlijst</td>
+            <td>Toestemming voor e-mail (dezelfde als voor de nieuwsbrief); zonder die toestemming sturen we niets</td>
           </tr>
           <tr>
             <td>Website verbeteren en advertenties meten</td>
@@ -148,6 +169,11 @@ function Nl() {
             <td>Meten welke campagnes tot bestellingen leiden</td>
             <td>Campagnegegevens uit de link bij je bestelling (geen cookies)</td>
             <td>Gerechtvaardigd belang</td>
+          </tr>
+          <tr>
+            <td>De website en vragenlijst verbeteren (bijv. zien bij welke vraag bezoekers afhaken)</td>
+            <td>Websitegebruik zonder cookies (zie punt 2)</td>
+            <td>Gerechtvaardigd belang; je kunt bezwaar maken via &quot;Do Not Track&quot; of &quot;Global Privacy Control&quot;</td>
           </tr>
           <tr>
             <td>Beveiliging en misbruik voorkomen</td>
@@ -288,6 +314,15 @@ function Nl() {
           <strong>Contactberichten:</strong> tot 12 maanden na afhandeling.
         </li>
         <li>
+          <strong>Klantenservicenotities:</strong> net als je intakegegevens zolang je klant bent, en daarna nog 12 maanden.
+        </li>
+        <li>
+          <strong>Overzicht van verstuurde e-mails:</strong> 12 maanden.
+        </li>
+        <li>
+          <strong>Websitegebruik (zonder cookies):</strong> 13 maanden.
+        </li>
+        <li>
           <strong>Nieuwsbrief:</strong> tot je je afmeldt.
         </li>
       </ul>
@@ -381,7 +416,19 @@ function En() {
           only with your consent, analytics and marketing data via cookies.
         </li>
         <li>
+          <strong>Website usage (without cookies):</strong> which pages and questionnaire steps a visit views, the type of
+          device (mobile, tablet or computer), the language and the campaign details from the link. For this we use a random
+          visit number that is only stored in your browser tab (sessionStorage) and disappears when you close the tab. We do
+          not store your IP address and do not track you on other websites. If &quot;Do Not Track&quot; or &quot;Global Privacy
+          Control&quot; is switched on in your browser, we do not measure anything. If you place an order, we link the
+          measurement of that visit to your order.
+        </li>
+        <li>
           <strong>Messages:</strong> what you send us via the contact form, email, the withdrawal function or a guarantee request.
+        </li>
+        <li>
+          <strong>Customer service:</strong> short notes about contact you have had with us, and an overview of the emails
+          we sent you (type, subject and time, not the content), so that we can check whether an email arrived.
         </li>
       </ul>
 
@@ -425,13 +472,18 @@ function En() {
           </tr>
           <tr>
             <td>Customer service, complaints, withdrawals and guarantee requests</td>
-            <td>Contact details, messages</td>
+            <td>Contact details, messages, notes, overview of emails sent</td>
             <td>Performance of the contract; legal obligation</td>
           </tr>
           <tr>
             <td>Newsletter with tips and offers</td>
             <td>First name, email address</td>
             <td>Consent (can be withdrawn at any time)</td>
+          </tr>
+          <tr>
+            <td>One reminder if you fill in the questionnaire but don&apos;t complete the payment, with a link that has your answers ready</td>
+            <td>First name, email address, your questionnaire answers</td>
+            <td>Consent to email (the same as for the newsletter); without that consent we send nothing</td>
           </tr>
           <tr>
             <td>Improving the website and measuring adverts</td>
@@ -444,6 +496,11 @@ function En() {
             <td>Measuring which campaigns lead to orders</td>
             <td>Campaign details from the link, stored with your order (no cookies)</td>
             <td>Legitimate interest</td>
+          </tr>
+          <tr>
+            <td>Improving the website and questionnaire (e.g. seeing at which question visitors drop off)</td>
+            <td>Website usage without cookies (see section 2)</td>
+            <td>Legitimate interest; you can object via &quot;Do Not Track&quot; or &quot;Global Privacy Control&quot;</td>
           </tr>
           <tr>
             <td>Security and preventing misuse</td>
@@ -577,6 +634,16 @@ function En() {
         </li>
         <li>
           <strong>Contact messages:</strong> up to 12 months after they have been dealt with.
+        </li>
+        <li>
+          <strong>Customer service notes:</strong> like your intake data, for as long as you are a customer and for 12 months
+          after that.
+        </li>
+        <li>
+          <strong>Overview of emails sent:</strong> 12 months.
+        </li>
+        <li>
+          <strong>Website usage (without cookies):</strong> 13 months.
         </li>
         <li>
           <strong>Newsletter:</strong> until you unsubscribe.

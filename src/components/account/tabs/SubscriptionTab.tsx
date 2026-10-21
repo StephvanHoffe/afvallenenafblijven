@@ -9,6 +9,7 @@ import { site } from "@/config/site";
 import { defineCopy, type Locale } from "@/i18n/config";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { euro, formatDate } from "@/lib/format";
+import { CANCEL_REASONS, cancelReasonLabel } from "@/lib/cancel-reasons";
 
 const copy = defineCopy({
   nl: {
@@ -32,6 +33,10 @@ const copy = defineCopy({
     endsAtMonth: "Je abonnement stopt aan het einde van de lopende maand.",
     keepAccess: "Je houdt toegang tot je schema's.",
     confirm: "Bevestig opzeggen",
+    reasonLabel: "Waarom stop je? (optioneel)",
+    reasonNone: "Zeg ik liever niet",
+    commentLabel: "Wil je nog iets kwijt? (optioneel)",
+    commentPlaceholder: "Wat kunnen we beter doen?",
     withdrawBefore: "Wil je je bestelling herroepen? Gebruik dan de",
     withdrawLink: "herroepingsfunctie",
     questionsTitle: "Vragen over betalen of opzeggen?",
@@ -74,6 +79,10 @@ const copy = defineCopy({
     endsAtMonth: "Your subscription will end at the end of the current month.",
     keepAccess: "You'll keep access to your plans.",
     confirm: "Confirm cancellation",
+    reasonLabel: "Why are you stopping? (optional)",
+    reasonNone: "I'd rather not say",
+    commentLabel: "Anything else you'd like to share? (optional)",
+    commentPlaceholder: "What could we do better?",
     withdrawBefore: "Want to withdraw from your order? Use the",
     withdrawLink: "withdrawal function",
     questionsTitle: "Questions about payment or cancelling?",
@@ -174,14 +183,29 @@ export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; 
                           <p className="mb-2">
                             {o.commitmentEndsAt ? c.endsAtCommitment(formatDate(o.commitmentEndsAt, l)) : c.endsAtMonth} {c.keepAccess}
                           </p>
-                          {demo ? (
-                            <DemoButton className="btn-primary w-full !py-2.5 text-sm">{c.confirm}</DemoButton>
-                          ) : (
-                            <form action={cancelSubscription}>
-                              <input type="hidden" name="order" value={o.id} />
+                          <form action={demo ? undefined : cancelSubscription} className="space-y-2">
+                            <input type="hidden" name="order" value={o.id} />
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-semibold">{c.reasonLabel}</span>
+                              <select name="reden" defaultValue="" className="input !py-2 text-sm">
+                                <option value="">{c.reasonNone}</option>
+                                {CANCEL_REASONS.map((r) => (
+                                  <option key={r} value={r}>
+                                    {cancelReasonLabel(r, l)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-xs font-semibold">{c.commentLabel}</span>
+                              <textarea name="toelichting" rows={2} maxLength={1000} className="input !py-2 text-sm" placeholder={c.commentPlaceholder} />
+                            </label>
+                            {demo ? (
+                              <DemoButton className="btn-primary w-full !py-2.5 text-sm">{c.confirm}</DemoButton>
+                            ) : (
                               <SubmitButton className="btn-primary w-full !py-2.5 text-sm">{c.confirm}</SubmitButton>
-                            </form>
-                          )}
+                            )}
+                          </form>
                         </div>
                       </details>
                     )}

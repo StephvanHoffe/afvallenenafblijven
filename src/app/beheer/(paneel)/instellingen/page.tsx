@@ -2,8 +2,8 @@ import { isAppleHealthEnabled, isJunctionConfigured, isWithingsConfigured, junct
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { CircleAlert, CircleCheck, Mail } from "lucide-react";
-import { sendTestEmail, setApprovalMode } from "@/app/beheer/actions";
+import { CircleAlert, CircleCheck, Download, Mail, Save } from "lucide-react";
+import { saveCheckoutReminder, saveDelivery, sendTestEmail, setApprovalMode } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
 import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, durations, monthlyPrice, products } from "@/config/pricing";
@@ -14,6 +14,9 @@ import { db, isDatabaseConfigured } from "@/lib/db";
 import { euro } from "@/lib/format";
 import { launchOfferActive } from "@/lib/launch";
 import { adminData } from "@/lib/admin/data";
+import { EXPORTS, exportHref, type ExportKind } from "@/lib/admin/export";
+import Link from "@/i18n/Link";
+import { checkoutReminderSettings, deliverySettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Instellingen" };
 
@@ -46,6 +49,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const stripeMode = demo ? "test" : (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
   const launch = await launchOfferActive();
   const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
+  const [delivery, reminder] = await Promise.all([deliverySettings(), demo ? Promise.resolve({ enabled: true, delayHours: 3 }) : checkoutReminderSettings()]);
+  const here = "/beheer/instellingen";
 
   const checks: { label: string; ok: boolean; detail: string }[] = [
     { label: "Database", ok: dbOk, detail: dbOk ? "Verbonden" : isDatabaseConfigured() ? "Kan niet verbinden" : "DATABASE_URL ontbreekt" },
@@ -80,8 +85,11 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   return (
     <>
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
-      <PageTitle title="Instellingen" intro="Status van de koppelingen. Waarden pas je aan bij je hosting (omgevingsvariabelen) of in de code." />
-      <div className="grid gap-6 xl:grid-cols-2">
+      <PageTitle
+        title="Instellingen"
+        intro="Levering, herinneringen en exports pas je hier aan. De koppelingen stel je in bij je hosting (omgevingsvariabelen), prijzen en acties in de code."
+      />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Panel title="Koppelingen">
           <ul className="divide-y divide-line">
             {checks.map((c) => (
@@ -109,28 +117,95 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
 
         <div className="space-y-6">
           <Panel title="Levering van schema's">
-            <div className="space-y-3 px-5 py-4 text-sm">
+            <form action={saveDelivery} className="space-y-3 px-5 py-4 text-sm">
+              <input type="hidden" name="terug" value={here} />
               <p>
-                Een nieuw schema wordt direct gemaakt en staat op een willekeurig moment tussen {site.delivery.minMinutes} en{" "}
-                {site.delivery.maxMinutes} minuten later voor de klant klaar (belofte: binnen {site.delivery.promiseHours} uur). De klant
-                krijgt dan een e-mail.{site.delivery.afterCheckin ? " Dit geldt ook na een check-in." : ""}
+                Een nieuw schema wordt direct gemaakt en staat op een willekeurig moment tussen het minimum en maximum voor de klant klaar
+                (belofte op de website: binnen {site.delivery.promiseHours} uur). De klant krijgt dan een e-mail.
               </p>
-              <p className="text-muted">
-                <strong className="text-ink">Schema&apos;s eerst zelf goedkeuren:</strong> {approval ? "staat aan" : "staat uit"}. Staat dit aan,
-                dan gaat een schema pas naar de klant als jij het in het beheer hebt goedgekeurd. Je krijgt per schema een e-mail met
-                het tijdstip waarop de klant het uiterlijk verwacht. Handig als steekproef in de eerste weken.
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block">
+                  <span className="label">Minimaal (minuten)</span>
+                  <input name="min" type="number" min={0} max={site.delivery.promiseHours * 60 - 10} defaultValue={delivery.minMinutes} className="input w-28 !py-2.5" />
+                </label>
+                <label className="block">
+                  <span className="label">Maximaal (minuten)</span>
+                  <input name="max" type="number" min={0} max={site.delivery.promiseHours * 60 - 10} defaultValue={delivery.maxMinutes} className="input w-28 !py-2.5" />
+                </label>
+              </div>
+              <label className="flex items-start gap-2">
+                <input type="checkbox" name="naCheckin" value="1" defaultChecked={delivery.afterCheckin} className="mt-0.5" />
+                <span>
+                  Ook na een check-in met vertraging leveren
+                  <span className="block text-xs text-muted">Uit = na een check-in staat het nieuwe schema klaar zodra het gemaakt is.</span>
+                </span>
+              </label>
+              <p className="text-xs text-muted">
+                Maximaal {site.delivery.promiseHours * 60 - 10} minuten, zodat de geplande taak (elke 5 minuten) de belofte altijd haalt.
+                0 en 0 = direct leveren.
               </p>
-            </div>
-            {dbOk && (
-            <form action={setApprovalMode} className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
-              <input type="hidden" name="terug" value="/beheer/instellingen" />
-              <input type="hidden" name="aan" value={approval ? "0" : "1"} />
-              <p className="text-sm text-muted">{approval ? "Weer automatisch laten leveren?" : "Elk schema eerst zelf bekijken?"}</p>
               <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
-                {approval ? "Goedkeuren uitzetten" : "Goedkeuren aanzetten"}
+                <Save className="size-4" aria-hidden /> Levering opslaan
               </SubmitButton>
             </form>
+            {dbOk && (
+              <form action={setApprovalMode} className="space-y-3 border-t border-line px-5 py-4 text-sm">
+                <input type="hidden" name="terug" value={here} />
+                <input type="hidden" name="aan" value={approval ? "0" : "1"} />
+                <p className="text-muted">
+                  <strong className="text-ink">Schema&apos;s eerst zelf goedkeuren:</strong> {approval ? "staat aan" : "staat uit"}. Staat dit aan,
+                  dan gaat een schema pas naar de klant als jij het in het beheer hebt goedgekeurd. Je krijgt per schema een e-mail met
+                  het tijdstip waarop de klant het uiterlijk verwacht. Handig als steekproef in de eerste weken.
+                </p>
+                <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
+                  {approval ? "Goedkeuren uitzetten" : "Goedkeuren aanzetten"}
+                </SubmitButton>
+              </form>
             )}
+          </Panel>
+
+          <div id="herinnering" className="scroll-mt-6">
+            <Panel title="Herinnering bij niet-afgeronde betaling">
+              <form action={saveCheckoutReminder} className="space-y-3 px-5 py-4 text-sm">
+                <input type="hidden" name="terug" value={here} />
+                <p>
+                  Vult iemand de vragenlijst in maar rondt de betaling niet af, dan sturen we één keer een vriendelijke herinnering met een
+                  link waarmee de antwoorden al ingevuld zijn. Alleen als de bezoeker toestemming gaf voor e-mail (nieuwsbrief), alleen tussen
+                  08:00 en 21:00 en niet als die persoon intussen toch heeft besteld.
+                </p>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" name="aan" value="1" defaultChecked={reminder.enabled} /> Herinnering aan
+                </label>
+                <label className="block">
+                  <span className="label">Versturen na (uur)</span>
+                  <input name="uren" type="number" min={1} max={48} defaultValue={reminder.delayHours} className="input w-28 !py-2.5" />
+                </label>
+                <p className="text-xs text-muted">
+                  De tekst van de mail pas je aan onder <Link href="/beheer/emails/checkout-reminder" className="font-semibold text-brand-700 underline">E-mails</Link>.
+                  Je kunt ook per persoon een herinnering sturen vanuit de <Link href="/beheer/funnel#afgehaakt" className="font-semibold text-brand-700 underline">funnel</Link>.
+                </p>
+                <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
+                  <Save className="size-4" aria-hidden /> Opslaan
+                </SubmitButton>
+              </form>
+            </Panel>
+          </div>
+
+          <Panel title="Gegevens exporteren (CSV)">
+            <ul className="divide-y divide-line text-sm">
+              {Object.entries(EXPORTS).map(([kind, label]) => (
+                <li key={kind}>
+                  <a href={exportHref(kind as ExportKind)} className="flex items-center justify-between gap-3 px-5 py-3 font-semibold hover:bg-sand/50">
+                    {label}
+                    <Download className="size-4 text-muted" aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="border-t border-line px-5 py-3 text-xs text-muted">
+              Opent direct in Excel of Numbers. Gebruik de nieuwsbrieflijst alleen voor mensen die toestemming gaven, en bewaar exports niet
+              langer dan nodig.
+            </p>
           </Panel>
 
           <Panel title="Acties en garantie">

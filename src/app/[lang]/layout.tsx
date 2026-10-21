@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { lang } from "next/root-params";
 import "../globals.css";
 import { jakarta } from "@/app/fonts";
 import { site } from "@/config/site";
 import { isLocale, locales } from "@/i18n/config";
 import { LocaleProvider } from "@/i18n/client";
+import { PageTracker } from "@/components/PageTracker";
 
 export function generateStaticParams() {
   return locales.map((l) => ({ lang: l }));
@@ -58,6 +60,9 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
     <html lang={l} className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <LocaleProvider locale={l}>{children}</LocaleProvider>
+        <Suspense fallback={null}>
+          <PageTracker />
+        </Suspense>
       </body>
     </html>
   );

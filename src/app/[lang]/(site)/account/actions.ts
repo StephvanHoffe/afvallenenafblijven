@@ -8,13 +8,13 @@ import { currentCustomer, endSession } from "@/lib/auth";
 import { checkinOptions, checkinWindow, type CheckinData } from "@/lib/checkin";
 import { processOrderPlans, startNextPeriod } from "@/lib/plans";
 import { newPeriodStartsAt } from "@/lib/schedule";
-import { deliveryTime } from "@/lib/delivery";
-import { site } from "@/config/site";
+import { scheduledDelivery } from "@/lib/settings";
 import {
   addCheckin,
   createGuaranteeRequest,
   ordersForCustomer,
   plansForOrder,
+  setCancelReason,
   setCustomerLocale,
   setWeeklyReminders,
 } from "@/lib/repo";
@@ -29,6 +29,7 @@ import { euro, formatDate } from "@/lib/format";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import { requestLocale } from "@/i18n/server";
 import { goalOptions } from "@/lib/intake";
+import { isCancelReason } from "@/lib/cancel-reasons";
 import type { FormState } from "@/components/forms/FormStatus";
 
 const copy = defineCopy({
@@ -84,6 +85,11 @@ export async function cancelSubscription(formData: FormData): Promise<void> {
   const { customer, order, subscriptionId } = await ownSubscriptionOrder(formData, l);
   const subscription = await cancelStripeSubscription(subscriptionId, order.duration);
   await syncSubscription(subscription);
+  const reason = formData.get("reden");
+  const comment = String(formData.get("toelichting") ?? "").trim().slice(0, 1000) || null;
+  await setCancelReason(order.id, isCancelReason(reason) ? reason : comment ? "anders" : null, comment).catch((err) =>
+    console.error("Opzegreden opslaan mislukt", err),
+  );
   const periodEnd = subscription.cancel_at ?? subscription.items.data[0]?.current_period_end ?? null;
   await sendMail(
     cancellationEmail(
@@ -199,7 +205,7 @@ export async function submitCheckin(_prev: FormState, formData: FormData): Promi
   await addCheckin(customer.id, order.id, window.seq, parsed.data as CheckinData);
   // Het nieuwe schema wordt direct gemaakt, staat binnen 2 uur klaar en start op de maandag van de nieuwe
   // periode (of meteen, als die al begonnen is).
-  await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt), site.delivery.afterCheckin ? deliveryTime() : new Date());
+  await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt), await scheduledDelivery("checkin"));
   after(() => processOrderPlans(order.id));
   redirect(localePath(l, "/account?checkin=ontvangen"));
 }

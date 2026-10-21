@@ -66,11 +66,22 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 
 **Beheer (`/beheer`)**
 - Inloggen met één wachtwoord (`ADMIN_PASSWORD`, minimaal 12 tekens).
-- Overzicht: terugkerende omzet per maand, nieuwe bestellingen, conversie van gestarte betalingen, bestellingen per dag en actieve abonnementen per plan.
-- Klanten: zoeken, alle antwoorden uit de vragenlijst, check-ins per periode, de status van de volgende check-in, bestellingen en schema's. Acties: inloglink sturen, een nieuwe periode starten zonder check-in (als de klant zijn gegevens anders heeft doorgegeven), abonnement opzeggen namens de klant, klant volledig verwijderen (AVG).
-- Bestellingen en schema's met filters (ook "Nog niet bij klant" en "Goedkeuren"). Schema's bekijk je zoals de klant ze ziet, ook als PDF, met de allergieën van de klant erbij. Je kunt ze goedkeuren, meteen naar de klant sturen, opnieuw laten maken en de e-mail opnieuw sturen.
+- **Overzicht**: terugkerende omzet per maand, nieuwe bestellingen, conversie, een samenvatting van de funnel, bestellingen per dag, actieve abonnementen per plan en campagnes. Alles wat aandacht nodig heeft (goed te keuren of mislukte schema's, herroepingen, garantie-aanvragen) staat bovenaan.
+- **Funnel**: van bezoek tot betaling in 9 stappen, met per stap hoeveel bezoekers afhaken en het grootste afhaakmoment gemarkeerd. Per vraag van de vragenlijst zie je hoeveel mensen er stopten. Uitsplitsing naar bron, apparaat, landingspagina en plan; bezoeken en bestellingen per dag; heatmaps van wanneer mensen komen en bestellen (weekdag × uur); en een lijst van niet-afgeronde betalingen, met een knop om één herinnering te sturen (alleen met toestemming voor e-mail). Filters: 7, 30 of 90 dagen, bron en apparaat.
+  - De meting werkt zonder cookies: een willekeurig bezoeknummer in sessionStorage (`afb_bezoek`), geen IP-adres, en niets als Do Not Track of Global Privacy Control aanstaat. Bots worden eruit gefilterd. Bewaard 13 maanden. In de demo-modus en zonder database staat de meting uit.
+- **Analyse**: omzet per maand (uit de echte betalingen van Stripe, of geschat voor maanden van vóór de betaalregistratie), terugkerende omzet, nieuwe en beëindigde abonnementen, klantwaarde, opzegpercentage, cohorten (hoeveel klanten na 1, 2, 3… maanden nog klant zijn), plan- en looptijdmix, opzegredenen, betrokkenheid (check-ins en weegmomenten op tijd), resultaten (gewichtsverandering), schema's (tijd tot levering, mislukt), e-mails en kortingscodes.
+- **Klanten**: zoeken, gegevens aanpassen (naam, e-mail, taal, nieuwsbrief, herinneringen), antwoorden uit de vragenlijst bekijken en aanpassen, interne notities, de klantreis (hoe de klant binnenkwam), alle verstuurde e-mails, check-ins en weegmomenten, bestellingen en schema's. Acties: inloglink sturen, nieuwe periode starten zonder check-in, abonnement opzeggen namens de klant (met reden), eerste betaling terugbetalen via Stripe (met of zonder direct beëindigen), klant volledig verwijderen (AVG). Export naar CSV (klanten en de nieuwsbrieflijst).
+- **Bestellingen** met filters, kortingscode, terugbetaald bedrag en opzegreden, en export naar CSV.
+- **Schema's** met filters (ook "Nog niet bij klant" en "Goedkeuren"). Je bekijkt ze zoals de klant ze ziet, ook als PDF, met de allergieën erbij. Goedkeuren, meteen naar de klant sturen, opnieuw laten maken **met een aanwijzing** (bijv. "meer warme lunches"; die gaat mee naar Claude), de mail opnieuw sturen en een **beoordeling** (1-5 met toelichting) geven.
 - Mislukt een schema, dan wordt het automatisch opnieuw geprobeerd, steeds iets later (na 5, 10, 20 en 40 minuten). Na 5 pogingen krijg je een e-mail met een link naar het schema; los de oorzaak op (meestal de API-sleutel of het tegoed bij Anthropic) en klik op "Opnieuw maken".
-- Herroepingen en garantie-aanvragen afhandelen (terugbetalen en het abonnement direct beëindigen doe je zelf in Stripe; daarna markeer je de aanvraag als afgehandeld), en een pagina Instellingen die laat zien welke koppelingen werken (met testmail).
+- **Feedback**: de antwoorden uit de check-ins (verdeling per vraag, met aandachtspunten in oranje), opmerkingen uit check-ins en weegmomenten, opzegredenen met toelichting, garantie-aanvragen en je eigen beoordelingen van schema's.
+- **Kortingscodes**: percentage of vast bedrag, voor de eerste betaling, de eerste maanden of altijd, beperkt tot producten of looptijden, met een maximum aantal keer en een geldigheidsperiode. Per code zie je hoe vaak hij is gebruikt, hoe vaak de betaalpagina ermee werd geopend en de eerste betalingen. Klanten vullen de code in bij het afrekenen, of je deelt een link (`/start?code=ZOMER10`, werkt ook achter een landingspagina). Een code vervangt de lanceringskorting. De Stripe-coupon wordt automatisch aangemaakt.
+- **E-mails**: van elke klantmail pas je het onderwerp, de tekst en de knop aan, in het Nederlands en het Engels, met invulvelden zoals `{naam}`. Met een voorbeeld, testmail en "terug naar standaard". Daarnaast een log van alle verstuurde e-mails (12 maanden), te filteren op status en soort.
+- **Herinnering bij niet-afgeronde betaling** (staat standaard uit, aanzetten in Instellingen): één mail na een in te stellen aantal uren, alleen met toestemming voor e-mail, tussen 08:00 en 21:00, en niet als de persoon intussen heeft besteld. De link opent de vragenlijst met de antwoorden al ingevuld.
+- **Herroepingen en garantie-aanvragen** afhandelen, met een knop die de eerste betaling via Stripe terugbetaalt, het abonnement direct beëindigt en de aanvraag afhandelt.
+- **Logboek**: alles wat in het beheer is gedaan (24 maanden bewaard).
+- **Instellingen**: levertijd van schema's (minimum en maximum, ook na een check-in of niet), schema's eerst zelf goedkeuren, de herinnering bij niet-afgeronde betaling, exports (klanten, bestellingen, betalingen, nieuwsbrief, kortingscodes) en de status van alle koppelingen (met testmail).
+- Klanten kunnen bij het opzeggen optioneel een reden kiezen; die zie je terug bij Analyse en Feedback.
 - `BEHEER_DEMO=1` toont het beheer met fictieve voorbeelddata en zonder wachtwoord. Alleen voor een demo; zet dit nooit aan op de live site.
 
 **Juridisch (Nederland)**
@@ -137,7 +148,9 @@ Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwi
      - `customer.subscription.created`
      - `customer.subscription.updated`
      - `customer.subscription.deleted`
+     - `invoice.paid` (voor de omzetcijfers in het beheer: elke maandelijkse betaling)
    - Zet het signing secret in `STRIPE_WEBHOOK_SECRET`.
+   - Terugbetalen doe je bij voorkeur vanuit het beheer; dan staat het ook in de omzetcijfers. Betaal je terug in het Stripe-dashboard, dan zie je dat niet terug in het beheer.
    - Sla het **klantportaal** (Settings → Billing → Customer portal) één keer op. Zet daarin betaalmethode wijzigen en factuurhistorie aan. Zet **opzeggen in het portaal uit**: de website regelt opzeggen zelf, zodat de minimale looptijd klopt.
    - Producten, prijzen en de lanceringscoupon worden automatisch aangemaakt bij de eerste bestelling.
    - Btw: de prijzen zijn inclusief 21%. Verkoop je ook aan België, overweeg dan Stripe Tax (OSS-regeling).

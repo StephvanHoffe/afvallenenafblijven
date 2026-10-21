@@ -150,6 +150,14 @@ function Nl() {
         zodat je verder kunt waar je gebleven was. Deze gegevens verdwijnen als je het tabblad sluit en worden pas naar ons
         verstuurd als je een plan bestelt.
       </p>
+      <p>
+        Om te zien waar bezoekers afhaken, slaan we in hetzelfde tabblad een willekeurig bezoeknummer op
+        (<code>afb_bezoek</code>, sessionStorage). Daarmee tellen we welke pagina&apos;s en vragen een bezoek bekijkt. Het nummer
+        verdwijnt als je het tabblad sluit, wordt niet gedeeld met andere partijen en niet gebruikt om je op andere websites te
+        volgen; we slaan geen IP-adres op. Dit valt onder de uitzondering voor analytische gegevens met geringe gevolgen voor je
+        privacy, en vraagt daarom geen toestemming. Staat &quot;Do Not Track&quot; of &quot;Global Privacy Control&quot; aan in je browser, dan
+        meten we niets. Zie ook ons <Link href="/privacybeleid">privacybeleid</Link>.
+      </p>
 
       <h2>Toestemming</h2>
       <p>
@@ -175,6 +183,14 @@ function En() {
         In addition, while you are filling in the questionnaire, we temporarily store your answers in your browser
         (sessionStorage), so that you can continue where you left off. This data disappears when you close the tab and is
         only sent to us when you order a plan.
+      </p>
+      <p>
+        To see where visitors drop off, we store a random visit number in the same tab (<code>afb_bezoek</code>,
+        sessionStorage). We use it to count which pages and questions a visit views. The number disappears when you close the
+        tab, is not shared with other parties and is not used to track you on other websites; we do not store your IP address.
+        This falls under the exemption for analytics with little impact on your privacy, so it does not require consent. If
+        &quot;Do Not Track&quot; or &quot;Global Privacy Control&quot; is switched on in your browser, we do not measure anything. See also
+        our <Link href="/privacybeleid">privacy policy</Link>.
       </p>
 
       <h2>Consent</h2>

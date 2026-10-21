@@ -120,6 +120,32 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "nog-niet-klaar": { tone: "warn", text: "De schema's van deze periode zijn nog niet bij de klant; de mail gaat vanzelf mee op het geplande moment." },
   "bevestig-verwijderen": { tone: "warn", text: "Typ VERWIJDER om het verwijderen te bevestigen." },
   "eerst-opzeggen": { tone: "warn", text: "Deze klant heeft nog een lopend abonnement. Zeg dat eerst op." },
+  "code-ongeldig": { tone: "warn", text: "Controleer de kortingscode: minimaal 3 tekens, een korting van 1-100% of een bedrag, en bij \"de eerste maanden\" 1-24 maanden." },
+  "code-bestaat": { tone: "warn", text: "Deze kortingscode bestaat al. Kies een andere code." },
+  "code-aangemaakt": { tone: "ok", text: "De kortingscode is aangemaakt en direct te gebruiken." },
+  "code-aan": { tone: "ok", text: "De kortingscode is weer actief." },
+  "code-uit": { tone: "ok", text: "De kortingscode is gepauzeerd; klanten kunnen hem niet meer gebruiken." },
+  "code-verwijderd": { tone: "ok", text: "De kortingscode is verwijderd." },
+  "code-gebruikt": { tone: "warn", text: "Deze code is al gebruikt en kan daarom niet worden verwijderd. Hij is gepauzeerd." },
+  "mail-opgeslagen": { tone: "ok", text: "De teksten zijn opgeslagen. Nieuwe mails gebruiken ze direct (uiterlijk binnen een halve minuut)." },
+  "mail-standaard": { tone: "ok", text: "De standaardteksten worden weer gebruikt." },
+  "gegevens-ongeldig": { tone: "warn", text: "Controleer de naam en het e-mailadres." },
+  "email-bestaat": { tone: "warn", text: "Er is al een andere klant met dit e-mailadres." },
+  "klant-opgeslagen": { tone: "ok", text: "De klantgegevens zijn opgeslagen." },
+  "vragenlijst-ongeldig": { tone: "warn", text: "Controleer de antwoorden (bijvoorbeeld een streefgewicht dat lager is dan het huidige gewicht)." },
+  "vragenlijst-opgeslagen": { tone: "ok", text: "De antwoorden zijn aangepast. Het volgende schema gebruikt de nieuwe antwoorden; maak het huidige schema zo nodig opnieuw." },
+  "notitie-leeg": { tone: "warn", text: "Schrijf eerst een notitie." },
+  "notitie-opgeslagen": { tone: "ok", text: "De notitie is opgeslagen." },
+  "notitie-verwijderd": { tone: "ok", text: "De notitie is verwijderd." },
+  beoordeeld: { tone: "ok", text: "Je beoordeling is opgeslagen." },
+  "al-terugbetaald": { tone: "warn", text: "Deze bestelling is al (deels) terugbetaald." },
+  "terugbetalen-mislukt": { tone: "warn", text: "Terugbetalen via Stripe is mislukt. Controleer de betaling in het Stripe-dashboard." },
+  terugbetaald: { tone: "ok", text: "De betaling is terugbetaald via Stripe." },
+  "levering-ongeldig": { tone: "warn", text: "De levertijd moet tussen 0 en 110 minuten liggen, met het minimum lager dan het maximum." },
+  "instellingen-opgeslagen": { tone: "ok", text: "De instellingen zijn opgeslagen." },
+  "herinnering-ongeldig": { tone: "warn", text: "Kies een wachttijd tussen 1 en 48 uur." },
+  "herinnering-niet-mogelijk": { tone: "warn", text: "Een herinnering kan alleen als de bezoeker toestemming gaf voor e-mail, nog niet heeft betaald en nog geen herinnering kreeg." },
+  "herinnering-verstuurd": { tone: "ok", text: "De herinnering is verstuurd." },
 };
 
 export function Notice({ code }: { code?: string }) {
@@ -196,4 +222,59 @@ export function NeedsDatabase() {
       </Link>
     </div>
   );
+}
+
+/** Tabs die één queryparameter zetten en de andere behouden (bijv. periode en bron). */
+export function QueryTabs({
+  base,
+  param,
+  current,
+  options,
+  params = {},
+  label = "Filter",
+}: {
+  base: string;
+  param: string;
+  current?: string | null;
+  options: { value?: string; label: string }[];
+  params?: Record<string, string | null | undefined>;
+  label?: string;
+}) {
+  return (
+    <nav aria-label={label} className="flex flex-wrap gap-1.5">
+      {options.map((o) => {
+        const active = (o.value ?? "") === (current ?? "");
+        const q = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) if (v && k !== param) q.set(k, v);
+        if (o.value) q.set(param, o.value);
+        const href = q.size ? `${base}?${q.toString()}` : base;
+        return (
+          <Link
+            key={o.label}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${active ? "bg-brand-900 text-white" : "border border-line bg-white hover:border-brand-300"}`}
+          >
+            {o.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Dunne balk voor een waarde ten opzichte van het maximum (één kleur). */
+export function Meter({ value, max, tone = "brand" }: { value: number; max: number; tone?: "brand" | "warn" }) {
+  const width = max > 0 ? Math.max(value > 0 ? 2 : 0, (value / max) * 100) : 0;
+  return (
+    <div className="h-2 rounded-full bg-brand-50" aria-hidden>
+      <div className={`h-full rounded-full ${tone === "warn" ? "bg-accent-500" : "bg-brand-600"}`} style={{ width: `${width}%` }} />
+    </div>
+  );
+}
+
+/** Percentage als tekst ("12%", of "–" zonder noemer). */
+export function pct(n: number, d: number, digits = 0): string {
+  if (!d) return "–";
+  return `${((n / d) * 100).toLocaleString("nl-NL", { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 }

@@ -35,6 +35,14 @@ export interface IntakeRow {
   consents: Record<string, unknown>;
   locale: string;
   campaign: Campaign | null;
+  /** Anoniem bezoeknummer uit de funnelmeting (koppelt de vragenlijst aan de bestelling). */
+  visit_id: string | null;
+  device: string | null;
+  discount_code: string | null;
+  /** Gekozen looptijd bij het starten van de betaling. */
+  duration: string | null;
+  /** Herinnering verstuurd voor een niet-afgeronde betaling. */
+  reminded_at: Date | null;
   created_at: Date;
 }
 
@@ -53,6 +61,13 @@ export interface Order {
   checkin_reminded_seq: number | null;
   checkin_reminders: number;
   weekly_reminded_at: Date | null;
+  discount_code: string | null;
+  /** Opzegreden uit het opzegformulier (vaste keuze) en eventuele toelichting. */
+  cancel_reason: string | null;
+  cancel_comment: string | null;
+  /** Wanneer het abonnement echt is beëindigd. */
+  ended_at: Date | null;
+  refunded_cents: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -79,6 +94,11 @@ export interface Plan {
   approved_at: Date | null;
   /** Wanneer de beheerder om goedkeuring is gevraagd. */
   review_requested_at: Date | null;
+  /** Aanwijzing van de beheerder voor het (opnieuw) maken van dit schema. */
+  admin_instruction: string | null;
+  /** Beoordeling door de beheerder (1-5) met toelichting. */
+  rating: number | null;
+  rating_note: string | null;
   created_at: Date;
 }
 
@@ -99,14 +119,32 @@ export async function createIntake(input: {
   consents: Record<string, unknown>;
   locale: Locale;
   campaign?: Campaign | null;
+  visitId?: string | null;
+  device?: string | null;
+  discountCode?: string | null;
+  duration?: string | null;
 }): Promise<string> {
   const sql = await db();
   const [row] = await sql<{ id: string }[]>`
-    insert into intakes (email, name, data, consents, locale, campaign)
+    insert into intakes (email, name, data, consents, locale, campaign, visit_id, device, discount_code, duration)
     values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)}, ${input.locale},
-            ${input.campaign ? sql.json(input.campaign as never) : null})
+            ${input.campaign ? sql.json(input.campaign as never) : null}, ${input.visitId ?? null}, ${input.device ?? null},
+            ${input.discountCode ?? null}, ${input.duration ?? null})
     returning id`;
   return row.id;
+}
+
+/**
+ * Een begonnen maar niet afgeronde bestelling (maximaal 7 dagen oud), voor de
+ * link "verder waar je gebleven was" in de herinneringsmail.
+ */
+export async function resumableIntake(id: string): Promise<IntakeRow | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const sql = await db();
+  const [row] = await sql<IntakeRow[]>`
+    select * from intakes i where i.id = ${id} and i.created_at > now() - interval '7 days'
+      and not exists (select 1 from orders o where o.intake_id = i.id)`;
+  return row ?? null;
 }
 
 export async function getIntake(id: string): Promise<IntakeRow | null> {
@@ -184,12 +222,13 @@ export async function createOrder(input: {
   status: OrderStatus;
   amountCents: number;
   monthlyCents: number;
+  discountCode?: string | null;
 }): Promise<Order | null> {
   const sql = await db();
   const [row] = await sql<Order[]>`
-    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents)
+    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents, discount_code)
     values (${input.customerId}, ${input.intakeId}, ${input.product}, ${input.duration}, ${input.stripeSessionId},
-            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents})
+            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents}, ${input.discountCode ?? null})
     on conflict (stripe_session_id) do nothing
     returning *`;
   if (row) {
@@ -221,7 +260,8 @@ export async function updateOrderBySubscription(
 ): Promise<void> {
   const sql = await db();
   await sql`
-    update orders set status = ${update.status}, cancel_at = ${update.cancelAt}, updated_at = now()
+    update orders set status = ${update.status}, cancel_at = ${update.cancelAt}, updated_at = now(),
+      ended_at = case when ${update.status} = 'canceled' then coalesce(ended_at, now()) else null end
     where stripe_subscription_id = ${subscriptionId}`;
 }
 
@@ -299,7 +339,7 @@ export async function plansForCustomer(customerId: string): Promise<Plan[]> {
   const sql = await db();
   return sql<Plan[]>`
     select id, order_id, customer_id, type, seq, status, null as content, error, attempts, generated_at, emailed_at, starts_at,
-           release_after, released_at, approved_at, review_requested_at, created_at
+           release_after, released_at, approved_at, review_requested_at, admin_instruction, rating, rating_note, created_at
     from plans where customer_id = ${customerId} order by created_at desc, type`;
 }
 
@@ -582,6 +622,13 @@ export async function setWeeklyReminders(customerId: string, on: boolean): Promi
   await sql`update customers set weekly_reminders = ${on} where id = ${customerId}`;
 }
 
+/** Bewaart waarom een klant opzegt (optioneel in het opzegformulier). */
+export async function setCancelReason(orderId: string, reason: string | null, comment: string | null): Promise<void> {
+  if (!reason && !comment) return;
+  const sql = await db();
+  await sql`update orders set cancel_reason = ${reason}, cancel_comment = ${comment} where id = ${orderId}`;
+}
+
 /**
  * Bestellingen met een lopende periode, voor de wekelijkse herinnering: met
  * het begin van de laatste periode en de weegmomenten die al zijn ingevuld.
@@ -688,6 +735,10 @@ export async function cleanupExpiredData(): Promise<{ intakes: number; customers
     : [];
   const customers = ids.length ? await sql`delete from customers where id = any(${ids})` : { count: 0 };
   await sql`delete from withdrawals where created_at < now() - interval '24 months'`;
+  // Anonieme funnelmeting 13 maanden, e-maillog 12 maanden, logboek 24 maanden.
+  await sql`delete from funnel_events where created_at < now() - interval '13 months'`;
+  await sql`delete from email_log where created_at < now() - interval '12 months'`;
+  await sql`delete from admin_log where created_at < now() - interval '24 months'`;
   return { intakes: intakes.count, customers: customers.count, junctionUserIds: junction.map((r) => r.external_user_id) };
 }
 

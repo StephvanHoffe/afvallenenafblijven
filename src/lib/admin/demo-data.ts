@@ -21,6 +21,8 @@ import type {
  */
 
 const TODAY = new Date("2027-02-15T10:00:00+01:00").getTime();
+/** "Nu" in de demo: alle voorbeelddata zijn rond deze datum verzonnen. */
+export const DEMO_NOW = TODAY;
 const DAY = 24 * 60 * 60 * 1000;
 
 const FIRST = ["Sanne", "Lisa", "Mark", "Eva", "Daan", "Fleur", "Kim", "Tom", "Iris", "Bas", "Noor", "Lotte", "Ruben", "Anouk", "Sem", "Femke", "Joost", "Maud", "Thijs", "Esther", "Rick", "Laura", "Niels", "Sophie"];
@@ -78,6 +80,10 @@ for (let i = 0; i < 48; i++) {
     createdAt,
     stripeSubscriptionId: subscription ? `sub_demo${String(i + 1).padStart(4, "0")}` : null,
     campaign: CAMPAIGN_CYCLE[i % CAMPAIGN_CYCLE.length],
+    discountCode: i % 5 === 1 ? "WELKOM10" : i % 9 === 4 ? "SANNE20" : null,
+    refundedCents: 0,
+    cancelReason: cancelAt || status === "canceled" ? (["te_duur", "doel_bereikt", "geen_tijd", "past_niet"] as const)[i % 4] : null,
+    cancelComment: null,
   });
 
   const ageDays = Math.floor((TODAY - createdAt.getTime()) / DAY);
@@ -111,6 +117,7 @@ for (let i = 0; i < 48; i++) {
         releaseAfter: releasedAt ?? new Date(created.getTime() + (newest ? 74 : 41) * 60 * 1000),
         releasedAt,
         approvedAt: null,
+        rating: !newest && !failed && seq > 1 ? 4 : null,
       });
       planCount++;
     }
@@ -126,6 +133,8 @@ for (let i = 0; i < 48; i++) {
     activeSubscriptions: subscription && (status === "active" || status === "past_due") ? 1 : 0,
     orders: 1,
     plans: planCount,
+    locale: i % 11 === 5 ? "en" : "nl",
+    weeklyReminders: i % 13 !== 7,
   });
 }
 
@@ -297,6 +306,8 @@ export const demoAdminData: AdminData = {
     if (!p) return null;
     return {
       ...p,
+      adminInstruction: null,
+      ratingNote: p.rating ? "Goed afgestemd op de check-in." : null,
       allergies: demoIntake.allergies,
       otherAllergies: demoIntake.otherAllergies ?? null,
       dislikes: demoIntake.dislikes ?? null,

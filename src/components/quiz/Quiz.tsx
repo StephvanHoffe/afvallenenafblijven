@@ -31,9 +31,11 @@ import { nutritionTargets, weightProjection } from "@/lib/calculations";
 import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
 import { trackEvent } from "@/lib/consent";
+import { deviceType, track, visitId } from "@/lib/track";
+import { discountedAmount, discountedPayments, type DiscountTerms } from "@/lib/discounts";
 import { campaignFromParams, type Campaign } from "@/lib/campaign";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { startCheckout, type CheckoutState } from "@/app/[lang]/(site)/start/actions";
+import { checkDiscountCode, startCheckout, type CheckoutState } from "@/app/[lang]/(site)/start/actions";
 import { site } from "@/config/site";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
@@ -260,6 +262,15 @@ const copy = defineCopy({
       methodsSubscription: "Eerste maand met iDEAL | Wero, Bancontact of IBAN; daarna automatische SEPA-incasso",
       methodsOneOff: "Betalen via Stripe met iDEAL | Wero, Bancontact of creditcard",
       guarantee: (days: number) => `Past het toch niet? Binnen ${days} dagen vraag je je eerste betaling terug in Mijn schema's.`,
+      codeToggle: "Heb je een kortingscode?",
+      codeLabel: "Kortingscode",
+      codeApply: "Toepassen",
+      codeChecking: "Controleren…",
+      codeRemove: "Verwijderen",
+      codeLine: (code: string) => `Kortingscode ${code}`,
+      codeReplacesLaunch: "Je kortingscode vervangt de lanceringskorting.",
+      codeRepeating: (n: number, amount: string) => `Met je kortingscode betaal je de eerste ${n} maanden ${amount} per maand.`,
+      codeFailed: "We konden de code nu niet controleren. Probeer het opnieuw.",
     },
     calculating: {
       title: "Even rekenen…",
@@ -435,6 +446,15 @@ const copy = defineCopy({
       methodsSubscription: "First month with iDEAL | Wero, Bancontact or IBAN; then automatic SEPA Direct Debit",
       methodsOneOff: "Pay via Stripe with iDEAL | Wero, Bancontact or credit card",
       guarantee: (days: number) => `Not the right fit after all? Within ${days} days, you can request your first payment back in My plans.`,
+      codeToggle: "Have a discount code?",
+      codeLabel: "Discount code",
+      codeApply: "Apply",
+      codeChecking: "Checking…",
+      codeRemove: "Remove",
+      codeLine: (code: string) => `Discount code ${code}`,
+      codeReplacesLaunch: "Your discount code replaces the launch discount.",
+      codeRepeating: (n: number, amount: string) => `With your discount code, you pay ${amount} a month for the first ${n} months.`,
+      codeFailed: "We couldn't check the code right now. Please try again.",
     },
     calculating: {
       title: "Crunching the numbers…",
@@ -470,6 +490,45 @@ const initialAnswers: Answers = {
 const num = (v?: string) => (v ? Number(v.replace(",", ".")) : NaN);
 const losing = (a: Answers) => a.goal === "afvallen" || a.goal === "afvallen_strakker";
 const hasNutrition = (p: ProductId | null) => p !== "training";
+
+/** Een eerder begonnen bestelling (link "verder waar je gebleven was" uit de herinneringsmail). */
+export interface QuizResume {
+  intake: Intake;
+  name: string;
+  email: string;
+  duration: DurationId | null;
+}
+
+function answersFromIntake(i: Intake): Answers {
+  const str = (n: number | undefined) => (n === undefined ? undefined : String(n));
+  return {
+    goal: i.goal,
+    sex: i.sex,
+    age: str(i.age),
+    heightCm: str(i.heightCm),
+    weightKg: str(i.weightKg),
+    targetWeightKg: str(i.targetWeightKg),
+    pace: i.pace,
+    activity: i.activity,
+    diet: i.diet,
+    allergies: i.allergies,
+    otherAllergies: i.otherAllergies ?? "",
+    dislikes: i.dislikes ?? "",
+    mealsPerDay: i.mealsPerDay,
+    cookingTime: i.cookingTime,
+    budget: i.budget,
+    location: i.location,
+    experience: i.experience,
+    trainingDays: i.trainingDays,
+    sessionMinutes: i.sessionMinutes,
+    injuries: i.injuries ?? "",
+    pregnant: i.pregnant,
+    eatingDisorder: i.eatingDisorder,
+    conditions: i.conditions,
+    medication: i.medication ?? "",
+    doctorApproval: i.doctorApproval,
+  };
+}
 const hasTraining = (p: ProductId | null) => p === "training" || p === "bundel";
 
 function visibleSteps(s: QuizState, presetProduct: boolean): StepId[] {
@@ -575,6 +634,8 @@ export function Quiz({
   startAtPlan,
   launch,
   durationPreset = false,
+  initialCode = null,
+  resume = null,
 }: {
   initialProduct: ProductId | null;
   initialDuration: DurationId;
@@ -584,6 +645,10 @@ export function Quiz({
   initialGoal?: Intake["goal"] | null;
   startAtPlan: boolean;
   launch: { active: boolean; percentOff: number };
+  /** Kortingscode uit de link (?code=). */
+  initialCode?: string | null;
+  /** Verder met een eerder begonnen bestelling (?hervat=). */
+  resume?: QuizResume | null;
 }) {
   const l = useLocale();
   const c = copy[l];
@@ -600,6 +665,21 @@ export function Quiz({
       email: "",
       consents: { healthData: false, terms: false, immediateDelivery: false, marketing: false },
     };
+    if (resume) {
+      // Alles was al ingevuld: meteen naar de plankeuze. De vinkjes zet de klant opnieuw.
+      return {
+        ...start,
+        product: resume.intake.product,
+        duration: resume.duration ?? initialDuration,
+        answers: answersFromIntake(resume.intake),
+        answered: visibleSteps({ ...start, product: resume.intake.product, answers: answersFromIntake(resume.intake) }, false).filter(
+          (st) => st !== "plan",
+        ),
+        step: "plan",
+        name: resume.name,
+        email: resume.email,
+      };
+    }
     if (!initialGoal) return start;
     const withGoal = { ...start, answers: { ...initialAnswers, goal: initialGoal }, answered: ["doel" as StepId] };
     return { ...withGoal, step: visibleSteps(withGoal, presetProduct)[1] ?? "doel" };
@@ -607,7 +687,12 @@ export function Quiz({
   // Campagnebron uit de advertentielink (utm), alleen in het geheugen; gaat mee met de bestelling.
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   // Zolang de bezoeker zelf geen looptijd heeft gekozen, staat ons advies voorgeselecteerd.
-  const [durationChosen, setDurationChosen] = useState(durationPreset);
+  const [durationChosen, setDurationChosen] = useState(durationPreset || Boolean(resume?.duration));
+  // Kortingscode: wat de bezoeker invult en, na controle, de geldige code met de voorwaarden.
+  const [codeInput, setCodeInput] = useState(initialCode ?? "");
+  const [discount, setDiscount] = useState<{ code: string; label: string; terms: DiscountTerms } | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
   const restored = useRef(false);
@@ -618,6 +703,7 @@ export function Quiz({
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
+    if (resume) return;
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (!saved) return;
@@ -635,7 +721,19 @@ export function Quiz({
     } catch {
       /* geen opgeslagen voortgang */
     }
-  }, [initialProduct, initialDuration, initialGoal, presetProduct, startAtPlan]);
+  }, [initialProduct, initialDuration, initialGoal, presetProduct, startAtPlan, resume]);
+
+  // Funnel: elke stap die de bezoeker te zien krijgt (anoniem, zie src/lib/track.ts).
+  const trackedStep = useRef<string | null>(null);
+  useEffect(() => {
+    if (trackedStep.current === s.step) return;
+    trackedStep.current = s.step;
+    track("quiz_step", { step: s.step, product: s.product });
+  }, [s.step, s.product]);
+
+  useEffect(() => {
+    if (checkoutState.error) track("checkout_error", { step: "plan" });
+  }, [checkoutState]);
 
   useEffect(() => {
     // De adresbalk is pas in de browser te lezen.
@@ -714,6 +812,7 @@ export function Quiz({
 
   function choosePlan(product: ProductId, duration: DurationId) {
     setDurationChosen(true);
+    track("plan_select", { product, duration });
     const state = { ...s, product, duration };
     // Kiest de klant een plan met onderdelen waarvoor nog geen vragen zijn beantwoord? Stel die eerst.
     const missing = visibleSteps(state, false).find(
@@ -730,6 +829,52 @@ export function Quiz({
 
   // De looptijd waarmee we afrekenen: de eigen keuze, anders ons advies (zoals voorgeselecteerd in de prijstabel).
   const orderState: QuizState = durationChosen ? s : { ...s, duration: recommended };
+
+  function applyCode(raw: string) {
+    if (!s.product || !raw.trim()) return;
+    const product = s.product;
+    const duration = orderState.duration;
+    setCodeChecking(true);
+    setCodeError(null);
+    checkDiscountCode(raw, product, duration)
+      .then((r) => {
+        if (r.ok) {
+          setDiscount({ code: r.code, label: r.label, terms: r.terms });
+          setCodeInput(r.code);
+          track("discount_applied", { step: r.code, product, duration });
+        } else {
+          setDiscount(null);
+          setCodeError(r.error);
+        }
+      })
+      .catch(() => setCodeError(copy[l].checkout.codeFailed))
+      .finally(() => setCodeChecking(false));
+  }
+
+  // Een code uit de link, of een al toegepaste code, controleren we (opnieuw) voor het gekozen plan.
+  const pendingCode = useRef(initialCode);
+  useEffect(() => {
+    const code = discount?.code ?? pendingCode.current;
+    if (!s.product || !code) return;
+    pendingCode.current = null;
+    let stale = false;
+    checkDiscountCode(code, s.product, orderState.duration)
+      .then((r) => {
+        if (stale) return;
+        if (r.ok) {
+          setDiscount({ code: r.code, label: r.label, terms: r.terms });
+        } else {
+          setDiscount(null);
+          setCodeError(r.error);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      stale = true;
+    };
+    // Alleen opnieuw bij een ander plan of andere looptijd (niet bij het zetten van de korting zelf).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.product, orderState.duration]);
   const payload = JSON.stringify({
     intake: toIntakeInput(s),
     customer: { name: s.name, email: s.email },
@@ -1197,6 +1342,23 @@ export function Quiz({
                 formAction={formAction}
                 pending={pending}
                 serverError={checkoutState.error}
+                discount={discount}
+                code={{
+                  value: codeInput,
+                  set: (v) => {
+                    setCodeInput(v);
+                    setCodeError(null);
+                  },
+                  apply: () => applyCode(codeInput),
+                  remove: () => {
+                    setDiscount(null);
+                    setCodeInput("");
+                    setCodeError(null);
+                  },
+                  error: codeError,
+                  checking: codeChecking,
+                  initiallyOpen: Boolean(initialCode),
+                }}
               />
             )}
           </div>
@@ -1220,6 +1382,8 @@ function CheckoutBox({
   formAction,
   pending,
   serverError,
+  discount,
+  code,
 }: {
   state: QuizState;
   setConsents: (c: Partial<QuizState["consents"]>) => void;
@@ -1228,6 +1392,16 @@ function CheckoutBox({
   formAction: (fd: FormData) => void;
   pending: boolean;
   serverError?: string;
+  discount: { code: string; label: string; terms: DiscountTerms } | null;
+  code: {
+    value: string;
+    set: (v: string) => void;
+    apply: () => void;
+    remove: () => void;
+    error: string | null;
+    checking: boolean;
+    initiallyOpen: boolean;
+  };
 }) {
   const l = useLocale();
   const t = copy[l].checkout;
@@ -1235,10 +1409,14 @@ function CheckoutBox({
   const d = durationFor(state.duration, l);
   const subscription = isSubscription(state.duration);
   const total = monthlyPrice(product, state.duration);
-  const first = launch.active ? applyPercentOff(total, launch.percentOff) : total;
+  // Een kortingscode vervangt de lanceringskorting.
+  const first = discount ? discountedAmount(total, discount.terms) : launch.active ? applyPercentOff(total, launch.percentOff) : total;
+  const later = discount && discount.terms.duration === "forever" ? discountedAmount(total, discount.terms) : total;
+  const repeating = discount && subscription ? discountedPayments(discount.terms) : null;
   const c = state.consents;
   const ready = c.healthData && c.terms && c.immediateDelivery;
   const [touched, setTouched] = useState(false);
+  const [codeOpen, setCodeOpen] = useState(code.initiallyOpen);
 
   return (
     <form
@@ -1251,7 +1429,15 @@ function CheckoutBox({
           return;
         }
         trackEvent("begin_checkout", { value: first / 100, currency: "EUR", items: [{ item_id: `${product}_${state.duration}` }] });
+        track("checkout_submit", { product, duration: state.duration });
         const data = new FormData(e.currentTarget);
+        // Bezoeknummer en apparaat (funnel) en de kortingscode gaan mee met de bestelling.
+        try {
+          const p = JSON.parse(String(data.get("payload")));
+          data.set("payload", JSON.stringify({ ...p, visitId: visitId(), device: deviceType(), discountCode: discount?.code ?? null }));
+        } catch {
+          /* dan zonder */
+        }
         startTransition(() => formAction(data));
       }}
       className="card mx-auto mt-12 max-w-2xl scroll-mt-24 p-6 sm:p-8"
@@ -1269,25 +1455,81 @@ function CheckoutBox({
             {subscription ? t.perMonthSuffix : ""}
           </dd>
         </div>
-        {launch.active && (
+        {discount ? (
           <div className="flex justify-between gap-4 text-brand-700">
-            <dt>{t.launchDiscount(launch.percentOff)}</dt>
-            <dd>− {euro(total - first, l)}</dd>
+            <dt>
+              {t.codeLine(discount.code)} <span className="text-sm">({discount.label})</span>
+            </dt>
+            <dd className="whitespace-nowrap">− {euro(total - first, l)}</dd>
           </div>
+        ) : (
+          launch.active && (
+            <div className="flex justify-between gap-4 text-brand-700">
+              <dt>{t.launchDiscount(launch.percentOff)}</dt>
+              <dd>− {euro(total - first, l)}</dd>
+            </div>
+          )
         )}
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-extrabold">
           <dt>{subscription ? t.dueNowFirstMonth : t.dueNow}</dt>
           <dd>{euro(first, l)}</dd>
         </div>
         <p className="text-sm text-muted">
+          {repeating && repeating > 1 ? `${t.codeRepeating(repeating, euro(discountedAmount(total, discount!.terms), l))} ` : ""}
           {subscription
             ? d.months === 1
-              ? t.monthly(euro(total, l))
-              : t.minimumTerm(euro(total, l), d.label)
+              ? t.monthly(euro(later, l))
+              : t.minimumTerm(euro(later, l), d.label)
             : t.oneOffPayment}{" "}
           {t.vat}
+          {discount && launch.active ? ` ${t.codeReplacesLaunch}` : ""}
         </p>
       </dl>
+
+      <div className="mt-4">
+        {discount ? (
+          <button type="button" onClick={code.remove} className="text-sm font-semibold text-muted underline hover:text-ink">
+            {t.codeRemove} ({discount.code})
+          </button>
+        ) : !codeOpen ? (
+          <button type="button" onClick={() => setCodeOpen(true)} className="text-sm font-semibold text-brand-700 underline">
+            {t.codeToggle}
+          </button>
+        ) : (
+          <div>
+            <label htmlFor="kortingscode" className="label">
+              {t.codeLabel}
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="kortingscode"
+                value={code.value}
+                onChange={(e) => code.set(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    code.apply();
+                  }
+                }}
+                autoComplete="off"
+                autoCapitalize="characters"
+                maxLength={30}
+                className="input flex-1 uppercase"
+                aria-invalid={code.error ? true : undefined}
+                aria-describedby={code.error ? "kortingscode-fout" : undefined}
+              />
+              <button type="button" onClick={code.apply} disabled={code.checking || !code.value.trim()} className="btn-secondary !px-4 !py-2 text-sm">
+                {code.checking ? t.codeChecking : t.codeApply}
+              </button>
+            </div>
+            {code.error && (
+              <p id="kortingscode-fout" role="alert" className="mt-1.5 text-sm font-semibold text-accent-600">
+                {code.error}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 space-y-3">
         <Checkbox

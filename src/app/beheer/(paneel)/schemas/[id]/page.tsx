@@ -3,8 +3,8 @@ import Link from "@/i18n/Link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ArrowLeft, CircleCheck, RotateCw, Send } from "lucide-react";
-import { approvePlan, resendPlanEmail, retryPlan } from "@/app/beheer/actions";
+import { ArrowLeft, CircleCheck, RotateCw, Send, Star } from "lucide-react";
+import { approvePlan, ratePlan, resendPlanEmail, retryPlan } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { NeedsDatabase, Notice, Panel, PlanDelivery, PlanStatusBadge } from "@/components/beheer/ui";
 import { PlanDocument } from "@/components/plan/PlanDocument";
@@ -84,13 +84,31 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
             </form>
           )}
           {plan.status !== "generating" && (
-            <form action={retryPlan}>
-              <input type="hidden" name="plan" value={plan.id} />
-              <input type="hidden" name="terug" value={here} />
-              <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
+            <details className="relative">
+              <summary className="btn-secondary cursor-pointer list-none !px-3.5 !py-2 text-sm [&::-webkit-details-marker]:hidden">
                 <RotateCw className="size-4" aria-hidden /> Opnieuw maken
-              </SubmitButton>
-            </form>
+              </summary>
+              <form action={retryPlan} className="absolute right-0 z-10 mt-2 w-80 space-y-2 rounded-xl border border-line bg-white p-4 text-sm shadow-[var(--shadow-soft)]">
+                <input type="hidden" name="plan" value={plan.id} />
+                <input type="hidden" name="terug" value={here} />
+                <label className="block">
+                  <span className="label">Aanwijzing voor het nieuwe schema (optioneel)</span>
+                  <textarea
+                    name="aanwijzing"
+                    rows={4}
+                    maxLength={1000}
+                    defaultValue={plan.adminInstruction ?? ""}
+                    className="input text-sm"
+                    placeholder={plan.type === "voeding" ? "Bijv. meer warme lunches, geen kwark bij het ontbijt" : "Bijv. geen sprongen vanwege knieklachten"}
+                  />
+                </label>
+                <p className="text-xs text-muted">
+                  De aanwijzing gaat mee naar de software die het schema maakt, net als de antwoorden van de klant. Leeg laten = opnieuw maken met
+                  dezelfde gegevens.
+                </p>
+                <SubmitButton className="btn-primary w-full !py-2 text-sm">Maak opnieuw</SubmitButton>
+              </form>
+            </details>
           )}
         </div>
       </div>
@@ -122,7 +140,44 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
           </p>
         )}
         {plan.error && <p className="border-t border-line px-5 py-3 text-sm text-accent-600">Laatste fout: {plan.error}</p>}
+        {plan.adminInstruction && (
+          <p className="border-t border-line px-5 py-3 text-sm">
+            <span className="text-muted">Aanwijzing bij het opnieuw maken: </span>
+            {plan.adminInstruction}
+          </p>
+        )}
       </Panel>
+      {plan.status === "ready" && (
+        <Panel title="Jouw beoordeling" className="mb-6">
+          <form action={ratePlan} className="flex flex-wrap items-end gap-4 p-5 text-sm">
+            <input type="hidden" name="plan" value={plan.id} />
+            <input type="hidden" name="terug" value={here} />
+            <fieldset>
+              <legend className="label">Hoe goed is dit schema?</legend>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <label key={n} className="cursor-pointer">
+                    <input type="radio" name="score" value={n} defaultChecked={plan.rating === n} required className="peer sr-only" />
+                    <span className="flex size-10 items-center justify-center rounded-xl border border-line font-bold tabular-nums peer-checked:border-brand-700 peer-checked:bg-brand-50 peer-checked:text-brand-800 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-700">
+                      {n}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <label className="block min-w-60 flex-1">
+              <span className="label">Toelichting (alleen voor jou)</span>
+              <input name="toelichting" maxLength={1000} defaultValue={plan.ratingNote ?? ""} className="input !py-2.5" placeholder="Wat is goed, wat kan beter?" />
+            </label>
+            <SubmitButton className="btn-primary !px-4 !py-2.5 text-sm">
+              <Star className="size-4" aria-hidden /> Beoordeling opslaan
+            </SubmitButton>
+            <p className="w-full text-xs text-muted">
+              Beoordelingen zie je terug onder Feedback. Zo houd je bij of de schema&apos;s goed genoeg zijn en waar je vaker moet bijsturen.
+            </p>
+          </form>
+        </Panel>
+      )}
       {plan.content ? (
         <div className="rounded-2xl border border-line bg-cream p-5 sm:p-8">
           <PlanDocument

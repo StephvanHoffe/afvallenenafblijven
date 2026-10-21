@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { Badge, EmptyRow, NeedsDatabase, Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { formatDate } from "@/lib/format";
+import { exportHref } from "@/lib/admin/export";
 
 export const metadata: Metadata = { title: "Klanten" };
 
@@ -30,10 +31,18 @@ async function Customers({ searchParams }: Pick<PageProps<"/beheer/klanten">, "s
     <>
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle title="Klanten" intro={`${rows.length} ${rows.length === 1 ? "klant" : "klanten"}${q ? ` gevonden voor "${q}"` : ""}`}>
-        <form role="search" className="relative w-full sm:w-80">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden />
-          <input name="q" defaultValue={q} placeholder="Zoek op naam of e-mail" aria-label="Zoek klanten" className="input !py-2.5 pl-10 text-sm" />
-        </form>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <form role="search" className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden />
+            <input name="q" defaultValue={q} placeholder="Zoek op naam of e-mail" aria-label="Zoek klanten" className="input !py-2.5 pl-10 text-sm" />
+          </form>
+          <a href={exportHref("klanten")} className="btn-secondary !px-3.5 !py-2 text-sm">
+            <Download className="size-4" aria-hidden /> Klanten (CSV)
+          </a>
+          <a href={exportHref("nieuwsbrief")} className="btn-secondary !px-3.5 !py-2 text-sm" title="Alleen klanten die toestemming gaven voor de nieuwsbrief">
+            <Download className="size-4" aria-hidden /> Nieuwsbrieflijst
+          </a>
+        </div>
       </PageTitle>
       <Panel>
         <div className={table.wrap}>

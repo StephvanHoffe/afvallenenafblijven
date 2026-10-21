@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { markGuaranteeHandled, markWithdrawalHandled } from "@/app/beheer/actions";
+import { markGuaranteeHandled, markWithdrawalHandled, refundOrder } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Badge, EmptyRow, NeedsDatabase, Notice, PageTitle, Panel, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
@@ -79,8 +79,8 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
         <Panel title={`Garantie-aanvragen (${site.guarantee.days} dagen geld terug)`}>
           <p className="border-b border-line px-5 py-3.5 text-sm text-muted">
             Aangevraagd door de klant in Mijn schema&apos;s. De klant heeft een bevestiging gekregen waarin staat dat we binnen{" "}
-            {site.responseTimeDays} werkdagen terugbetalen. Betaal in Stripe de eerste betaling volledig terug, beëindig het
-            abonnement direct (niet aan het einde van de periode) en markeer de aanvraag daarna als afgehandeld.
+            {site.responseTimeDays} werkdagen terugbetalen. Met &quot;Terugbetalen via Stripe&quot; betaal je de eerste betaling volledig terug,
+            beëindig je het abonnement direct (niet aan het einde van de periode) en markeer je de aanvraag als afgehandeld, in één keer.
           </p>
           <div className={table.wrap}>
             <table className={table.table}>
@@ -128,13 +128,34 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
                     <td className={`${table.td} max-w-xs text-muted`}>{g.reason ?? "–"}</td>
                     <td className={table.td}>
                       {g.handledAt ? (
-                        <Badge tone="ok">Afgehandeld {formatDate(g.handledAt)}</Badge>
+                        <Badge tone="ok">
+                          Afgehandeld {formatDate(g.handledAt)}
+                          {g.order.refundedCents > 0 && ` · ${euro(g.order.refundedCents)} terug`}
+                        </Badge>
                       ) : (
-                        <form action={markGuaranteeHandled}>
-                          <input type="hidden" name="aanvraag" value={g.id} />
-                          <input type="hidden" name="terug" value="/beheer/herroepingen" />
-                          <SubmitButton className="btn-secondary !px-3 !py-1.5 text-xs">Terugbetaald, markeer als afgehandeld</SubmitButton>
-                        </form>
+                        <div className="flex flex-col items-start gap-2">
+                          {g.order.refundedCents === 0 && (
+                            <form action={refundOrder} className="space-y-1.5">
+                              <input type="hidden" name="bestelling" value={g.order.id} />
+                              <input type="hidden" name="aanvraag" value={g.id} />
+                              <input type="hidden" name="reden" value="14-dagengarantie" />
+                              <input type="hidden" name="terug" value="/beheer/herroepingen" />
+                              {g.order.stripeSubscriptionId && (
+                                <label className="flex items-center gap-1.5 text-xs">
+                                  <input type="checkbox" name="beeindigen" value="1" defaultChecked /> Abonnement direct beëindigen
+                                </label>
+                              )}
+                              <SubmitButton className="btn-primary !px-3 !py-1.5 text-xs">Terugbetalen via Stripe</SubmitButton>
+                            </form>
+                          )}
+                          <form action={markGuaranteeHandled}>
+                            <input type="hidden" name="aanvraag" value={g.id} />
+                            <input type="hidden" name="terug" value="/beheer/herroepingen" />
+                            <SubmitButton className="text-xs font-semibold text-muted hover:text-ink hover:underline">
+                              {g.order.refundedCents > 0 ? "Markeer als afgehandeld" : "Al zelf terugbetaald, markeer als afgehandeld"}
+                            </SubmitButton>
+                          </form>
+                        </div>
                       )}
                     </td>
                   </tr>

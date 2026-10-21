@@ -8,7 +8,9 @@ import {
   productFor,
   products,
 } from "@/config/pricing";
-import { deliveryTime } from "@/lib/delivery";
+import { scheduledDelivery } from "@/lib/settings";
+import { recordFunnelEvent } from "@/lib/funnel";
+import { recordPayment } from "@/lib/payments";
 import { orderConfirmationEmail, sendMail } from "@/lib/email";
 import { euro } from "@/lib/format";
 import {
@@ -65,7 +67,7 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
   const existing = await getOrderBySession(session.id);
   if (existing) return existing;
 
-  const { intake_id: intakeId, product, duration } = session.metadata ?? {};
+  const { intake_id: intakeId, product, duration, discount_code: discountCode } = session.metadata ?? {};
   if (!intakeId || !isProductId(product) || !isDurationId(duration)) {
     throw new Error(`Checkout ${session.id} mist geldige metadata`);
   }
@@ -94,11 +96,32 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
     status: isSubscription(duration) ? "active" : "completed",
     amountCents: session.amount_total ?? 0,
     monthlyCents: isSubscription(duration) ? monthlyPrice(product, duration) : 0,
+    discountCode: discountCode ?? intake.discount_code ?? null,
   });
   if (!order) return getOrderBySession(session.id);
 
+  // Funnel: de stap "betaald", gekoppeld aan het bezoek waarin de vragenlijst is ingevuld.
+  await recordFunnelEvent({
+    visitId: intake.visit_id,
+    event: "purchase",
+    product,
+    duration,
+    locale: intake.locale,
+    device: intake.device,
+    source: intake.campaign?.source ?? null,
+    campaign: intake.campaign?.campaign ?? null,
+    landing: intake.campaign?.landing ?? null,
+  });
+  // Een los schema is één betaling; abonnementen leggen we vast via de betaalde facturen (webhook invoice.paid).
+  if (!isSubscription(duration) && (session.amount_total ?? 0) > 0) {
+    const pi = typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? session.id);
+    await recordPayment({ id: pi, orderId: order.id, customerId: customer.id, amountCents: session.amount_total ?? 0, kind: "payment", description: "eenmalig" }).catch(
+      (err) => console.error("Betaling vastleggen mislukt", err),
+    );
+  }
+
   // Het schema wordt direct gemaakt en staat op een willekeurig moment binnen 2 uur voor de klant klaar.
-  await createPlans(order.id, customer.id, products[product].includes, 1, new Date(), deliveryTime());
+  await createPlans(order.id, customer.id, products[product].includes, 1, new Date(), await scheduledDelivery("purchase"));
 
   const l = toLocale(customer.locale);
   const c = orderCopy[l];

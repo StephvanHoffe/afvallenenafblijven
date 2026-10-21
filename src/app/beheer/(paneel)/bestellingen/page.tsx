@@ -3,11 +3,14 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { EmptyRow, FilterTabs, NeedsDatabase, Notice, OrderStatusBadge, PageTitle, Panel, planName, table } from "@/components/beheer/ui";
+import { Badge, EmptyRow, FilterTabs, NeedsDatabase, Notice, OrderStatusBadge, PageTitle, Panel, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { euro, formatDate } from "@/lib/format";
 import type { OrderStatus } from "@/lib/repo";
+import { cancelReasonLabel } from "@/lib/cancel-reasons";
+import { exportHref } from "@/lib/admin/export";
+import { Download } from "lucide-react";
 
 export const metadata: Metadata = { title: "Bestellingen" };
 
@@ -33,6 +36,9 @@ async function Orders({ searchParams }: Pick<PageProps<"/beheer/bestellingen">, 
     <>
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle title="Bestellingen" intro="Abonnementen en losse aankopen. Betalingen en facturen staan in Stripe.">
+        <a href={exportHref("bestellingen", { status })} className="btn-secondary !px-3.5 !py-2 text-sm">
+          <Download className="size-4" aria-hidden /> Exporteer (CSV)
+        </a>
         <FilterTabs
           base="/beheer/bestellingen"
           current={status}
@@ -73,11 +79,24 @@ async function Orders({ searchParams }: Pick<PageProps<"/beheer/bestellingen">, 
                   <td className={table.td}>
                     {planName(o.product, o.duration)}
                     {o.campaign && <span className="block text-xs text-muted">{describeCampaign(o.campaign)}</span>}
+                    {o.discountCode && (
+                      <span className="mt-1 inline-block">
+                        <Badge tone="info">Code {o.discountCode}</Badge>
+                      </span>
+                    )}
                   </td>
                   <td className={table.td}>
                     <OrderStatusBadge status={o.status} cancelAt={o.cancelAt} />
+                    {(o.cancelReason || o.cancelComment) && (
+                      <span className="mt-1 block max-w-48 text-xs text-muted" title={o.cancelComment ?? undefined}>
+                        {cancelReasonLabel(o.cancelReason)}
+                      </span>
+                    )}
                   </td>
-                  <td className={`${table.td} text-right ${table.num}`}>{euro(o.amountCents)}</td>
+                  <td className={`${table.td} text-right ${table.num}`}>
+                    {euro(o.amountCents)}
+                    {o.refundedCents > 0 && <span className="block text-xs font-semibold text-accent-600">{euro(o.refundedCents)} terug</span>}
+                  </td>
                   <td className={`${table.td} text-right ${table.num}`}>{o.monthlyCents ? euro(o.monthlyCents) : "–"}</td>
                   <td className={`${table.td} ${table.num}`}>{formatDate(o.createdAt)}</td>
                 </tr>

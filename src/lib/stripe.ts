@@ -11,6 +11,7 @@ import {
 import { isLaunchOfferActive, site } from "@/config/site";
 import { addMonthsClamped } from "@/lib/dates";
 import { localeUrl, type Locale } from "@/i18n/config";
+import { saveStripeCoupon, type DiscountCodeRow } from "@/lib/discounts-server";
 
 /**
  * Stripe-koppeling. Producten, prijzen en de lanceringskorting worden
@@ -32,7 +33,12 @@ export function isStripeConfigured(): boolean {
 
 export function stripe(): Stripe {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is niet ingesteld");
-  client ??= new Stripe(process.env.STRIPE_SECRET_KEY, { maxNetworkRetries: 2 });
+  // STRIPE_API_BASE alleen voor tests tegen een nagebootste Stripe (bijv. http://127.0.0.1:4242).
+  const base = process.env.STRIPE_API_BASE ? new URL(process.env.STRIPE_API_BASE) : null;
+  client ??= new Stripe(process.env.STRIPE_SECRET_KEY, {
+    maxNetworkRetries: 2,
+    ...(base ? { host: base.hostname, port: base.port, protocol: base.protocol.replace(":", "") as "http" | "https" } : {}),
+  });
   return client;
 }
 
@@ -106,6 +112,27 @@ async function ensureLaunchCoupon(): Promise<string> {
   }
 }
 
+/** De Stripe-coupon bij een kortingscode (aangemaakt bij het eerste gebruik). */
+async function ensureCodeCoupon(row: DiscountCodeRow): Promise<string> {
+  if (row.stripe_coupon_id) return row.stripe_coupon_id;
+  const id = `afb_code_${row.code}_${row.id.slice(0, 8)}`;
+  try {
+    await stripe().coupons.retrieve(id);
+  } catch (err) {
+    if (!isMissing(err)) throw err;
+    await stripe().coupons.create({
+      id,
+      name: row.code,
+      ...(row.percent_off ? { percent_off: row.percent_off } : { amount_off: row.amount_off_cents ?? 0, currency: "eur" }),
+      duration: row.duration,
+      ...(row.duration === "repeating" ? { duration_in_months: Math.max(1, row.duration_months ?? 1) } : {}),
+      metadata: { code: row.code },
+    });
+  }
+  await saveStripeCoupon(row.id, id);
+  return id;
+}
+
 export interface CheckoutInput {
   intakeId: string;
   product: ProductId;
@@ -113,6 +140,8 @@ export interface CheckoutInput {
   email: string;
   name: string;
   locale?: Locale;
+  /** Een geldige kortingscode; vervangt de lanceringskorting. */
+  discount?: DiscountCodeRow | null;
 }
 
 export async function createCheckoutSession(input: CheckoutInput): Promise<string> {
@@ -122,8 +151,13 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
     intake_id: input.intakeId,
     product: input.product,
     duration: input.duration,
+    ...(input.discount ? { discount_code: input.discount.code } : {}),
   };
-  const discounts = isLaunchOfferActive(new Date()) ? [{ coupon: await ensureLaunchCoupon() }] : undefined;
+  const discounts = input.discount
+    ? [{ coupon: await ensureCodeCoupon(input.discount) }]
+    : isLaunchOfferActive(new Date())
+      ? [{ coupon: await ensureLaunchCoupon() }]
+      : undefined;
   const l = input.locale ?? "nl";
   const months = durations[input.duration].months;
 
@@ -200,6 +234,36 @@ export async function resumeSubscription(subscriptionId: string): Promise<Stripe
     return stripe().subscriptions.update(subscriptionId, { cancel_at_period_end: false });
   }
   return stripe().subscriptions.update(subscriptionId, { cancel_at: "" });
+}
+
+/**
+ * Betaalt de eerste betaling van een bestelling volledig terug (garantie of
+ * herroeping) en beëindigt een abonnement desgewenst direct. Geeft het
+ * terugbetaalde bedrag in centen terug.
+ */
+export async function refundFirstPayment(
+  order: { stripe_session_id: string; stripe_subscription_id: string | null },
+  { cancel }: { cancel: boolean },
+): Promise<{ refundedCents: number; refundId: string }> {
+  let paymentIntent: string | null = null;
+  if (order.stripe_subscription_id) {
+    const invoices = await stripe().invoices.list({ subscription: order.stripe_subscription_id, status: "paid", limit: 100 });
+    const first = [...invoices.data].sort((a, b) => a.created - b.created)[0];
+    if (first?.id) {
+      const payments = await stripe().invoicePayments.list({ invoice: first.id, status: "paid", limit: 1 });
+      const pi = payments.data[0]?.payment.payment_intent;
+      paymentIntent = typeof pi === "string" ? pi : (pi?.id ?? null);
+    }
+  } else {
+    const session = await stripe().checkout.sessions.retrieve(order.stripe_session_id);
+    paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null);
+  }
+  if (!paymentIntent) throw new Error("Geen betaling gevonden om terug te betalen");
+  const refund = await stripe().refunds.create({ payment_intent: paymentIntent, reason: "requested_by_customer" });
+  if (cancel && order.stripe_subscription_id) {
+    await stripe().subscriptions.cancel(order.stripe_subscription_id);
+  }
+  return { refundedCents: refund.amount, refundId: refund.id };
 }
 
 export async function retrieveCheckoutSession(sessionId: string) {

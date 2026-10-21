@@ -2,14 +2,20 @@
 
 import Link from "@/i18n/Link";
 import { usePathname } from "next/navigation";
-import { FileText, LayoutDashboard, Receipt, Settings, Undo2, Users } from "lucide-react";
+import { ChartColumn, FileText, Filter, History, LayoutDashboard, Mail, MessageSquareText, Receipt, Settings, TicketPercent, Undo2, Users } from "lucide-react";
 
 export const adminNav = [
   { href: "/beheer", label: "Overzicht", icon: LayoutDashboard },
+  { href: "/beheer/funnel", label: "Funnel", icon: Filter },
+  { href: "/beheer/analyse", label: "Analyse", icon: ChartColumn },
   { href: "/beheer/klanten", label: "Klanten", icon: Users },
   { href: "/beheer/bestellingen", label: "Bestellingen", icon: Receipt },
   { href: "/beheer/schemas", label: "Schema's", icon: FileText },
+  { href: "/beheer/feedback", label: "Feedback", icon: MessageSquareText },
+  { href: "/beheer/kortingscodes", label: "Kortingscodes", icon: TicketPercent },
+  { href: "/beheer/emails", label: "E-mails", icon: Mail },
   { href: "/beheer/herroepingen", label: "Herroepingen & garantie", icon: Undo2 },
+  { href: "/beheer/logboek", label: "Logboek", icon: History },
   { href: "/beheer/instellingen", label: "Instellingen", icon: Settings },
 ];
 

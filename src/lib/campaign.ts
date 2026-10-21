@@ -46,11 +46,11 @@ export function campaignFromParams(params: URLSearchParams): Campaign | null {
   return Object.keys(clean).length ? clean : null;
 }
 
-/** De utm-parameters (en lp) uit een querystring, om door te geven aan een volgende pagina. */
+/** De utm-parameters, lp en een kortingscode uit een querystring, om door te geven aan een volgende pagina. */
 export function forwardableParams(search: string): URLSearchParams {
   const from = new URLSearchParams(search);
   const out = new URLSearchParams();
-  for (const k of [...UTM_KEYS, "lp"]) {
+  for (const k of [...UTM_KEYS, "lp", "code"]) {
     const v = from.get(k);
     if (v) out.set(k, v.slice(0, 120));
   }

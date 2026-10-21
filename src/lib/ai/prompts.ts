@@ -31,6 +31,8 @@ export interface ProgressContext {
     /** Activiteitsniveau waarmee nu gerekend is, als dat door de metingen is veranderd. */
     activityChange?: { from: Intake["activity"]; to: Intake["activity"] };
   };
+  /** Aanwijzing van de beheerder bij het opnieuw maken van dit schema. */
+  instruction?: string;
 }
 
 const WEEKDAYS = "Maandag, Dinsdag, Woensdag, Donderdag, Vrijdag, Zaterdag, Zondag";
@@ -132,6 +134,14 @@ function personBlock(name: string, intake: Intake, l: Locale): string {
 }
 
 function progressBlock(progress: ProgressContext, kind: "voeding" | "training", l: Locale): string {
+  const base = progressLines(progress, kind, l);
+  // Een aanwijzing van onze diëtist/trainer (bij opnieuw maken) gaat voor, zolang die veilig is.
+  return progress.instruction
+    ? `${base}\n\n## Aanwijzing van onze ${kind === "voeding" ? "diëtist" : "trainer"}\n${progress.instruction}\nVolg deze aanwijzing, zolang die veilig is en binnen de dagdoelen en de eisen hierboven past.`
+    : base;
+}
+
+function progressLines(progress: ProgressContext, kind: "voeding" | "training", l: Locale): string {
   const num = (n: number, digits = 0) => formatNumber(n, digits, l);
   const answer = (v?: string) => (v ? checkinLabel(l, v) : v);
   if (progress.periodNumber <= 1) {

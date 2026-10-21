@@ -5,6 +5,7 @@ import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro } from "@/lib/format";
 import { nextPeriodStart } from "@/lib/schedule";
+import { logMail, mailTextOverride } from "@/lib/email-store";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -35,21 +36,106 @@ function transport(): Transporter {
 const FROM = () => process.env.EMAIL_FROM ?? `${site.name} <${site.company.email}>`;
 export const adminEmail = () => process.env.ADMIN_EMAIL ?? site.company.email;
 
+/**
+ * Klantmails waarvan je onderwerp, hoofdtekst en knop in het beheer kunt
+ * aanpassen (per taal). Teksten mogen plaatshouders bevatten, zoals {naam}.
+ */
+export const MAIL_KINDS = [
+  "order",
+  "plans-first",
+  "plans-next",
+  "plans-upcoming",
+  "checkin-0",
+  "checkin-1",
+  "checkin-2",
+  "checkin-3",
+  "weekly",
+  "login",
+  "checkout-reminder",
+  "cancellation",
+  "guarantee",
+  "withdrawal",
+] as const;
+export type MailKind = (typeof MAIL_KINDS)[number];
+
+/** De aanpasbare delen van een mail. Een lege knop betekent: deze mail heeft geen knop. */
+export interface MailTexts {
+  subject: string;
+  intro: string;
+  button: string;
+}
+
 export interface Mail {
   to: string;
   subject: string;
   html: string;
   text: string;
   replyTo?: string;
+  /** Soort mail (voor het log en aangepaste teksten); "admin" = melding aan de beheerder. */
+  kind?: MailKind | "admin";
+  locale?: Locale;
+  /** Standaardteksten met {plaatshouders}, en de waarden voor deze mail. */
+  defaults?: MailTexts;
+  vars?: Record<string, string>;
+  /** Bouwt dezelfde mail opnieuw met (aangepaste) teksten. */
+  render?: (texts: Partial<MailTexts>) => Mail;
 }
 
 export async function sendMail(mail: Mail): Promise<boolean> {
+  let final = mail;
+  // Teksten die in het beheer zijn aangepast, gaan voor op de standaardteksten.
+  if (mail.render && mail.kind && mail.kind !== "admin" && mail.locale) {
+    const override = await mailTextOverride(mail.kind, mail.locale).catch(() => null);
+    if (override) final = { ...mail.render(override), to: mail.to, replyTo: mail.replyTo };
+  }
   if (!isEmailConfigured()) {
-    console.info(`[e-mail niet verstuurd: SMTP niet ingesteld] Aan: ${mail.to} | ${mail.subject}\n${mail.text}`);
+    console.info(`[e-mail niet verstuurd: SMTP niet ingesteld] Aan: ${final.to} | ${final.subject}\n${final.text}`);
+    await logMail(final, "skipped");
     return false;
   }
-  await transport().sendMail({ from: FROM(), ...mail });
+  try {
+    await transport().sendMail({ from: FROM(), to: final.to, subject: final.subject, html: final.html, text: final.text, replyTo: final.replyTo });
+  } catch (err) {
+    await logMail(final, "failed", err instanceof Error ? err.message : String(err));
+    throw err;
+  }
+  await logMail(final, "sent");
   return true;
+}
+
+/** Vult {plaatshouders} in; onbekende plaatshouders blijven staan. */
+export function fillPlaceholders(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? vars[k] : m));
+}
+
+/** Platte tekst naar alinea's (een lege regel = nieuwe alinea). */
+function paragraphs(text: string): string {
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+}
+
+/** Een aanpasbare mail: bouwt de mail met de standaardteksten, en opnieuw met aangepaste teksten. */
+function editableMail(
+  kind: MailKind,
+  l: Locale,
+  to: string,
+  defaults: MailTexts,
+  vars: Record<string, string>,
+  build: (t: MailTexts) => { subject: string; html: string; text: string },
+): Mail {
+  const render = (o: Partial<MailTexts> = {}): Mail => {
+    const t: MailTexts = {
+      subject: fillPlaceholders(o.subject?.trim() || defaults.subject, vars),
+      intro: fillPlaceholders(o.intro?.trim() || defaults.intro, vars),
+      button: fillPlaceholders(o.button?.trim() || defaults.button, vars),
+    };
+    return { to, kind, locale: l, defaults, vars, render, ...build(t) };
+  };
+  return render();
 }
 
 function escapeHtml(s: string): string {
@@ -170,23 +256,28 @@ export function plansReadyEmail(
 ): Mail {
   const c = plansReadyCopy[l];
   const g = common[l];
-  const what = c.what(input.types);
   const start = input.startsAt ?? new Date();
   const upcoming = input.seq > 1 && start.getTime() > Date.now() + 60 * 60 * 1000;
-  const startLabel = weekdayDate(start, l);
-  const intro = upcoming
-    ? c.introUpcoming(what, startLabel, input.types.includes("voeding"))
-    : input.seq > 1
-      ? c.introNext(what)
-      : c.introFirst(what, input.types.length === 2);
-  const subject = upcoming ? c.subjectUpcoming(input.name, startLabel) : input.seq > 1 ? c.subjectNext(input.name) : c.subjectFirst(input.name);
+  const kind: MailKind = upcoming ? "plans-upcoming" : input.seq > 1 ? "plans-next" : "plans-first";
+  const defaults: MailTexts = {
+    intro: upcoming
+      ? c.introUpcoming("{schemas}", "{startdatum}", input.types.includes("voeding"))
+      : input.seq > 1
+        ? c.introNext("{schemas}")
+        : c.introFirst("{schemas}", input.types.length === 2),
+    subject: upcoming ? c.subjectUpcoming("{naam}", "{startdatum}") : input.seq > 1 ? c.subjectNext("{naam}") : c.subjectFirst("{naam}"),
+    button: c.button,
+  };
+  const vars = { naam: input.name, schemas: c.what(input.types), startdatum: weekdayDate(start, l), periode: String(input.seq) };
   const tips = c.tips(weekdayDate(nextPeriodStart(start), l));
   const loginHref = localeUrl(site.url, l, "/inloggen");
-  const html = layout(
-    subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${intro}</p>
-${button(input.link, c.button)}
+  return editableMail(kind, l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${button(input.link, t.button)}
 <p><strong>${c.tipsTitle}</strong></p>
 <ul style="padding-left:20px;">
 ${tips.map((tip) => `<li>${tip}</li>`).join("\n")}
@@ -194,10 +285,10 @@ ${tips.map((tip) => `<li>${tip}</li>`).join("\n")}
 <p>${c.personal(loginHref)}</p>
 <p>${c.goodLuck}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  const text = `${g.hi(input.name)}\n\n${intro}\n\n${c.textLink(input.link)}\n\n${c.textPersonal(loginHref)}\n\n${g.team(site.name)}`;
-  return { to: input.to, subject, html, text };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.textLink(input.link)}\n\n${c.textPersonal(loginHref)}\n\n${g.team(site.name)}`,
+  }));
 }
 
 const checkinCopy = defineCopy({
@@ -210,7 +301,7 @@ const checkinCopy = defineCopy({
           : reminder === 2
             ? "Je nieuwe periode is begonnen: vul je check-in in"
             : "Je nieuwe schema staat nog voor je klaar",
-    intro: (reminder: number, start: string, advised: string, seq: number) =>
+    intro: (reminder: number, start: string, advised: string, seq: number | string) =>
       reminder === 0
         ? `Je nieuwe periode start op ${start}. Vul je check-in in (2 minuten), het liefst uiterlijk ${advised}: dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. We maken het bewust pas na je check-in, zodat het past bij hoe het nu gaat.`
         : reminder === 1
@@ -237,7 +328,7 @@ const checkinCopy = defineCopy({
           : reminder === 2
             ? "Your new period has started: fill in your check-in"
             : "Your new plan is still waiting for you",
-    intro: (reminder: number, start: string, advised: string, seq: number) =>
+    intro: (reminder: number, start: string, advised: string, seq: number | string) =>
       reminder === 0
         ? `Your new period starts on ${start}. Fill in your check-in (2 minutes), ideally by ${advised}: then your plan for period ${seq} with shopping list will be ready in time for your weekend shopping. We deliberately only create it after your check-in, so it matches how things are going now.`
         : reminder === 1
@@ -281,28 +372,35 @@ export function checkinEmail(
 ): Mail {
   const c = checkinCopy[l];
   const g = common[l];
-  const subject = c.subject(input.reminder, input.name);
-  const intro = c.intro(input.reminder, weekdayDate(input.dueAt, l), weekdayDate(input.advisedBy, l), input.seq);
-  const html = layout(
-    subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${escapeHtml(intro)}</p>
-${button(input.link, c.button)}
+  const stage = Math.min(3, Math.max(0, input.reminder));
+  const defaults: MailTexts = {
+    subject: c.subject(stage, "{naam}"),
+    intro: c.intro(stage, "{startdatum}", "{uiterlijk}", "{periode}"),
+    button: c.button,
+  };
+  const vars = { naam: input.name, startdatum: weekdayDate(input.dueAt, l), uiterlijk: weekdayDate(input.advisedBy, l), periode: String(input.seq) };
+  return editableMail(`checkin-${stage}` as MailKind, l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${button(input.link, t.button)}
 <p><strong>${c.askTitle}</strong></p>
 <ul style="padding-left:20px;">
 ${c.asks.map((ask) => `<li>${ask}</li>`).join("\n")}
 </ul>
 <p>${c.after}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  const text = `${g.hi(input.name)}\n\n${intro}\n\n${c.textLink(input.link)}\n\n${g.team(site.name)}`;
-  return { to: input.to, subject, html, text };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.textLink(input.link)}\n\n${g.team(site.name)}`,
+  }));
 }
 
 const weeklyReminderCopy = defineCopy({
   nl: {
-    subject: (week: number, name: string) => `Weegmoment week ${week}: hoe gaat het, ${name}?`,
+    subject: (week: number | string, name: string) => `Weegmoment week ${week}: hoe gaat het, ${name}?`,
     intro:
       "Tijd voor je wekelijkse weegmoment. Vul je gewicht en een paar korte vragen in (1 minuut). Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen.",
     button: "Weegmoment invullen",
@@ -310,7 +408,7 @@ const weeklyReminderCopy = defineCopy({
     textLink: (link: string) => `Weegmoment invullen: ${link}`,
   },
   en: {
-    subject: (week: number, name: string) => `Weekly weigh-in, week ${week}: how's it going, ${name}?`,
+    subject: (week: number | string, name: string) => `Weekly weigh-in, week ${week}: how's it going, ${name}?`,
     intro:
       "It's time for your weekly weigh-in. Enter your weight and answer a few short questions (1 minute). If your progress is off track, we'll adjust your plan straight away: eating a little more or less, or training harder or lighter.",
     button: "Fill in your weigh-in",
@@ -326,17 +424,20 @@ export function weeklyReminderEmail(
 ): Mail {
   const c = weeklyReminderCopy[l];
   const g = common[l];
-  const subject = c.subject(input.week, input.name);
-  const html = layout(
-    subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${escapeHtml(c.intro)}</p>
-${button(input.link, c.button)}
+  const defaults: MailTexts = { subject: c.subject("{week}", "{naam}"), intro: c.intro, button: c.button };
+  return editableMail("weekly", l, input.to, defaults, { naam: input.name, week: String(input.week) }, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${button(input.link, t.button)}
 <p style="font-size:14px;color:#5b6b62;">${c.tip}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  return { to: input.to, subject, html, text: `${g.hi(input.name)}\n\n${c.intro}\n\n${c.textLink(input.link)}\n\n${g.team(site.name)}` };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.textLink(input.link)}\n\n${g.team(site.name)}`,
+  }));
 }
 
 const loginCopy = defineCopy({
@@ -359,20 +460,19 @@ const loginCopy = defineCopy({
 export function loginEmail(input: { to: string; name: string; link: string; locale?: Locale }, l: Locale = input.locale ?? "nl"): Mail {
   const c = loginCopy[l];
   const g = common[l];
-  const html = layout(
-    c.subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${c.body}</p>
-${button(input.link, c.button)}
+  const defaults: MailTexts = { subject: c.subject, intro: c.body, button: c.button };
+  return editableMail("login", l, input.to, defaults, { naam: input.name }, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${button(input.link, t.button)}
 <p style="font-size:14px;color:#5b6b62;">${c.ignore}</p>`,
-    l,
-  );
-  return {
-    to: input.to,
-    subject: c.subject,
-    html,
-    text: `${g.hi(input.name)}\n\n${c.text(input.link)}`,
-  };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.text(input.link)}`,
+  }));
 }
 
 const withdrawalCopy = defineCopy({
@@ -424,16 +524,21 @@ export function withdrawalConfirmationEmail(
     timeZone: "Europe/Amsterdam",
   }).format(input.receivedAt);
   const details = `${c.name}: ${input.name}\n${c.email}: ${input.to}\n${c.order}: ${input.orderReference}\n${input.message ? `${c.message}: ${input.message}\n` : ""}${c.receivedAt}: ${when}\n${c.reference}: ${input.id}`;
-  const html = layout(
-    c.subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${c.intro}</p>
+  // De inhoud en het tijdstip van ontvangst zijn wettelijk verplicht en dus niet aanpasbaar; de begeleidende tekst wel.
+  const defaults: MailTexts = { subject: c.subject, intro: c.intro, button: "" };
+  return editableMail("withdrawal", l, input.to, defaults, { naam: input.name, bestelling: input.orderReference }, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
 <pre style="background:#f4f3ee;border-radius:12px;padding:16px;font-family:inherit;white-space:pre-wrap;">${escapeHtml(details)}</pre>
 <p>${c.refund(site.responseTimeDays)}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  return { to: input.to, subject: c.subject, html, text: `${g.hi(input.name)}\n\n${c.text}\n\n${details}\n\n${g.team(site.name)}` };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${details}\n\n${g.team(site.name)}`,
+  }));
 }
 
 const guaranteeCopy = defineCopy({
@@ -466,19 +571,23 @@ export function guaranteeRequestEmail(
 ): Mail {
   const c = guaranteeCopy[l];
   const g = common[l];
-  const intro = c.intro(input.reference, productName(input.productName, l));
   const refund = c.refund(euro(input.amountCents, l), site.responseTimeDays, input.subscription);
-  const html = layout(
-    c.subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${escapeHtml(intro)}</p>
+  const defaults: MailTexts = { subject: c.subject, intro: c.intro("{bestelnummer}", "{product}"), button: "" };
+  const vars = { naam: input.name, bestelnummer: input.reference, product: productName(input.productName, l), bedrag: euro(input.amountCents, l) };
+  return editableMail("guarantee", l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
 <p>${escapeHtml(refund)}</p>
 <p>${c.access(localeUrl(site.url, l, "/account"))}</p>
 <p>${c.sorry}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  return { to: input.to, subject: c.subject, html, text: `${g.hi(input.name)}\n\n${intro}\n\n${refund}\n\n${g.team(site.name)}` };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${refund}\n\n${g.team(site.name)}`,
+  }));
 }
 
 /** Melding aan de beheerder (altijd Nederlands). */
@@ -487,6 +596,7 @@ export function adminNotificationEmail(subject: string, lines: Record<string, st
   return {
     to: adminEmail(),
     subject: `[${site.shortName}] ${subject}`,
+    kind: "admin",
     replyTo,
     html: layout(
       subject,
@@ -526,17 +636,21 @@ export function cancellationEmail(
   const end = input.endsAt
     ? new Intl.DateTimeFormat(intlLocale(l), { dateStyle: "long", timeZone: "Europe/Amsterdam" }).format(input.endsAt)
     : null;
-  const line = c.line(productName(input.productName, l), end);
-  const html = layout(
-    c.subject,
-    `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${escapeHtml(line)}</p>
+  const defaults: MailTexts = { subject: c.subject, intro: c.line("{product}", end ? "{einddatum}" : null), button: "" };
+  const vars = { naam: input.name, product: productName(input.productName, l), einddatum: end ?? "" };
+  return editableMail("cancellation", l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
 <p>${c.access(localeUrl(site.url, l, "/account"))}</p>
 <p>${c.thanks}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
-    l,
-  );
-  return { to: input.to, subject: c.subject, html, text: `${g.hi(input.name)}\n\n${line}\n\n${g.team(site.name)}` };
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${g.team(site.name)}`,
+  }));
 }
 
 const orderCopy = defineCopy({
@@ -552,7 +666,6 @@ const orderCopy = defineCopy({
     thanks: "Bedankt voor je bestelling! We gaan aan de slag met je persoonlijke schema. Binnen 2 uur staat het klaar; je ontvangt dan een aparte e-mail met een persoonlijke link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur ontvang je apart van onze betaalpartner Stripe.`,
-    textThanks: "Bedankt voor je bestelling!",
     textTerms: "Algemene voorwaarden",
     textCancel: "Opzeggen",
   },
@@ -568,7 +681,6 @@ const orderCopy = defineCopy({
     thanks: "Thank you for your order! We're getting to work on your personal plan. It will be ready within 2 hours, and we'll send you a separate email with a personal link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll receive your invoice separately from our payment partner Stripe.`,
-    textThanks: "Thank you for your order!",
     textTerms: "Terms and conditions",
     textCancel: "Cancel",
   },
@@ -590,7 +702,6 @@ export function orderConfirmationEmail(
 ): Mail {
   const c = orderCopy[l];
   const g = common[l];
-  const subject = c.subject(input.orderNumber);
   const rows: [string, string][] = [
     [c.orderNumber, input.orderNumber],
     [c.product, productName(input.productName, l)],
@@ -600,10 +711,14 @@ export function orderConfirmationEmail(
   ];
   const termsHref = localeUrl(site.url, l, "/algemene-voorwaarden");
   const cancelHref = localeUrl(site.url, l, "/abonnement-opzeggen");
-  const html = layout(
-    subject,
+  const defaults: MailTexts = { subject: c.subject("{bestelnummer}"), intro: c.thanks, button: "" };
+  const vars = { naam: input.name, bestelnummer: input.orderNumber, product: productName(input.productName, l), bedrag: input.amountPaid };
+  return editableMail("order", l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+    t.subject,
     `<p>${g.hi(escapeHtml(input.name))}</p>
-<p>${c.thanks}</p>
+${paragraphs(t.intro)}
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:15px;">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5b6b62;">${escapeHtml(k)}</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${escapeHtml(v)}</td></tr>`).join("")}
 </table>
@@ -612,7 +727,51 @@ ${input.incassoNote ? `<p style="font-size:14px;color:#5b6b62;">${escapeHtml(inp
 <p style="font-size:14px;color:#5b6b62;">${c.terms(termsHref, cancelHref, cancelHref.replace(/^https?:\/\//, ""))}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
     l,
-  );
-  const text = `${g.hi(input.name)}\n\n${c.textThanks}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${c.consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`;
-  return { to: input.to, subject, html, text };
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${c.consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`,
+  }));
+}
+
+const checkoutReminderCopy = defineCopy({
+  nl: {
+    subject: (name: string) => `Je persoonlijke plan staat nog voor je klaar, ${name}`,
+    intro:
+      "Je was bijna klaar met je bestelling, maar de betaling is niet afgerond. Geen probleem: je antwoorden hebben we bewaard. Met de knop hieronder ga je verder waar je gebleven was en kies je je plan.",
+    button: "Verder waar ik was",
+    note: "Deze link werkt 7 dagen. Je krijgt deze herinnering maar één keer.",
+    unsubscribe: "Je ontvangt deze e-mail omdat je hebt aangegeven tips en aanbiedingen van ons te willen ontvangen.",
+    textLink: (link: string) => `Verder waar je was: ${link}`,
+  },
+  en: {
+    subject: (name: string) => `Your personal plan is still waiting for you, ${name}`,
+    intro:
+      "You were almost done with your order, but the payment wasn't completed. No problem: we've saved your answers. Use the button below to pick up where you left off and choose your plan.",
+    button: "Pick up where I left off",
+    note: "This link works for 7 days. You'll only receive this reminder once.",
+    unsubscribe: "You're receiving this email because you said you'd like to receive tips and offers from us.",
+    textLink: (link: string) => `Pick up where you left off: ${link}`,
+  },
+});
+
+/** Herinnering bij een begonnen maar niet afgeronde betaling (alleen met toestemming voor e-mail). */
+export function checkoutReminderEmail(
+  input: { to: string; name: string; link: string; productName: string; locale?: Locale },
+  l: Locale = input.locale ?? "nl",
+): Mail {
+  const c = checkoutReminderCopy[l];
+  const g = common[l];
+  const defaults: MailTexts = { subject: c.subject("{naam}"), intro: c.intro, button: c.button };
+  return editableMail("checkout-reminder", l, input.to, defaults, { naam: input.name, product: productName(input.productName, l) }, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${button(input.link, t.button)}
+<p style="font-size:14px;color:#5b6b62;">${c.note} ${c.unsubscribe}</p>
+<p>${g.team(escapeHtml(site.name))}</p>`,
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.textLink(input.link)}\n\n${c.note}\n\n${g.team(site.name)}`,
+  }));
 }

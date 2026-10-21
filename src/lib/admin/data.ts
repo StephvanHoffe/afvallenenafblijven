@@ -29,6 +29,10 @@ export interface AdminOrderRow {
   campaign: Campaign | null;
   /** Alleen gevuld in de klantdetails: de check-in voor de volgende periode. */
   checkin?: CheckinWindow | null;
+  discountCode: string | null;
+  refundedCents: number;
+  cancelReason: string | null;
+  cancelComment: string | null;
 }
 
 export interface AdminCustomerRow {
@@ -41,6 +45,8 @@ export interface AdminCustomerRow {
   activeSubscriptions: number;
   orders: number;
   plans: number;
+  locale: string;
+  weeklyReminders: boolean;
 }
 
 export interface AdminPlanRow {
@@ -64,10 +70,15 @@ export interface AdminPlanRow {
   /** Wanneer de klant het schema kreeg; null = nog niet. */
   releasedAt: Date | null;
   approvedAt: Date | null;
+  /** Je eigen beoordeling (1-5), null = nog niet beoordeeld. */
+  rating: number | null;
 }
 
 export interface AdminPlanDetail extends AdminPlanRow {
   content: PlanContent | null;
+  /** Aanwijzing bij het laatst opnieuw maken, en de toelichting bij je beoordeling. */
+  adminInstruction: string | null;
+  ratingNote: string | null;
   /** Uit de vragenlijst, om het schema te controleren. */
   allergies: Intake["allergies"];
   otherAllergies: string | null;
@@ -143,9 +154,9 @@ export interface AdminCampaignRow {
 export interface AdminData {
   demo: boolean;
   overview(): Promise<AdminOverview>;
-  customers(query?: string): Promise<AdminCustomerRow[]>;
+  customers(query?: string, limit?: number): Promise<AdminCustomerRow[]>;
   customer(id: string): Promise<AdminCustomerDetail | null>;
-  orders(status?: OrderStatus): Promise<AdminOrderRow[]>;
+  orders(status?: OrderStatus, limit?: number): Promise<AdminOrderRow[]>;
   plans(filter?: AdminPlanFilter): Promise<AdminPlanRow[]>;
   plan(id: string): Promise<AdminPlanDetail | null>;
   withdrawals(): Promise<AdminWithdrawalRow[]>;
@@ -170,6 +181,10 @@ type OrderSql = {
   created_at: Date;
   stripe_subscription_id: string | null;
   campaign: Campaign | null;
+  discount_code: string | null;
+  refunded_cents: number;
+  cancel_reason: string | null;
+  cancel_comment: string | null;
 };
 
 const toOrder = (r: OrderSql): AdminOrderRow => ({
@@ -187,6 +202,10 @@ const toOrder = (r: OrderSql): AdminOrderRow => ({
   monthlyCents: r.monthly_cents,
   createdAt: r.created_at,
   stripeSubscriptionId: r.stripe_subscription_id,
+  discountCode: r.discount_code,
+  refundedCents: r.refunded_cents ?? 0,
+  cancelReason: r.cancel_reason,
+  cancelComment: r.cancel_comment,
 });
 
 type PlanSql = {
@@ -207,6 +226,7 @@ type PlanSql = {
   release_after: Date;
   released_at: Date | null;
   approved_at: Date | null;
+  rating: number | null;
   content?: PlanContent | null;
 };
 
@@ -228,6 +248,7 @@ const toPlan = (r: PlanSql): AdminPlanRow => ({
   releaseAfter: r.release_after,
   releasedAt: r.released_at,
   approvedAt: r.approved_at,
+  rating: r.rating,
 });
 
 type CustomerSql = {
@@ -240,6 +261,8 @@ type CustomerSql = {
   active_subscriptions: number;
   orders: number;
   plans: number;
+  locale: string;
+  weekly_reminders: boolean;
 };
 
 const toCustomer = (r: CustomerSql): AdminCustomerRow => ({
@@ -252,6 +275,8 @@ const toCustomer = (r: CustomerSql): AdminCustomerRow => ({
   activeSubscriptions: r.active_subscriptions,
   orders: r.orders,
   plans: r.plans,
+  locale: r.locale ?? "nl",
+  weeklyReminders: r.weekly_reminders ?? true,
 });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -334,7 +359,7 @@ const dbAdminData: AdminData = {
     };
   },
 
-  async customers(query) {
+  async customers(query, limit = 200) {
     const sql = await db();
     const q = query?.trim() ? `%${query.trim().toLowerCase()}%` : null;
     const rows = await sql<CustomerSql[]>`
@@ -344,7 +369,7 @@ const dbAdminData: AdminData = {
         (select count(*)::int from plans p where p.customer_id = c.id) as plans
       from customers c
       ${q ? sql`where lower(c.email) like ${q} or lower(c.name) like ${q}` : sql``}
-      order by c.created_at desc limit 200`;
+      order by c.created_at desc limit ${limit}`;
     return rows.map(toCustomer);
   },
 
@@ -364,7 +389,7 @@ const dbAdminData: AdminData = {
       where o.customer_id = ${id} order by o.created_at desc`;
     const plans = await sql<PlanSql[]>`
       select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
-             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at,
+             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at, p.rating,
              c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       where p.customer_id = ${id} order by p.created_at desc, p.type`;
@@ -403,13 +428,13 @@ const dbAdminData: AdminData = {
     };
   },
 
-  async orders(status) {
+  async orders(status, limit = 300) {
     const sql = await db();
     const rows = await sql<OrderSql[]>`
       select o.*, c.name as customer_name, c.email as customer_email, i.campaign
       from orders o join customers c on c.id = o.customer_id left join intakes i on i.id = o.intake_id
       ${status ? sql`where o.status = ${status}` : sql``}
-      order by o.created_at desc limit 300`;
+      order by o.created_at desc limit ${limit}`;
     return rows.map(toOrder);
   },
 
@@ -425,7 +450,7 @@ const dbAdminData: AdminData = {
             : sql``;
     const rows = await sql<PlanSql[]>`
       select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
-             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at,
+             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at, p.rating,
              c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       ${where}
@@ -436,7 +461,7 @@ const dbAdminData: AdminData = {
   async plan(id) {
     if (!UUID.test(id)) return null;
     const sql = await db();
-    const [r] = await sql<(PlanSql & { intake: Intake | null })[]>`
+    const [r] = await sql<(PlanSql & { intake: Intake | null; admin_instruction: string | null; rating_note: string | null })[]>`
       select p.*, c.name as customer_name, c.email as customer_email, i.data as intake
       from plans p join customers c on c.id = p.customer_id
       join orders o on o.id = p.order_id left join intakes i on i.id = o.intake_id
@@ -445,6 +470,8 @@ const dbAdminData: AdminData = {
     return {
       ...toPlan(r),
       content: r.content ?? null,
+      adminInstruction: r.admin_instruction,
+      ratingNote: r.rating_note,
       allergies: r.intake?.allergies ?? [],
       otherAllergies: r.intake?.otherAllergies ?? null,
       dislikes: r.intake?.dislikes ?? null,

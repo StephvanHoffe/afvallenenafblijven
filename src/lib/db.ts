@@ -176,6 +176,113 @@ create table if not exists settings (
   updated_at timestamptz not null default now()
 );
 
+-- Funnel: anonieme stappen van bezoekers (geen cookies, geen IP-adres of persoonsgegevens).
+-- visit_id is een willekeurig nummer per tabblad (sessionStorage), zodat we stappen van één
+-- bezoek kunnen koppelen. Wordt na 13 maanden opgeruimd.
+create table if not exists funnel_events (
+  id bigserial primary key,
+  visit_id text,
+  event text not null,
+  step text,
+  path text,
+  product text,
+  duration text,
+  locale text,
+  device text,
+  source text,
+  campaign text,
+  landing text,
+  created_at timestamptz not null default now()
+);
+create index if not exists funnel_events_created_idx on funnel_events(created_at);
+create index if not exists funnel_events_visit_idx on funnel_events(visit_id);
+alter table intakes add column if not exists visit_id text;
+alter table intakes add column if not exists device text;
+alter table intakes add column if not exists discount_code text;
+alter table intakes add column if not exists reminded_at timestamptz;
+alter table intakes add column if not exists duration text;
+
+-- Ontvangen betalingen en terugbetalingen (uit de Stripe-webhooks en het beheer).
+create table if not exists payments (
+  id text primary key,
+  order_id uuid references orders(id) on delete set null,
+  customer_id uuid references customers(id) on delete set null,
+  amount_cents integer not null,
+  kind text not null default 'payment',
+  description text,
+  paid_at timestamptz not null default now()
+);
+create index if not exists payments_paid_idx on payments(paid_at);
+
+-- Kortingscodes (de bijbehorende Stripe-coupon wordt bij het eerste gebruik aangemaakt).
+create table if not exists discount_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  description text,
+  percent_off integer,
+  amount_off_cents integer,
+  duration text not null default 'once',
+  duration_months integer,
+  products text[] not null default '{}',
+  durations text[] not null default '{}',
+  max_redemptions integer,
+  starts_at timestamptz,
+  expires_at timestamptz,
+  active boolean not null default true,
+  stripe_coupon_id text,
+  created_at timestamptz not null default now()
+);
+alter table orders add column if not exists discount_code text;
+alter table orders add column if not exists cancel_reason text;
+alter table orders add column if not exists cancel_comment text;
+alter table orders add column if not exists ended_at timestamptz;
+alter table orders add column if not exists refunded_cents integer not null default 0;
+
+-- Aangepaste e-mailteksten uit het beheer (lege velden = standaardtekst).
+create table if not exists email_templates (
+  kind text not null,
+  locale text not null,
+  subject text,
+  intro text,
+  button text,
+  updated_at timestamptz not null default now(),
+  primary key (kind, locale)
+);
+
+-- Alle verstuurde e-mails (12 maanden bewaard).
+create table if not exists email_log (
+  id bigserial primary key,
+  to_email text not null,
+  kind text,
+  subject text not null,
+  status text not null,
+  error text,
+  created_at timestamptz not null default now()
+);
+create index if not exists email_log_created_idx on email_log(created_at);
+create index if not exists email_log_to_idx on email_log(lower(to_email));
+
+-- Notities bij een klant en het logboek van beheeracties.
+create table if not exists admin_notes (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references customers(id) on delete cascade,
+  text text not null,
+  created_at timestamptz not null default now()
+);
+create table if not exists admin_log (
+  id bigserial primary key,
+  action text not null,
+  details text,
+  customer_id uuid,
+  created_at timestamptz not null default now()
+);
+create index if not exists admin_log_created_idx on admin_log(created_at);
+
+-- Schema opnieuw maken met een aanwijzing, en je eigen beoordeling van een schema.
+alter table plans add column if not exists admin_instruction text;
+alter table plans add column if not exists rating integer;
+alter table plans add column if not exists rating_note text;
+
 -- Aanvragen onder de tevredenheidsgarantie (eerste betaling terug), één per klant.
 create table if not exists guarantee_requests (
   id uuid primary key default gen_random_uuid(),

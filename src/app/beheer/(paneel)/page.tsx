@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ArrowRight, CircleAlert } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleAlert } from "lucide-react";
 import { OrdersChart } from "@/components/beheer/OrdersChart";
-import { NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, planName, table } from "@/components/beheer/ui";
+import { NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, pct, planName, table } from "@/components/beheer/ui";
+import { funnelReport } from "@/lib/admin/funnel-report";
 import { durations, products } from "@/config/pricing";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
@@ -24,7 +25,14 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
   if (!isDemoMode()) await connection();
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
-  const [o, sp, approval] = await Promise.all([adminData().overview(), searchParams, adminData().approvalRequired()]);
+  const [o, sp, approval, funnel] = await Promise.all([
+    adminData().overview(),
+    searchParams,
+    adminData().approvalRequired(),
+    funnelReport({ days: 30 }).catch(() => null),
+  ]);
+  const funnelKeys = ["visits", "quiz", "result", "selected", "checkout", "purchase"];
+  const funnelStages = funnel ? funnelKeys.map((k) => funnel.stages.find((st) => st.key === k)).filter((st) => st !== undefined) : [];
   const conversion = o.checkoutStarts30 > 0 ? Math.round((o.newOrders30 / o.checkoutStarts30) * 100) : null;
   const toApprove = approval ? o.plansAwaitingApproval : 0;
   const attention = o.plansFailed + o.openWithdrawals + o.openGuaranteeRequests + toApprove;
@@ -87,7 +95,35 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      {funnelStages.length > 0 && funnelStages[0].count > 0 && (
+        <Panel
+          title="Funnel (laatste 30 dagen)"
+          className="mt-6"
+          action={
+            <Link href="/beheer/funnel" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700">
+              Waar haken ze af? <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          }
+        >
+          <ol className="grid gap-px overflow-hidden rounded-b-2xl bg-line sm:grid-cols-3 xl:grid-cols-6">
+            {funnelStages.map((st, i) => {
+              const prev = i > 0 ? funnelStages[i - 1].count : null;
+              return (
+                <li key={st.key} className="bg-white px-5 py-4">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-muted">
+                    {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
+                    {st.label}
+                  </p>
+                  <p className="mt-1 text-xl font-extrabold tabular-nums">{formatNumber(st.count)}</p>
+                  <p className="text-xs text-muted tabular-nums">{prev === null ? "100%" : `${pct(st.count, prev)} van vorige stap`}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </Panel>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title="Nieuwe bestellingen per dag (laatste 30 dagen)">
           <div className="p-5">
             <OrdersChart data={o.ordersPerDay} />
