@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
-import { faqFor } from "@/content/faq";
+import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -16,11 +16,11 @@ const copy = defineCopy({
       eyebrow: "Bundel · Meest gekozen",
       title: (
         <>
-          Voeding + training, <span className="text-brand-600">volledig op elkaar afgestemd</span>
+          Minder eten én sporten, <span className="text-brand-600">maar het schiet niet op</span>?
         </>
       ),
       intro:
-        "Afvallen doe je in de keuken, strak en sterk word je met training. Met de bundel krijg je beide, volledig op elkaar afgestemd, en betaal je minder dan los.",
+        "Dan werken je voeding en training waarschijnlijk langs elkaar heen. Met de bundel krijg je een voedings- én trainingsschema die volledig op elkaar zijn afgestemd, en betaal je minder dan los.",
       heroAlt: "Gezonde gerechten en ingrediënten op een houten tafel",
       forWho: [
         "het deze keer echt goed wilt aanpakken",
@@ -54,11 +54,11 @@ const copy = defineCopy({
       eyebrow: "Bundle · Most popular",
       title: (
         <>
-          Nutrition + training, <span className="text-brand-600">fully aligned</span>
+          Eating less and working out, <span className="text-brand-600">but getting nowhere</span>?
         </>
       ),
       intro:
-        "Weight loss happens in the kitchen; getting toned and strong happens through training. The bundle gives you both, fully aligned, and you pay less than buying them separately.",
+        "Then your nutrition and training are probably working against each other. With the bundle, you get a nutrition plan and a workout plan that are fully aligned, and you pay less than buying them separately.",
       heroAlt: "Healthy dishes and ingredients on a wooden table",
       forWho: [
         "want to get it right this time",
@@ -100,7 +100,7 @@ export default async function BundelPage() {
         heroImage: "/images/food-flatlay.jpg",
         showcase: { ...c.showcase, image: "/images/deadlift.jpg" },
         pricingProducts: ["bundel"],
-        faq: faqFor(l, ["snel", "abonnement", "opzeggen", "betalen", "resultaat", "niet-afvallen", "afblijven"]),
+        faq: faqInOrder(l, ["opzeggen", "garantie", "abonnement", "resultaat", "niet-afvallen", "afblijven"]),
       }}
     />
   );

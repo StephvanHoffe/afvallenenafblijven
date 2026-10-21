@@ -7,8 +7,8 @@ import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 
 const copy = defineCopy({
-  nl: { label: "Start je persoonlijke plan" },
-  en: { label: "Start your personal plan" },
+  nl: { label: "Maak mijn persoonlijke plan" },
+  en: { label: "Create my personal plan" },
 });
 
 /** Vaste knop onderin op mobiel, zichtbaar zodra de bezoeker voorbij de hero scrolt. */

@@ -74,9 +74,10 @@ const copy = defineCopy({
         `Ben je niet tevreden over je schema? Vraag binnen ${days} dagen na je aankoop je eerste betaling volledig terug, eenvoudig in Mijn schema's of per e-mail. Geen vragen, geen gedoe.`,
     },
     cta: {
-      title: "Klaar om te beginnen?",
-      text: "Beantwoord de vragen in 2 minuten en ontvang vandaag nog je persoonlijke schema.",
-      label: "Start je persoonlijke plan",
+      title: "Wacht niet weer tot maandag",
+      text: "Beantwoord een paar vragen in 2 minuten en ontvang vandaag nog je persoonlijke schema. Je betaalt pas als je een plan kiest.",
+      label: "Maak mijn persoonlijke plan",
+      risk: (days: number) => ` Ben je niet tevreden, dan vraag je binnen ${days} dagen je eerste betaling terug.`,
     },
   },
   en: {
@@ -132,9 +133,10 @@ const copy = defineCopy({
         `Not happy with your plan? Within ${days} days of your purchase, get your first payment back in full, easily in My plans or by email. No questions asked, no hassle.`,
     },
     cta: {
-      title: "Ready to get started?",
-      text: "Answer the questions in 2 minutes and get your personal plan today.",
-      label: "Start your personal plan",
+      title: "Don't wait for Monday again",
+      text: "Answer a few questions in 2 minutes and get your personal plan today. You only pay once you choose a plan.",
+      label: "Create my personal plan",
+      risk: (days: number) => ` Not satisfied? Request your first payment back within ${days} days.`,
     },
   },
 });
@@ -290,7 +292,9 @@ export async function CtaBanner({
         />
         <div className="relative mx-auto max-w-2xl">
           <h2 className="heading-lg text-white">{title ?? c.title}</h2>
-          <p className="mt-4 text-lg text-white/80">{text ?? c.text}</p>
+          <p className="mt-4 text-lg text-white/80">
+            {text ?? c.text + (site.guarantee.enabled ? c.risk(site.guarantee.days) : "")}
+          </p>
           <Link href={href} className="btn-glow mt-8 text-lg">
             {label ?? c.label} <ArrowRight className="size-5" aria-hidden />
           </Link>

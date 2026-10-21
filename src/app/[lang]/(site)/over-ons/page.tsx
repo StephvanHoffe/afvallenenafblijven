@@ -13,7 +13,7 @@ const copy = defineCopy({
     eyebrow: "Over ons",
     title: "Afvallen is één ding. Afblijven is de kunst.",
     story: [
-      `${site.name} is ontstaan uit frustratie over diëten die niet werken. Strenge lijstjes, shakes en verboden producten leveren misschien snel resultaat op, maar bijna iedereen komt de kilo's daarna weer aan.`,
+      `${site.name} is ontstaan uit frustratie over diëten die niet werken. Strenge lijstjes, shakes en verboden producten leveren misschien snel resultaat op, maar veel mensen komen de kilo's daarna net zo hard weer aan.`,
       "Wij geloven in een andere aanpak: een persoonlijk plan met eten dat je lekker vindt, training die past in je week en kleine, blijvende gewoontes. Dankzij slimme technologie kunnen we die persoonlijke aanpak aanbieden voor een fractie van de prijs van een diëtist of personal trainer.",
     ],
     imageAlt: "Vrienden koken samen in de keuken",
@@ -46,7 +46,7 @@ const copy = defineCopy({
     eyebrow: "About us",
     title: "Losing weight is one thing. Keeping it off is the real art.",
     story: [
-      `${site.name} (Dutch for "lose weight and keep it off") was born out of frustration with diets that don't work. Strict lists, shakes and forbidden foods might deliver quick results, but almost everyone puts the kilos back on afterwards.`,
+      `${site.name} (Dutch for "lose weight and keep it off") was born out of frustration with diets that don't work. Strict lists, shakes and forbidden foods might deliver quick results, but many people put the kilos straight back on afterwards.`,
       "We believe in a different approach: a personal plan with food you enjoy, training that fits into your week, and small habits that last. Thanks to smart technology, we can offer that personal approach for a fraction of the price of a dietitian or personal trainer.",
     ],
     imageAlt: "Friends cooking together in the kitchen",

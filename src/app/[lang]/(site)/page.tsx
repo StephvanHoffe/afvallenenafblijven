@@ -14,7 +14,8 @@ import {
 } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
-import { faqFor } from "@/content/faq";
+import { PainSection } from "@/components/conversion";
+import { faqInOrder } from "@/content/faq";
 import { launchOfferActive } from "@/lib/launch";
 import { site } from "@/config/site";
 import { lowestMonthlyPrice, productFor, type ProductId } from "@/config/pricing";
@@ -30,7 +31,7 @@ const copy = defineCopy<{
   startQuiz: string;
   sample: string;
   priceFrom: string;
-  perMonth: (price: string) => string;
+  perMonth: (price: string, perWeek: string) => string;
   priceNote: string;
   heroAlt: string;
   mealLabel: string;
@@ -79,13 +80,13 @@ const copy = defineCopy<{
 }>({
   nl: {
     badge: "Persoonlijk schema in 2 minuten",
-    title: ["Afvallen én afblijven, met een plan dat bij ", "jóu", " past."],
+    title: ["De kilo's gaan eraf, en komen ", "steeds weer terug", "?"],
     intro:
-      "Een persoonlijk voedings- en trainingsschema, afgestemd op jouw doel, lichaam, smaak en agenda. Zonder crashdiëten, zonder honger, en binnen enkele minuten in je mailbox.",
-    startQuiz: "Start de vragenlijst",
+      "Tijd voor een aanpak die wél bij je leven past: een persoonlijk voedings- en trainingsschema op jouw lichaam, smaak en agenda, elke week bijgestuurd, met daarna een plan om op gewicht te blijven. Zonder crashdieet of honger, en binnen enkele minuten in je mailbox.",
+    startQuiz: "Maak mijn persoonlijke plan",
     sample: "Bekijk een voorbeeldschema",
     priceFrom: "Al vanaf",
-    perMonth: (price) => `${price} per maand`,
+    perMonth: (price, perWeek) => `${price} per maand (${perWeek} per week)`,
     priceNote: "maandelijks via automatische incasso",
     heroAlt: "Vrouw doet thuis een buikspieroefening op een yogamat",
     mealLabel: "Lunch · 10 min",
@@ -98,7 +99,7 @@ const copy = defineCopy<{
     whyEyebrow: "Waarom deze aanpak anders is",
     whyTitle: "Geen dieet. Een plan dat je volhoudt.",
     whyText:
-      "Strenge diëten werken even, en dan komen de kilo's terug. Wij doen het anders: een realistisch tekort, genoeg eiwit, krachttraining die je spieren beschermt en eten dat je gewoon lekker vindt.",
+      "Wij doen het anders: een realistisch tekort, genoeg eiwit, krachttraining die je spieren beschermt en eten dat je gewoon lekker vindt. En omdat we elke week bijsturen, sta je er niet alleen voor als het even tegenzit.",
     whyAlt: "Vrouw kookt een gezonde maaltijd in een lichte keuken",
     dietTitle: "Standaard dieet",
     dietCons: ["Eén lijstje voor iedereen", "Honger en trek", "Saai en streng", "Jojo-effect"],
@@ -106,7 +107,7 @@ const copy = defineCopy<{
     stepsEyebrow: "Zo werkt het",
     stepsTitle: "In 3 stappen naar jouw persoonlijke schema",
     stepsIntro: "Geen wachttijden of intakegesprekken. Vandaag beginnen kan gewoon.",
-    answer: "Beantwoord de vragen",
+    answer: "Maak mijn persoonlijke plan",
     answerNote: "Duurt ongeveer 2 minuten · Je betaalt pas als je een plan kiest",
     productsEyebrow: "Kies wat bij je past",
     productsTitle: "Voeding, training of allebei",
@@ -130,11 +131,11 @@ const copy = defineCopy<{
     pricingEyebrow: "Prijzen",
     pricingTitle: "Kies je plan en looptijd",
     pricingIntro:
-      "Je betaalt per maand via automatische incasso. Hoe langer de minimale looptijd, hoe lager je maandprijs. Daarna is elk abonnement maandelijks opzegbaar.",
+      "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand. Na de minimale looptijd is elk abonnement maandelijks opzegbaar.",
     keepEyebrow: "Het geheim zit in het afblijven",
     keepTitle: "Je streefgewicht bereikt? Dan begint het pas.",
     keepText:
-      "De meeste mensen vallen terug zodra het dieet stopt. Daarom stappen we na het afvallen met je over op een onderhoudsplan: meer eten, sterk blijven en gewoontes vasthouden. Zo geef je je resultaat de beste kans om te blijven.",
+      "Juist na het afvallen gaat het vaak mis: het dieet stopt en de oude gewoontes komen terug. Daarom stappen we na het afvallen met je over op een onderhoudsplan: meer eten, sterk blijven en gewoontes vasthouden. Zo geef je je resultaat de beste kans om te blijven.",
     keepList: [
       "Geleidelijk terug naar je onderhoudsniveau",
       "Krachttraining om je stofwisseling te ondersteunen",
@@ -147,13 +148,13 @@ const copy = defineCopy<{
   },
   en: {
     badge: "Your personal plan in 2 minutes",
-    title: ["Lose the weight and keep it off, with a plan built around ", "you", "."],
+    title: ["The kilos come off, then ", "keep coming back", "?"],
     intro:
-      "A personal nutrition and workout plan, tailored to your goal, body, taste and schedule. No crash diets, no going hungry, and in your inbox within minutes.",
-    startQuiz: "Start the questionnaire",
+      "Time for an approach that actually fits your life: a personal nutrition and workout plan built around your body, taste and schedule, adjusted every week, followed by a plan to keep the weight off. No crash diet, no going hungry, and in your inbox within minutes.",
+    startQuiz: "Create my personal plan",
     sample: "See a sample plan",
     priceFrom: "From just",
-    perMonth: (price) => `${price} a month`,
+    perMonth: (price, perWeek) => `${price} a month (${perWeek} a week)`,
     priceNote: "paid monthly by direct debit",
     heroAlt: "Woman doing an ab exercise on a yoga mat at home",
     mealLabel: "Lunch · 10 min",
@@ -166,7 +167,7 @@ const copy = defineCopy<{
     whyEyebrow: "Why this approach is different",
     whyTitle: "Not a diet. A plan you can stick to.",
     whyText:
-      "Strict diets work for a while, and then the kilos creep back. We do things differently: a realistic calorie deficit, plenty of protein, strength training that protects your muscles, and food you genuinely enjoy.",
+      "We do things differently: a realistic calorie deficit, plenty of protein, strength training that protects your muscles, and food you genuinely enjoy. And because we adjust your plan every week, you're not on your own when things get tough.",
     whyAlt: "Woman cooking a healthy meal in a bright kitchen",
     dietTitle: "Typical diet",
     dietCons: ["One list for everyone", "Hunger and cravings", "Boring and strict", "Yo-yo effect"],
@@ -174,7 +175,7 @@ const copy = defineCopy<{
     stepsEyebrow: "How it works",
     stepsTitle: "Your personal plan in 3 simple steps",
     stepsIntro: "No waiting lists, no intake interviews. You can start today.",
-    answer: "Answer the questions",
+    answer: "Create my personal plan",
     answerNote: "Takes about 2 minutes · You only pay once you choose a plan",
     productsEyebrow: "Choose what suits you",
     productsTitle: "Nutrition, training or both",
@@ -199,11 +200,11 @@ const copy = defineCopy<{
     pricingEyebrow: "Pricing",
     pricingTitle: "Choose your plan and term",
     pricingIntro:
-      "You pay monthly by direct debit. The longer the minimum term, the lower your monthly price. After that, every subscription can be cancelled monthly.",
+      "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price. After the minimum term, every subscription can be cancelled monthly.",
     keepEyebrow: "The secret is keeping it off",
     keepTitle: "Reached your target weight? That's where it really begins.",
     keepText:
-      "Most people slip back as soon as the diet ends. That's why, once you've lost the weight, we move you onto a maintenance plan: eating more, staying strong and holding on to your new habits. That way, you give your results the best chance to last.",
+      "This is exactly where it often goes wrong: the diet ends and the old habits return. That's why, once you've lost the weight, we move you onto a maintenance plan: eating more, staying strong and holding on to your new habits. That way, you give your results the best chance to last.",
     keepList: [
       "A gradual return to your maintenance level",
       "Strength training to support your metabolism",
@@ -227,7 +228,9 @@ export default async function HomePage() {
   const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
   const l = await getLocale();
   const c = copy[l];
-  const faq = faqFor(l);
+  // De twijfels die het afsluiten tegenhouden eerst.
+  const faq = faqInOrder(l, ["opzeggen", "garantie", "abonnement", "persoonlijk", "niet-afvallen", "resultaat", "snel"]);
+  const price = lowestMonthlyPrice();
 
   return (
     <>
@@ -256,7 +259,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <p className="mt-4 text-[0.9375rem] font-semibold text-ink/80">
-              {c.priceFrom} <span className="text-brand-700">{c.perMonth(euro(lowestMonthlyPrice(), l))}</span> ·{" "}
+              {c.priceFrom} <span className="text-brand-700">{c.perMonth(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> ·{" "}
               {c.priceNote}
             </p>
             <div className="mt-8">
@@ -300,6 +303,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* HERKEN JE DIT? */}
+      <PainSection topic="afvallen" l={l} href="/start" />
 
       {/* WAAROM HET WERKT */}
       <section className="container-page py-16">
@@ -482,13 +488,13 @@ export default async function HomePage() {
       <section className="bg-sand py-16 sm:py-20">
         <div className="container-page">
           <SectionHeading eyebrow={c.faqEyebrow} title={c.faqTitle} />
-          <FaqList items={faq.slice(0, 7)} />
+          <FaqList items={faq} />
           <p className="mt-6 text-center">
             <Link href="/contact#veelgestelde-vragen" className="font-bold text-brand-700 underline underline-offset-2">
               {c.allQuestions}
             </Link>
           </p>
-          <FaqJsonLd items={faq.slice(0, 7)} />
+          <FaqJsonLd items={faq} />
         </div>
       </section>
 

@@ -6,6 +6,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 
 **Verkoop en conversie**
 - Homepage, productpagina's (voeding, training, bundel), prijzen, hoe het werkt, voorbeeldschema (inclusief een voorbeeld van Mijn schema's), over ons en contact met veelgestelde vragen.
+- Verkooppagina's beginnen bij het probleem van de bezoeker: een blok "Herken je dit?" (herkenbare situaties, wat het kost om zo door te gaan, "het ligt niet aan jou" en een knop), daarna "Zo pakken we het anders aan". De teksten per onderwerp (afvallen, voeding, training, bundel) staan in `src/content/pains.ts` en worden gedeeld met de campagne-landingspagina's. Bewust over frustratie en verspilde moeite, niet over iemands lichaam, en zonder beloftes over resultaat.
 - Vragenlijst in stappen (`/start`). De bezoeker ziet direct een persoonlijk resultaat: calorie- en macrodoel en een prognose met streefdatum. Daarna volgen de plankeuze en de betaling.
 - Prijstabel met looptijd-schakelaar (vanaf € 8,95 per maand), kortingslabels, "Meest gekozen"-bundel en een losse aankoop als alternatief.
 - Lanceringsactie (automatische korting op de eerste maand, alleen binnen de ingestelde data).

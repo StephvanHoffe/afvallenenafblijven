@@ -203,7 +203,7 @@ const copy = defineCopy({
     },
     result: {
       title: "Jouw persoonlijke plan is klaar om gemaakt te worden",
-      subtitle: "Op basis van je antwoorden hebben we jouw dagdoelen berekend.",
+      subtitle: "Op basis van je antwoorden hebben we jouw dagdoelen berekend. Geen standaarddieet voor iedereen, maar een doel voor jóu.",
       energy: "Jouw dagelijkse energiedoel",
       protein: "Eiwit",
       carbs: "Koolhydraten",
@@ -220,7 +220,7 @@ const copy = defineCopy({
       back: "Terug naar je resultaat",
       title: (name: string) => `${name ? `${name.trim()}, kies` : "Kies"} je plan`,
       basis: (kcal: string, protein: number) => `Je schema wordt gemaakt op ${kcal} kcal en ${protein} g eiwit per dag. `,
-      ready: "Na betaling staat het binnen enkele minuten klaar.",
+      ready: "Na betaling staat het binnen enkele minuten klaar. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
     },
     checkout: {
       title: "Je bestelling",
@@ -368,7 +368,7 @@ const copy = defineCopy({
     },
     result: {
       title: "Your personal plan is ready to be created",
-      subtitle: "Based on your answers, we've calculated your daily targets.",
+      subtitle: "Based on your answers, we've calculated your daily targets. Not a standard diet for everyone, but a target for you.",
       energy: "Your daily energy target",
       protein: "Protein",
       carbs: "Carbs",
@@ -385,7 +385,7 @@ const copy = defineCopy({
       back: "Back to your result",
       title: (name: string) => (name ? `${name.trim()}, choose your plan` : "Choose your plan"),
       basis: (kcal: string, protein: number) => `Your plan will be built around ${kcal} kcal and ${protein} g of protein a day. `,
-      ready: "After payment, it'll be ready within minutes.",
+      ready: "After payment, it'll be ready within minutes. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
     },
     checkout: {
       title: "Your order",

@@ -16,7 +16,7 @@ const copy = defineCopy({
       "Zo werkt Afvallen & Afblijven: vragenlijst invullen, plan kiezen en binnen enkele minuten je persoonlijke voedings- en trainingsschema ontvangen.",
     eyebrow: "Hoe werkt het",
     title: "Van vragenlijst naar persoonlijk schema in een paar minuten",
-    intro: "Geen wachtlijst, geen intakegesprek en geen standaardlijstjes. Wel een schema dat helemaal van jou is.",
+    intro: "Geen wachtlijst, geen intakegesprek en geen standaardlijstje dat je na drie weken weer opgeeft. Wel een schema dat helemaal van jou is, en dat meebeweegt als het even tegenzit.",
     details: [
       {
         title: "1. Je vult de vragenlijst in",
@@ -39,7 +39,8 @@ const copy = defineCopy({
         alt: "Sporter traint met hulp van een begeleider",
       },
     ],
-    start: "Start de vragenlijst",
+    start: "Maak mijn persoonlijke plan",
+    startNote: "2 minuten · je betaalt pas als je een plan kiest",
   },
   en: {
     metaTitle: "How does it work?",
@@ -47,7 +48,7 @@ const copy = defineCopy({
       "This is how Afvallen & Afblijven works: fill in the questionnaire, choose your plan and receive your personal nutrition and workout plan within minutes.",
     eyebrow: "How it works",
     title: "From questionnaire to personal plan in just a few minutes",
-    intro: "No waiting list, no intake interview and no generic lists. Just a plan that's entirely yours.",
+    intro: "No waiting list, no intake interview and no generic list you give up on after three weeks. Just a plan that's entirely yours, and that adapts when things get tough.",
     details: [
       {
         title: "1. You fill in the questionnaire",
@@ -70,7 +71,8 @@ const copy = defineCopy({
         alt: "Athlete training with the help of a coach",
       },
     ],
-    start: "Start the questionnaire",
+    start: "Create my personal plan",
+    startNote: "2 minutes · you only pay once you choose a plan",
   },
 });
 
@@ -112,6 +114,7 @@ export default async function HoeWerktHetPage() {
           <Link href="/start" className="btn-primary text-lg">
             {c.start} <ArrowRight className="size-5" aria-hidden />
           </Link>
+          <p className="mt-3 text-sm text-muted">{c.startNote}</p>
         </div>
       </section>
       <CtaBanner />

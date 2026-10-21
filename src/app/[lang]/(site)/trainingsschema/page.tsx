@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
-import { faqFor } from "@/content/faq";
+import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -16,11 +16,11 @@ const copy = defineCopy({
       eyebrow: "Trainingsschema",
       title: (
         <>
-          Sterker en strakker, <span className="text-brand-600">thuis of in de gym</span>
+          Stop met trainen <span className="text-brand-600">zonder plan</span>
         </>
       ),
       intro:
-        "Een trainingsschema dat past bij jouw niveau, materiaal en agenda. Met duidelijke uitleg per oefening en een opbouw waarmee je elke week vooruitgaat.",
+        "Elke keer dezelfde oefeningen, twijfelen wat je moet doen en weinig vooruitgang: zonde van je tijd. Je krijgt een trainingsschema dat past bij jouw niveau, materiaal en agenda, met duidelijke uitleg per oefening en een opbouw waarmee je elke week een stap verder komt. Thuis of in de sportschool.",
       heroAlt: "Vrouw drukt een halter boven haar hoofd in de sportschool",
       forWho: [
         "wilt afvallen zonder spiermassa te verliezen",
@@ -58,11 +58,11 @@ const copy = defineCopy({
       eyebrow: "Workout plan",
       title: (
         <>
-          Stronger and more toned, <span className="text-brand-600">at home or in the gym</span>
+          Stop training <span className="text-brand-600">without a plan</span>
         </>
       ),
       intro:
-        "A workout plan that fits your level, equipment and schedule. With clear instructions for every exercise and a progression that moves you forward every week.",
+        "The same exercises every time, unsure what to do and little progress: a waste of your time. You get a workout plan that fits your level, equipment and schedule, with clear instructions for every exercise and a build-up that takes you a step further every week. At home or at the gym.",
       heroAlt: "Woman pressing a weight overhead at the gym",
       forWho: [
         "want to lose weight without losing muscle",
@@ -108,7 +108,7 @@ export default async function TrainingsschemaPage() {
         heroImage: "/images/woman-overhead-press.jpg",
         showcase: { ...c.showcase, image: "/images/group-training.jpg" },
         pricingProducts: ["training", "bundel"],
-        faq: faqFor(l, ["snel", "abonnement", "opzeggen", "thuis", "koppelen", "medisch"]),
+        faq: faqInOrder(l, ["opzeggen", "garantie", "thuis", "abonnement", "koppelen", "medisch"]),
       }}
     />
   );

@@ -7,8 +7,6 @@ import {
   ChefHat,
   Dumbbell,
   Flame,
-  HeartCrack,
-  Hourglass,
   House,
   LineChart,
   ListChecks,
@@ -21,10 +19,9 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
-  Wallet,
   Watch,
-  X,
 } from "lucide-react";
+import { FixSection, PainSection } from "@/components/conversion";
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
@@ -60,9 +57,6 @@ const getIcons: Record<LandingVariant, (typeof Target)[]> = {
 };
 
 const guideIcons = [Scale, CalendarDays, LineChart];
-
-/** Geld, tijd en vertrouwen: wat het kost om zo door te gaan. */
-const costIcons = [Wallet, Hourglass, HeartCrack];
 
 /** Adres van de vragenlijst, met het doel en (per variant) het plan al ingevuld. */
 function startHref(variant: LandingVariant, goal?: Intake["goal"]): string {
@@ -246,72 +240,8 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
       </section>
 
       {/* HERKEN JE DIT? Eerst het probleem, dan wat het kost, dan de uitweg. */}
-      <section className="bg-sand py-16">
-        <div className="container-page">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
-            <div>
-              <p className="eyebrow mb-3">{c.painsEyebrow}</p>
-              <h2 className="heading-lg">{v.painTitle}</h2>
-              <ul className="mt-6 space-y-3.5">
-                {v.painPoints.map((p) => (
-                  <li key={p} className="flex gap-3 text-[1.0625rem] leading-relaxed">
-                    <X className="mt-1 size-5 shrink-0 text-accent-500" aria-hidden />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="self-start rounded-[var(--radius-card)] bg-brand-950 p-6 text-white sm:p-8">
-              <h3 className="text-xl font-extrabold">{c.costTitle}</h3>
-              <ul className="mt-6 space-y-5">
-                {v.costs.map((x, i) => {
-                  const Icon = costIcons[i] ?? Hourglass;
-                  return (
-                    <li key={x.title} className="flex gap-4">
-                      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-lime-glow">
-                        <Icon className="size-5" aria-hidden />
-                      </span>
-                      <span>
-                        <span className="block font-bold">{x.title}</span>
-                        <span className="mt-0.5 block text-[0.9375rem] text-white/70">{x.text}</span>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-          <div className="mx-auto mt-12 max-w-3xl text-center">
-            <h2 className="heading-md">{v.reframe.title}</h2>
-            <p className="mt-3 text-lg leading-relaxed text-muted">{v.reframe.text}</p>
-            <Link href={mainHref} data-lp-cta="pijn" className="btn-primary mt-7 text-lg">
-              {c.painCta} <ArrowRight className="size-5" aria-hidden />
-            </Link>
-            <p className="mt-3 text-sm text-muted">{c.painCtaNote}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ZO PAKKEN WE HET ANDERS AAN */}
-      <section className="container-page py-16">
-        <SectionHeading eyebrow={c.fixEyebrow} title={c.fixTitle} />
-        <ul className="grid gap-5 sm:grid-cols-2">
-          {v.fixes.map((f) => (
-            <li key={f.pain} className="card flex flex-col p-6">
-              <p className="text-xs font-bold tracking-wide text-muted uppercase">{c.fixLabels[0]}</p>
-              <p className="mt-1.5 flex gap-3 text-muted">
-                <X className="mt-0.5 size-5 shrink-0 text-accent-500" aria-hidden />
-                {f.pain}
-              </p>
-              <p className="mt-4 border-t border-line pt-4 text-xs font-bold tracking-wide text-brand-600 uppercase">{c.fixLabels[1]}</p>
-              <p className="mt-1.5 flex gap-3 font-semibold">
-                <Check className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
-                {f.answer}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <PainSection topic={variant} l={l} href={mainHref} cta="pijn" />
+      <FixSection topic={variant} l={l} />
 
       {/* WAT JE KRIJGT */}
       <section className="bg-sand py-14">

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Check, Minus } from "lucide-react";
+import { CalendarDays, Check, Minus, PiggyBank, RefreshCw } from "lucide-react";
 import { CtaBanner, FaqJsonLd, FaqList, Guarantee, SectionHeading } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { faqFor } from "@/content/faq";
+import { faqInOrder } from "@/content/faq";
 import {
   SUBSCRIPTION_DURATIONS,
   durationFor,
   durations,
   monthlyPrice,
   commitmentTotal,
+  lowestMonthlyPrice,
   maxSavingsPercent,
   productFor,
   type ProductId,
@@ -54,7 +55,22 @@ const copy = defineCopy({
     eyebrow: "Prijzen & abonnementen",
     title: "Persoonlijke begeleiding, zonder de prijs van een personal trainer",
     intro: (percent: number) =>
-      `Kies voeding, training of de voordelige bundel. Je betaalt altijd per maand via automatische incasso. Kies je een langere minimale looptijd, dan bespaar je tot ${percent}% per maand.`,
+      `Een diëtist of personal trainer kost al snel tientallen euro's per afspraak. Bij ons krijg je een persoonlijk schema dat elke week wordt bijgestuurd, voor een vast bedrag per maand. Kies je een langere minimale looptijd, dan bespaar je tot ${percent}% per maand.`,
+    whyTitle: "Waarom 3 maanden of langer?",
+    why: (percent: number, from: string, perWeek: string) => [
+      {
+        title: "Tijd om gewoontes op te bouwen",
+        text: "Eén schema van 4 weken is een begin. Met een abonnement krijg je elke 4 weken een nieuw schema, bijgestuurd op je voortgang, zodat je kunt blijven bijsturen.",
+      },
+      {
+        title: "Lagere maandprijs",
+        text: `Tot ${percent}% voordeliger dan per maand. Al vanaf ${from} per maand, ofwel ${perWeek} per week.`,
+      },
+      {
+        title: "Daarna gewoon opzegbaar",
+        text: "Na de minimale looptijd zeg je maandelijks op, online in een paar klikken. Je houdt al je schema's.",
+      },
+    ],
     compareTitle: "Wat zit er in elk plan?",
     included: "Inbegrepen",
     yes: "Ja",
@@ -77,7 +93,22 @@ const copy = defineCopy({
     eyebrow: "Pricing & subscriptions",
     title: "Personal guidance, without the personal trainer price tag",
     intro: (percent: number) =>
-      `Choose nutrition, training or the money-saving bundle. You always pay monthly by direct debit. Pick a longer minimum term and save up to ${percent}% a month.`,
+      `A dietitian or personal trainer easily costs tens of euros per session. With us, you get a personal plan that's adjusted every week, for a fixed monthly amount. Pick a longer minimum term and save up to ${percent}% a month.`,
+    whyTitle: "Why 3 months or longer?",
+    why: (percent: number, from: string, perWeek: string) => [
+      {
+        title: "Time to build habits",
+        text: "One 4-week plan is a start. With a subscription, you get a new plan every 4 weeks, fine-tuned to your progress, so you can keep adjusting.",
+      },
+      {
+        title: "A lower monthly price",
+        text: `Up to ${percent}% cheaper than monthly. From just ${from} a month, or ${perWeek} a week.`,
+      },
+      {
+        title: "Easy to cancel afterwards",
+        text: "After the minimum term, you cancel monthly, online in a few clicks. You keep all your plans.",
+      },
+    ],
     compareTitle: "What's included in each plan?",
     included: "Included",
     yes: "Yes",
@@ -106,7 +137,10 @@ export default async function PrijzenPage() {
   const l = await getLocale();
   const c = copy[l];
   const ids: ProductId[] = ["voeding", "training", "bundel"];
-  const faq = faqFor(l, ["abonnement", "opzeggen", "betalen", "garantie", "resultaat"]);
+  // De twijfels die het afsluiten tegenhouden eerst.
+  const faq = faqInOrder(l, ["opzeggen", "garantie", "abonnement", "betalen", "resultaat"]);
+  const from = lowestMonthlyPrice();
+  const why = c.why(maxSavingsPercent(), euro(from, l), euro(Math.round((from * 12) / 52), l));
   return (
     <>
       <section className="bg-gradient-to-b from-brand-50 to-sand py-14 sm:py-20">
@@ -118,6 +152,21 @@ export default async function PrijzenPage() {
             intro={c.intro(maxSavingsPercent())}
           />
           <PricingTable launch={launch} />
+          <div className="mx-auto mt-14 max-w-5xl">
+            <h2 className="heading-md text-center">{c.whyTitle}</h2>
+            <ul className="mt-6 grid gap-4 md:grid-cols-3">
+              {why.map((w, i) => {
+                const Icon = [CalendarDays, PiggyBank, RefreshCw][i] ?? Check;
+                return (
+                  <li key={w.title} className="card p-5">
+                    <Icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600" aria-hidden />
+                    <h3 className="mt-3 font-bold">{w.title}</h3>
+                    <p className="mt-1 text-[0.9375rem] text-muted">{w.text}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           <div className="mt-12">
             <Guarantee />
           </div>

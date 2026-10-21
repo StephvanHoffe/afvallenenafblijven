@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
-import { faqFor } from "@/content/faq";
+import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -20,7 +20,7 @@ const copy = defineCopy({
         </>
       ),
       intro:
-        "Een persoonlijk weekmenu op jouw calorie- en eiwitdoel, met recepten, hoeveelheden en een complete boodschappenlijst. Zonder honger, zonder verboden lijstjes.",
+        "Elke dag kipfilet met broccoli? Geen wonder dat je het niet volhoudt. Je krijgt een persoonlijk weekmenu op jouw calorie- en eiwitdoel, met recepten, hoeveelheden en een complete boodschappenlijst. Zonder honger, zonder verboden lijstjes.",
       heroAlt: "Kleurrijke bowl met groente, kikkererwten en avocado",
       forWho: [
         "wilt afvallen zonder te hongeren of alles te moeten laten staan",
@@ -62,7 +62,7 @@ const copy = defineCopy({
         </>
       ),
       intro:
-        "A personal weekly meal plan built around your calorie and protein targets, with recipes, quantities and a complete shopping list. No hunger, no lists of forbidden foods.",
+        "Chicken and broccoli every day? No wonder you can't keep it up. You get a personal weekly meal plan built around your calorie and protein targets, with recipes, quantities and a complete shopping list. No hunger, no lists of forbidden foods.",
       heroAlt: "Colourful bowl with vegetables, chickpeas and avocado",
       forWho: [
         "want to lose weight without going hungry or giving up everything you enjoy",
@@ -108,7 +108,7 @@ export default async function VoedingsschemaPage() {
         heroImage: "/images/bowl-colorful.jpg",
         showcase: { ...c.showcase, image: "/images/salad-jar.jpg" },
         pricingProducts: ["voeding", "bundel"],
-        faq: faqFor(l, ["snel", "persoonlijk", "opzeggen", "allergie", "niet-afvallen"]),
+        faq: faqInOrder(l, ["opzeggen", "garantie", "persoonlijk", "allergie", "niet-afvallen", "snel"]),
       }}
     />
   );
