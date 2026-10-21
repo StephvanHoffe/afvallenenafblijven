@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ArrowRight, ChevronRight, CircleAlert } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleAlert, Lightbulb } from "lucide-react";
 import { OrdersChart } from "@/components/beheer/OrdersChart";
-import { NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, pct, planName, table } from "@/components/beheer/ui";
+import { Badge, NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, pct, planName, table } from "@/components/beheer/ui";
+import { AREA_LABELS, buildOpportunities, hiddenOpportunities, opportunityInput } from "@/lib/admin/opportunities";
 import { funnelReport } from "@/lib/admin/funnel-report";
 import { durations, products } from "@/config/pricing";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
@@ -31,6 +32,12 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
     adminData().approvalRequired(),
     funnelReport({ days: 30 }).catch(() => null),
   ]);
+  const topKansen = await Promise.all([opportunityInput(), hiddenOpportunities()])
+    .then(([input, hidden]) => buildOpportunities(input).kansen.filter((k) => !hidden[k.id]).slice(0, 3))
+    .catch((err) => {
+      console.error("Kansen berekenen mislukt", err);
+      return [];
+    });
   const funnelKeys = ["visits", "quiz", "result", "selected", "checkout", "purchase"];
   const funnelStages = funnel ? funnelKeys.map((k) => funnel.stages.find((st) => st.key === k)).filter((st) => st !== undefined) : [];
   const conversion = o.checkoutStarts30 > 0 ? Math.round((o.newOrders30 / o.checkoutStarts30) * 100) : null;
@@ -93,6 +100,33 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
             </Link>
           )}
         </div>
+      )}
+
+      {topKansen.length > 0 && (
+        <Panel
+          title="Belangrijkste kansen"
+          className="mt-6"
+          action={
+            <Link href="/beheer/kansen" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700">
+              Alle kansen <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          }
+        >
+          <ul className="divide-y divide-line">
+            {topKansen.map((k) => (
+              <li key={k.id} className="flex items-start gap-3 px-5 py-3.5 text-sm">
+                <Lightbulb className="mt-0.5 size-4.5 shrink-0 text-brand-700" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="font-semibold">{k.title}</span>
+                  <span className="block text-muted">{k.finding}</span>
+                </span>
+                <span className="hidden shrink-0 sm:block">
+                  <Badge tone={k.impact === "hoog" ? "bad" : k.impact === "middel" ? "warn" : "muted"}>{AREA_LABELS[k.area]}</Badge>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
 
       {funnelStages.length > 0 && funnelStages[0].count > 0 && (

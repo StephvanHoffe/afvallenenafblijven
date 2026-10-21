@@ -6,7 +6,7 @@ import { Star } from "lucide-react";
 import { Meter, NeedsDatabase, PageTitle, Panel, QueryTabs, StatTile, pct } from "@/components/beheer/ui";
 import { adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
-import { feedbackReport } from "@/lib/admin/insights";
+import { FEEDBACK_CONCERNS, feedbackReport } from "@/lib/admin/insights";
 import { CANCEL_REASONS, cancelReasonLabel } from "@/lib/cancel-reasons";
 import { checkinOptions } from "@/lib/checkin";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -21,15 +21,7 @@ const PERIODS = [
   { value: "365", label: "12 maanden" },
 ];
 
-/** Antwoorden die op een probleem wijzen: die tellen we als "aandacht". */
-const CONCERNS: Record<string, string[]> = {
-  nutritionAdherence: ["Soms (50-70%)", "Weinig (minder dan 50%)"],
-  hunger: ["Vaak"],
-  energy: ["Laag"],
-  sleep: ["Slecht"],
-  trainingAdherence: ["Ongeveer de helft", "Weinig of geen"],
-  difficulty: ["Te zwaar", "Te licht"],
-};
+const CONCERNS = FEEDBACK_CONCERNS;
 
 export default function FeedbackPage({ searchParams }: PageProps<"/beheer/feedback">) {
   return (

@@ -35,6 +35,7 @@ import { connectionsForCustomer } from "@/lib/health/repo";
 import { disconnect } from "@/lib/health/sync";
 import { logAdminAction } from "@/lib/admin/log";
 import { cancelReasonLabel, isCancelReason } from "@/lib/cancel-reasons";
+import { aiAdvice, generateAiAdvice, hideOpportunity as hideOpportunityInDb, showAllOpportunities as showAllOpportunitiesInDb } from "@/lib/admin/opportunities";
 
 export interface LoginState {
   error?: string;
@@ -539,4 +540,37 @@ export async function sendCheckoutReminderNow(formData: FormData): Promise<void>
   );
   await logAdminAction("Herinnering afrekenen verstuurd", row.email);
   back(formData, "herinnering-verstuurd");
+}
+
+// ---------- Kansen ----------
+
+export async function hideOpportunity(formData: FormData): Promise<void> {
+  await guard(formData);
+  const id = String(formData.get("kans") ?? "");
+  if (!id) back(formData, "niet-gevonden");
+  await hideOpportunityInDb(id);
+  await logAdminAction("Kans verborgen (30 dagen)", String(formData.get("titel") ?? id).slice(0, 200));
+  back(formData, "kans-verborgen");
+}
+
+export async function showAllOpportunities(formData: FormData): Promise<void> {
+  await guard(formData);
+  await showAllOpportunitiesInDb();
+  back(formData, "kansen-hersteld");
+}
+
+/** Vraagt Claude om advies op basis van de opgetelde cijfers (duurt ongeveer een minuut). */
+export async function requestAiAdvice(formData: FormData): Promise<void> {
+  await guard(formData);
+  if (!process.env.ANTHROPIC_API_KEY) back(formData, "ai-geen-sleutel");
+  const previous = await aiAdvice();
+  if (previous && Date.now() - Date.parse(previous.at) < 10 * 60 * 1000) back(formData, "ai-te-snel");
+  try {
+    await generateAiAdvice();
+  } catch (err) {
+    console.error("Advies van Claude mislukt", err);
+    back(formData, "ai-mislukt");
+  }
+  await logAdminAction("Advies gevraagd aan Claude", "Kansen");
+  back(formData, "ai-klaar");
 }

@@ -152,7 +152,8 @@ function Nl() {
       </p>
       <p>
         Om te zien waar bezoekers afhaken, slaan we in hetzelfde tabblad een willekeurig bezoeknummer op
-        (<code>afb_bezoek</code>, sessionStorage). Daarmee tellen we welke pagina&apos;s en vragen een bezoek bekijkt. Het nummer
+        (<code>afb_bezoek</code>, sessionStorage). Daarmee tellen we welke pagina&apos;s en vragen een bezoek bekijkt, hoe lang een pagina openstaat en van welke
+        website het bezoek kwam (alleen de naam). Het nummer
         verdwijnt als je het tabblad sluit, wordt niet gedeeld met andere partijen en niet gebruikt om je op andere websites te
         volgen; we slaan geen IP-adres op. Dit valt onder de uitzondering voor analytische gegevens met geringe gevolgen voor je
         privacy, en vraagt daarom geen toestemming. Staat &quot;Do Not Track&quot; of &quot;Global Privacy Control&quot; aan in je browser, dan
@@ -186,7 +187,8 @@ function En() {
       </p>
       <p>
         To see where visitors drop off, we store a random visit number in the same tab (<code>afb_bezoek</code>,
-        sessionStorage). We use it to count which pages and questions a visit views. The number disappears when you close the
+        sessionStorage). We use it to count which pages and questions a visit views, how long a page is open and which website the visit
+        came from (only its name). The number disappears when you close the
         tab, is not shared with other parties and is not used to track you on other websites; we do not store your IP address.
         This falls under the exemption for analytics with little impact on your privacy, so it does not require consent. If
         &quot;Do Not Track&quot; or &quot;Global Privacy Control&quot; is switched on in your browser, we do not measure anything. See also

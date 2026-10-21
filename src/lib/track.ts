@@ -4,7 +4,9 @@
  * kiezen, afrekenen) om te zien waar mensen afhaken. Er worden geen cookies
  * gezet en geen persoonsgegevens, IP-adressen of browsergegevens bewaard: alleen
  * een willekeurig bezoeknummer per tabblad (sessionStorage, verdwijnt als het
- * tabblad sluit), het soort apparaat en de campagne uit de link. Wie in de
+ * tabblad sluit), het soort apparaat, de campagne uit de link, de website
+ * waarvandaan het bezoek kwam (alleen de domeinnaam) en hoe lang een pagina
+ * zichtbaar openstond. Wie in de
  * browser "Do Not Track" of Global Privacy Control aanzet, wordt niet gemeten.
  * De gegevens gaan nergens anders heen dan naar onze eigen database.
  */
@@ -13,6 +15,7 @@ const VISIT_KEY = "afb_bezoek";
 
 export type FunnelEvent =
   | "page_view"
+  | "page_leave"
   | "quiz_step"
   | "plan_select"
   | "discount_applied"
@@ -46,8 +49,21 @@ export function deviceType(): "mobiel" | "tablet" | "desktop" {
   return w < 768 ? "mobiel" : w < 1100 ? "tablet" : "desktop";
 }
 
+/** De website waarvandaan het bezoek kwam (alleen de domeinnaam), niet onze eigen site. */
+function referrerHost(): string | undefined {
+  try {
+    const host = document.referrer ? new URL(document.referrer).hostname : "";
+    return host && host !== window.location.hostname ? host : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Meet één stap. Doet niets als meten uit staat; fouten worden genegeerd. */
-export function track(event: FunnelEvent, data: { step?: string; product?: string | null; duration?: string | null } = {}) {
+export function track(
+  event: FunnelEvent,
+  data: { step?: string; product?: string | null; duration?: string | null; path?: string; seconds?: number } = {},
+) {
   if (!enabled()) return;
   try {
     const params = new URLSearchParams(window.location.search);
@@ -57,12 +73,14 @@ export function track(event: FunnelEvent, data: { step?: string; product?: strin
       step: data.step,
       product: data.product ?? undefined,
       duration: data.duration ?? undefined,
-      p: window.location.pathname,
+      p: data.path ?? window.location.pathname,
       l: document.documentElement.lang,
       d: deviceType(),
       s: params.get("utm_source") ?? undefined,
       c: params.get("utm_campaign") ?? undefined,
       lp: params.get("lp") ?? undefined,
+      r: referrerHost(),
+      sec: data.seconds,
     });
     const blob = new Blob([body], { type: "application/json" });
     if (!navigator.sendBeacon?.("/api/t", blob)) {

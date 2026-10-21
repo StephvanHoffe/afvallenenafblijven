@@ -194,6 +194,8 @@ create table if not exists funnel_events (
   landing text,
   created_at timestamptz not null default now()
 );
+alter table funnel_events add column if not exists referrer text;
+alter table funnel_events add column if not exists seconds integer;
 create index if not exists funnel_events_created_idx on funnel_events(created_at);
 create index if not exists funnel_events_visit_idx on funnel_events(visit_id);
 alter table intakes add column if not exists visit_id text;

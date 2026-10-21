@@ -28,6 +28,8 @@ export async function POST(request: Request) {
       source: e.s,
       campaign: e.c,
       landing: e.lp,
+      referrer: e.r,
+      seconds: e.sec,
     });
   }
   return new Response(null, { status: 204 });

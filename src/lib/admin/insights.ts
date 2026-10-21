@@ -40,6 +40,16 @@ export const FEEDBACK_QUESTIONS: { key: keyof CheckinData; label: string }[] = [
   { key: "difficulty", label: "Zwaarte trainingen" },
 ];
 
+/** Antwoorden in de check-in die op een probleem wijzen (oranje in Feedback, en een kans bij Kansen). */
+export const FEEDBACK_CONCERNS: Record<string, string[]> = {
+  nutritionAdherence: ["Soms (50-70%)", "Weinig (minder dan 50%)"],
+  hunger: ["Vaak"],
+  energy: ["Laag"],
+  sleep: ["Slecht"],
+  trainingAdherence: ["Ongeveer de helft", "Weinig of geen"],
+  difficulty: ["Te zwaar", "Te licht"],
+};
+
 export async function feedbackReport(days = 90): Promise<FeedbackReport> {
   if (isDemoMode()) return demoFeedbackReport();
   const sql = await db();

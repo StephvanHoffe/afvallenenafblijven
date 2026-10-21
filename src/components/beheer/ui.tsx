@@ -146,6 +146,12 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "herinnering-ongeldig": { tone: "warn", text: "Kies een wachttijd tussen 1 en 48 uur." },
   "herinnering-niet-mogelijk": { tone: "warn", text: "Een herinnering kan alleen als de bezoeker toestemming gaf voor e-mail, nog niet heeft betaald en nog geen herinnering kreeg." },
   "herinnering-verstuurd": { tone: "ok", text: "De herinnering is verstuurd." },
+  "kans-verborgen": { tone: "ok", text: "De kans is 30 dagen verborgen. Is hij daarna nog actueel, dan verschijnt hij weer." },
+  "kansen-hersteld": { tone: "ok", text: "Alle verborgen kansen worden weer getoond." },
+  "ai-klaar": { tone: "ok", text: "Het advies van Claude staat hieronder." },
+  "ai-mislukt": { tone: "warn", text: "Het advies kon niet worden gemaakt. Controleer de API-sleutel en het tegoed bij Anthropic, en probeer het later opnieuw." },
+  "ai-te-snel": { tone: "warn", text: "Je hebt net al advies gevraagd. Probeer het over tien minuten opnieuw." },
+  "ai-geen-sleutel": { tone: "warn", text: "Stel eerst ANTHROPIC_API_KEY in bij je hosting." },
 };
 
 export function Notice({ code }: { code?: string }) {

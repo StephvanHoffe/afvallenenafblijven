@@ -6,6 +6,7 @@ import type { AbandonedCheckout, FunnelBreakdownRow, FunnelFilters, FunnelReport
 import type { AnalyticsReport, CohortRow, MonthRow } from "@/lib/admin/analytics-report";
 import type { AdminLogRow, CustomerJourney, EmailLogRow, FeedbackReport, NoteRow } from "@/lib/admin/insights";
 import type { DiscountCodeRow } from "@/lib/discounts-server";
+import type { VisitorsReport, VisitorSegmentRow } from "@/lib/admin/visitors-report";
 import type { CheckinData } from "@/lib/checkin";
 
 /**
@@ -461,4 +462,122 @@ export function demoDiscountCodes(): DiscountCodeRow[] {
     { ...base, id: "d0000001-0000-4000-8000-000000000004", code: "BEDRIJF5", description: "Bedrijfsfitness Acme", percent_off: null, amount_off_cents: 500, duration: "forever", durations: ["6m", "12m"], created_at: new Date(TODAY - 60 * DAY), redemptions: 2, checkouts: 2, revenue_cents: 2990 },
     { ...base, id: "d0000001-0000-4000-8000-000000000005", code: "BLACKFRIDAY", description: "Black Friday 2026", percent_off: 30, duration: "once", expires_at: new Date(TODAY - 80 * DAY), active: false, created_at: new Date(TODAY - 90 * DAY), redemptions: 0, checkouts: 4, revenue_cents: 0 },
   ];
+}
+
+// ---------- Bezoekers ----------
+
+/** Rij voor een segment: bezoeken met vaste verhoudingen voor bounce, vragenlijst en betaald. */
+function seg(key: string, visits: number, bounce: number, start: number, buy: number, seconds: number): VisitorSegmentRow {
+  return {
+    key,
+    visits,
+    bounces: Math.round(visits * bounce),
+    toStart: Math.round(visits * start),
+    purchases: Math.round(visits * buy),
+    avgSeconds: seconds,
+  };
+}
+
+export function demoVisitorsReport(days: number): VisitorsReport {
+  const scale = days / 30;
+  const n = (v: number) => Math.round(v * scale);
+  const r = rng(31 + days);
+  const perDay: VisitorsReport["perDay"] = [];
+  for (let d = days - 1; d >= 0; d--) {
+    const date = new Date(TODAY - d * DAY);
+    const weekend = [0, 6].includes(date.getDay()) ? 1.25 : 1;
+    const visits = Math.round((55 + r() * 35) * weekend);
+    perDay.push({ date: date.toISOString().slice(0, 10), visits, pageviews: Math.round(visits * (2.4 + r() * 0.8)) });
+  }
+  const visits = perDay.reduce((s, d) => s + d.visits, 0);
+  const pageviews = perDay.reduce((s, d) => s + d.pageviews, 0);
+  const heatmap: VisitorsReport["heatmap"] = [];
+  for (let weekday = 0; weekday < 7; weekday++) {
+    for (let hour = 0; hour < 24; hour++) {
+      const evening = hour >= 19 && hour <= 22 ? 2.6 : hour >= 12 && hour <= 13 ? 1.6 : hour >= 7 && hour <= 23 ? 1 : 0.15;
+      const day = weekday === 0 ? 1.4 : weekday === 1 ? 1.25 : weekday === 6 ? 0.8 : 1;
+      heatmap.push({
+        weekday,
+        hour,
+        visits: Math.round(evening * day * (8 + r() * 6) * scale),
+        orders: r() < 0.08 * evening * day ? Math.max(1, Math.round(r() * 2 * scale)) : 0,
+      });
+    }
+  }
+  return {
+    days,
+    kpis: {
+      visits,
+      pageviews,
+      pagesPerVisit: pageviews / visits,
+      bounceRate: 0.46,
+      avgSeconds: 134,
+      startShare: 0.345,
+      conversion: 0.0158,
+      mobileShare: 0.71,
+    },
+    previous: {
+      visits: Math.round(visits * 0.86),
+      pageviews: Math.round(pageviews * 0.83),
+      pagesPerVisit: (pageviews * 0.83) / (visits * 0.86),
+      bounceRate: 0.49,
+      avgSeconds: 121,
+      startShare: 0.32,
+      conversion: 0.0141,
+      mobileShare: 0.69,
+    },
+    perDay,
+    pages: [
+      { path: "/lp", views: n(980), visits: n(790), avgSeconds: 71, entries: n(760), exits: n(330) },
+      { path: "/start", views: n(890), visits: n(742), avgSeconds: 248, entries: n(40), exits: n(520) },
+      { path: "/", views: n(610), visits: n(470), avgSeconds: 46, entries: n(390), exits: n(150) },
+      { path: "/prijzen", views: n(540), visits: n(455), avgSeconds: 58, entries: n(105), exits: n(160) },
+      { path: "/lp/voeding", views: n(470), visits: n(430), avgSeconds: 64, entries: n(420), exits: n(190) },
+      { path: "/voorbeeld", views: n(310), visits: n(260), avgSeconds: 95, entries: n(20), exits: n(70) },
+      { path: "/lp/training", views: n(260), visits: n(235), avgSeconds: 52, entries: n(230), exits: n(120) },
+      { path: "/hoe-werkt-het", views: n(220), visits: n(198), avgSeconds: 61, entries: n(15), exits: n(45) },
+      { path: "/voedingsschema", views: n(190), visits: n(160), avgSeconds: 49, entries: n(140), exits: n(70) },
+      { path: "/contact", views: n(120), visits: n(104), avgSeconds: 38, entries: n(10), exits: n(55) },
+      { path: "/bundel", views: n(95), visits: n(80), avgSeconds: 44, entries: n(60), exits: n(30) },
+      { path: "/bedankt", views: n(36), visits: n(34), avgSeconds: 22, entries: 0, exits: n(30) },
+      { path: "/en/lp", views: n(52), visits: n(45), avgSeconds: 33, entries: n(45), exits: n(31) },
+    ],
+    entries: [
+      seg("/lp", n(760), 0.38, 0.42, 0.0197, 142),
+      seg("/lp/voeding", n(420), 0.45, 0.39, 0.0167, 128),
+      seg("/", n(390), 0.52, 0.25, 0.0154, 118),
+      seg("/lp/training", n(230), 0.5, 0.31, 0.0087, 104),
+      seg("/voedingsschema", n(140), 0.61, 0.28, 0.0143, 96),
+      seg("/prijzen", n(105), 0.33, 0.35, 0.019, 151),
+      seg("/bundel", n(60), 0.48, 0.22, 0, 88),
+      seg("/en/lp", n(45), 0.69, 0.09, 0, 61),
+    ],
+    channels: [
+      seg("campagne", n(1290), 0.42, 0.37, 0.0155, 129),
+      seg("zoekmachine", n(380), 0.44, 0.33, 0.0211, 152),
+      seg("social", n(140), 0.66, 0.18, 0.0071, 74),
+      seg("email", n(35), 0.2, 0.51, 0.0571, 210),
+      seg("verwijzing", n(25), 0.48, 0.28, 0, 95),
+      seg("direct", n(280), 0.55, 0.3, 0.0179, 121),
+    ].map((c) => ({ ...c, key: c.key as VisitorsReport["channels"][number]["key"] })),
+    referrers: [
+      { host: "google.com", visits: n(340), purchases: n(8) },
+      { host: "instagram.com", visits: n(92), purchases: n(1) },
+      { host: "facebook.com", visits: n(41), purchases: 0 },
+      { host: "bing.com", visits: n(28), purchases: n(1) },
+      { host: "mail.google.com", visits: n(22), purchases: n(1) },
+      { host: "duckduckgo.com", visits: n(12), purchases: 0 },
+      { host: "voedingscentrum-forum.nl", visits: n(9), purchases: 0 },
+    ],
+    campaigns: [
+      { campaign: "lancering-januari", source: "meta", visits: n(980), purchases: n(17) },
+      { campaign: "voedingsschema-zoekwoorden", source: "google", visits: n(220), purchases: n(4) },
+      { campaign: "thuis-trainen", source: "tiktok", visits: n(310), purchases: n(3) },
+      { campaign: "nieuwsbrief-februari", source: "nieuwsbrief", visits: n(35), purchases: n(2) },
+    ],
+    devices: [seg("mobiel", n(1520), 0.5, 0.34, 0.0132, 118), seg("desktop", n(510), 0.35, 0.37, 0.0235, 171), seg("tablet", n(120), 0.43, 0.27, 0.0167, 140)],
+    languages: [seg("nl", n(2080), 0.45, 0.35, 0.0163, 136), seg("en", n(70), 0.66, 0.11, 0, 72)],
+    heatmap,
+    live: { visitors: 4, pages: [{ path: "/start", visitors: 2 }, { path: "/lp", visitors: 1 }, { path: "/prijzen", visitors: 1 }] },
+  };
 }
