@@ -34,6 +34,8 @@ import { trackEvent } from "@/lib/consent";
 import { campaignFromParams, type Campaign } from "@/lib/campaign";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { startCheckout, type CheckoutState } from "@/app/[lang]/(site)/start/actions";
+import { site } from "@/config/site";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 import { intakeLabels } from "@/i18n/options";
@@ -125,7 +127,7 @@ const copy = defineCopy({
     help: {
       title: "Waar wil je hulp bij?",
       subtitle: "Je kunt dit straks nog aanpassen.",
-      bundle: { title: "Voeding én training", description: "Snelst resultaat: alles op elkaar afgestemd", badge: "Meest gekozen" },
+      bundle: { title: "Voeding én training", description: "Alles op elkaar afgestemd: voeding en training versterken elkaar", badge: "Meest gekozen" },
       nutrition: { title: "Alleen voeding", description: "Weekmenu, recepten en boodschappenlijst" },
       training: { title: "Alleen training", description: "Thuis of in de sportschool" },
     },
@@ -247,6 +249,7 @@ const copy = defineCopy({
       submit: "Doorgaan naar veilig betalen",
       methodsSubscription: "Eerste maand met iDEAL | Wero, Bancontact of IBAN; daarna automatische SEPA-incasso",
       methodsOneOff: "Betalen via Stripe met iDEAL | Wero, Bancontact of creditcard",
+      guarantee: (days: number) => `Past het toch niet? Binnen ${days} dagen vraag je je eerste betaling terug in Mijn schema's.`,
     },
     calculating: {
       title: "Even rekenen…",
@@ -256,7 +259,7 @@ const copy = defineCopy({
       aria: (from: number, to: number, weeks: number) => `Verwachte gewichtsdaling van ${from} naar ${to} kilo in ${weeks} weken`,
       now: "Nu",
       week: (n: number) => `Week ${n}`,
-      note: "Indicatie op basis van een gemiddeld en veilig tempo. Iedereen is anders: je gewicht schommelt van dag tot dag en het resultaat hangt af van hoe je het schema volgt.",
+      note: "Een schatting op basis van een gemiddeld en veilig tempo, geen belofte. Iedereen is anders: je gewicht schommelt van dag tot dag en je resultaat hangt onder meer af van je lichaam en hoe je het schema volgt.",
     },
   },
   en: {
@@ -289,7 +292,7 @@ const copy = defineCopy({
     help: {
       title: "What would you like help with?",
       subtitle: "You can still change this later.",
-      bundle: { title: "Nutrition and training", description: "Fastest results: everything aligned", badge: "Most popular" },
+      bundle: { title: "Nutrition and training", description: "Everything aligned: nutrition and training reinforce each other", badge: "Most popular" },
       nutrition: { title: "Nutrition only", description: "Weekly meal plan, recipes and shopping list" },
       training: { title: "Training only", description: "At home or at the gym" },
     },
@@ -411,6 +414,7 @@ const copy = defineCopy({
       submit: "Continue to secure payment",
       methodsSubscription: "First month with iDEAL | Wero, Bancontact or IBAN; then automatic SEPA Direct Debit",
       methodsOneOff: "Pay via Stripe with iDEAL | Wero, Bancontact or credit card",
+      guarantee: (days: number) => `Not the right fit after all? Within ${days} days, you can request your first payment back in My plans.`,
     },
     calculating: {
       title: "Crunching the numbers…",
@@ -420,7 +424,7 @@ const copy = defineCopy({
       aria: (from: number, to: number, weeks: number) => `Expected weight loss from ${from} to ${to} kilos in ${weeks} weeks`,
       now: "Now",
       week: (n: number) => `Week ${n}`,
-      note: "An estimate based on an average, safe pace. Everyone is different: your weight fluctuates from day to day and the result depends on how closely you follow the plan.",
+      note: "An estimate based on an average, safe pace, not a promise. Everyone is different: your weight fluctuates from day to day and your result depends on factors such as your body and how closely you follow the plan.",
     },
   },
 });
@@ -1293,6 +1297,10 @@ function CheckoutBox({
       <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-sm text-muted">
         <ShieldCheck className="size-4 text-brand-600" aria-hidden />
         {subscription ? t.methodsSubscription : t.methodsOneOff}
+      </p>
+      <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+        {resultDisclaimer[l].long}
+        {site.guarantee.enabled ? ` ${t.guarantee(site.guarantee.days)}` : ""}
       </p>
     </form>
   );

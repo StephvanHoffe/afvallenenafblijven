@@ -146,8 +146,11 @@ function Nl() {
           onze <Link href="/disclaimer">disclaimer</Link>.
         </li>
         <li>
-          We geven geen garantie op een bepaald resultaat, zoals een bepaald aantal kilo&apos;s gewichtsverlies.
-          Resultaten verschillen per persoon en hangen onder meer af van hoe je het schema volgt.
+          We geven geen garantie op een bepaald resultaat, zoals een bepaald aantal kilo&apos;s gewichtsverlies of een
+          bepaalde toename van je spiermassa. Je koopt een persoonlijk schema en begeleiding, geen resultaat. Resultaten
+          verschillen per persoon en hangen onder meer af van je lichaam, je gezondheid, je omstandigheden en hoe je het
+          schema volgt. Prognoses, voorbeelden en de verwachte voortgang op de website en in Mijn schema&apos;s zijn
+          schattingen, geen toezeggingen.
         </li>
       </ol>
 
@@ -248,13 +251,19 @@ function Nl() {
           <h2 id="garantie">Artikel 10 – Tevredenheidsgarantie</h2>
           <ol>
             <li>
-              Ben je niet tevreden, dan kun je binnen {g.days} dagen na je eerste aankoop per e-mail aan{" "}
-              <a href={`mailto:${c.email}`}>{c.email}</a> om terugbetaling vragen. We betalen dan het volledige bedrag van
-              je eerste betaling terug en beëindigen het abonnement direct.
+              Ben je niet tevreden, dan kun je binnen {g.days} dagen na je eerste aankoop (tot en met de {g.days}e dag na
+              de besteldag) om terugbetaling vragen, zonder opgaaf van reden. Dat doe je in Mijn schema&apos;s, op het
+              tabblad Abonnement, of per e-mail aan <a href={`mailto:${c.email}`}>{c.email}</a>. We betalen dan binnen{" "}
+              {site.responseTimeDays} werkdagen het volledige bedrag van je eerste betaling terug en beëindigen het
+              abonnement direct.
             </li>
             <li>
               De garantie geldt één keer per klant en alleen voor de eerste betaling, niet voor latere termijnen of
               verlengingen.
+            </li>
+            <li>
+              De garantie gaat over je tevredenheid met onze dienst. Het is geen garantie op een bepaald resultaat (zie
+              artikel 6).
             </li>
             <li>Deze garantie komt bovenop je wettelijke rechten en beperkt die niet.</li>
           </ol>
@@ -490,8 +499,11 @@ function En() {
           <Link href="/disclaimer">disclaimer</Link>.
         </li>
         <li>
-          We do not guarantee any particular result, such as losing a certain number of kilos. Results vary from person
-          to person and depend, among other things, on how you follow the plan.
+          We do not guarantee any particular result, such as losing a certain number of kilos or gaining a certain
+          amount of muscle mass. You are buying a personal plan and guidance, not a result. Results vary from person to
+          person and depend, among other things, on your body, your health, your circumstances and how you follow the
+          plan. Projections, examples and the expected progress on the website and in My plans are estimates, not
+          promises.
         </li>
       </ol>
 
@@ -595,13 +607,19 @@ function En() {
           <h2 id="garantie">Article 10 – Satisfaction guarantee</h2>
           <ol>
             <li>
-              If you are not satisfied, you can request a refund by email to <a href={`mailto:${c.email}`}>{c.email}</a>{" "}
-              within {g.days} days of your first purchase. We will then refund the full amount of your first payment
-              and end the subscription immediately.
+              If you are not satisfied, you can request a refund within {g.days} days of your first purchase (up to and
+              including day {g.days} after the order date), without giving a reason. You can do this in My plans,
+              on the Subscription tab, or by email to <a href={`mailto:${c.email}`}>{c.email}</a>. We will then refund
+              the full amount of your first payment within {site.responseTimeDays} working days and end the subscription
+              immediately.
             </li>
             <li>
               The guarantee applies once per customer and only to the first payment, not to later instalments or
               renewals.
+            </li>
+            <li>
+              The guarantee concerns your satisfaction with our service. It is not a guarantee of any particular result
+              (see article 6).
             </li>
             <li>This guarantee is in addition to your statutory rights and does not limit them.</li>
           </ol>

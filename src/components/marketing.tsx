@@ -71,7 +71,7 @@ const copy = defineCopy({
     guarantee: {
       title: (days: number) => `${days} dagen tevredenheidsgarantie`,
       text: (days: number) =>
-        `Probeer het zonder risico. Ben je niet tevreden over je schema? Mail ons binnen ${days} dagen na je aankoop en je krijgt je eerste betaling volledig terug. Geen vragen, geen gedoe.`,
+        `Ben je niet tevreden over je schema? Vraag binnen ${days} dagen na je aankoop je eerste betaling volledig terug, eenvoudig in Mijn schema's of per e-mail. Geen vragen, geen gedoe.`,
     },
     cta: {
       title: "Klaar om te beginnen?",
@@ -129,7 +129,7 @@ const copy = defineCopy({
     guarantee: {
       title: (days: number) => `${days}-day satisfaction guarantee`,
       text: (days: number) =>
-        `Try it risk-free. Not happy with your plan? Email us within ${days} days of your purchase and we'll refund your first payment in full. No questions asked, no hassle.`,
+        `Not happy with your plan? Within ${days} days of your purchase, get your first payment back in full, easily in My plans or by email. No questions asked, no hassle.`,
     },
     cta: {
       title: "Ready to get started?",

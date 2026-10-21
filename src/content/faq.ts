@@ -18,6 +18,7 @@ export type FaqId =
   | "medisch"
   | "betalen"
   | "garantie"
+  | "resultaat"
   | "periode"
   | "weegmoment"
   | "koppelen"
@@ -35,6 +36,7 @@ const ORDER: FaqId[] = [
   "medisch",
   "betalen",
   "garantie",
+  "resultaat",
   "periode",
   "weegmoment",
   "koppelen",
@@ -81,7 +83,11 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     garantie: {
       q: "Wat als het schema me niet bevalt?",
-      a: `Dan krijg je je geld terug. Je hebt ${days} dagen tevredenheidsgarantie op je eerste betaling: stuur ons binnen ${days} dagen na je aankoop een mailtje en we betalen het volledige bedrag van die eerste betaling terug. Zonder gedoe.`,
+      a: `Dan krijg je je geld terug. Je hebt ${days} dagen tevredenheidsgarantie op je eerste betaling: vraag binnen ${days} dagen na je aankoop je geld terug in Mijn schema's (tabblad Abonnement) of stuur ons een mailtje, en we betalen het volledige bedrag van die eerste betaling terug. Zonder gedoe.`,
+    },
+    resultaat: {
+      q: "Is het resultaat gegarandeerd?",
+      a: "Nee, en eerlijk gezegd kan niemand dat beloven. Je koopt een persoonlijk schema en begeleiding, geen gegarandeerd resultaat. Hoeveel je afvalt of aan spiermassa opbouwt, verschilt per persoon en hangt onder meer af van je lichaam, je gezondheid, je omstandigheden en hoe goed je het schema volgt. Prognoses en voorbeelden op de site zijn schattingen. Wat we wél doen: je schema afstemmen op jou en het bijsturen op je voortgang.",
     },
     periode: {
       q: "Hoe lang duurt een periode, en krijg ik elke week een nieuw schema?",
@@ -105,7 +111,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     afblijven: {
       q: "Wat betekent 'afblijven'?",
-      a: "Afvallen is één ding, je resultaat vasthouden is minstens zo belangrijk. Heb je je streefgewicht bereikt, dan kies je in je volgende check-in het doel 'Op gewicht blijven'. Je schema wordt dan omgezet naar een onderhoudsplan, zodat je niet terugvalt in oude patronen en het jojo-effect voorkomt.",
+      a: "Afvallen is één ding, je resultaat vasthouden is minstens zo belangrijk. Heb je je streefgewicht bereikt, dan kies je in je volgende check-in het doel 'Op gewicht blijven'. Je schema wordt dan omgezet naar een onderhoudsplan, dat je helpt om niet terug te vallen in oude patronen en het jojo-effect te voorkomen.",
     },
   },
   en: {
@@ -143,7 +149,11 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     garantie: {
       q: "What if I'm not happy with my plan?",
-      a: `Then you get your money back. You have a ${days}-day satisfaction guarantee on your first payment: just email us within ${days} days of your purchase and we'll refund the full amount of that first payment. No hassle.`,
+      a: `Then you get your money back. You have a ${days}-day satisfaction guarantee on your first payment: within ${days} days of your purchase, request your money back in My plans (Subscription tab) or just email us, and we'll refund the full amount of that first payment. No hassle.`,
+    },
+    resultaat: {
+      q: "Are results guaranteed?",
+      a: "No, and honestly, nobody can promise that. You're buying a personal plan and guidance, not a guaranteed result. How much weight you lose or muscle you build varies from person to person and depends on factors such as your body, your health, your circumstances and how closely you follow the plan. Projections and examples on the site are estimates. What we do: tailor your plan to you and adjust it based on your progress.",
     },
     periode: {
       q: "How long is a period, and do I get a new plan every week?",
@@ -167,7 +177,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     afblijven: {
       q: "What does 'afblijven' (keeping it off) mean?",
-      a: "Losing weight is one thing; holding on to your results matters at least as much. Once you've reached your target weight, choose the goal 'Maintain my weight' in your next check-in. Your plan then switches to a maintenance plan, so you don't slip back into old habits and you avoid the yo-yo effect.",
+      a: "Losing weight is one thing; holding on to your results matters at least as much. Once you've reached your target weight, choose the goal 'Maintain my weight' in your next check-in. Your plan then switches to a maintenance plan that helps you avoid slipping back into old habits and the yo-yo effect.",
     },
   },
 });

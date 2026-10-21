@@ -12,13 +12,13 @@ export async function DemoAccountPage({ tab }: { tab: AccountTab }) {
       <DemoBanner>
         {l === "en" ? (
           <>
-            Example of <strong>My plans</strong> for a fictional customer with the bundle, now in period 4. Buttons and forms
-            don&apos;t work here.
+            Example of <strong>My plans</strong> for a fictional customer with the bundle, now in period 4. The figures are an
+            example, not a promise. Buttons and forms don&apos;t work here.
           </>
         ) : (
           <>
-            Voorbeeld van <strong>Mijn schema&apos;s</strong> voor een fictieve klant met de bundel, nu in periode 4. Knoppen en
-            formulieren werken hier niet.
+            Voorbeeld van <strong>Mijn schema&apos;s</strong> voor een fictieve klant met de bundel, nu in periode 4. De cijfers
+            zijn een voorbeeld, geen belofte. Knoppen en formulieren werken hier niet.
           </>
         )}
       </DemoBanner>

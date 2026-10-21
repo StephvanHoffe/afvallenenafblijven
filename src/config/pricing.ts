@@ -78,7 +78,7 @@ export const products: Record<ProductId, Product> = {
     id: "bundel",
     name: "Bundel: Voeding + Training",
     shortName: "Bundel",
-    tagline: "De snelste route naar blijvend resultaat.",
+    tagline: "Voeding en training die elkaar versterken.",
     includes: ["voeding", "training"],
     features: [
       "Alles uit het voedingsschema",
@@ -129,7 +129,7 @@ const productTextEn: Record<ProductId, Pick<Product, "name" | "shortName" | "tag
   bundel: {
     name: "Bundle: Nutrition + Training",
     shortName: "Bundle",
-    tagline: "The fastest route to lasting results.",
+    tagline: "Nutrition and training that reinforce each other.",
     features: [
       "Everything in the nutrition plan",
       "Everything in the workout plan",

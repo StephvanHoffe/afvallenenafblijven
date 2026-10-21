@@ -82,7 +82,7 @@ function Nl() {
           serverlogs) en, alleen met je toestemming, analytische en marketinggegevens via cookies.
         </li>
         <li>
-          <strong>Berichten:</strong> wat je ons stuurt via het contactformulier, e-mail of de herroepingsfunctie.
+          <strong>Berichten:</strong> wat je ons stuurt via het contactformulier, e-mail, de herroepingsfunctie of een garantie-aanvraag.
         </li>
       </ul>
 
@@ -128,7 +128,7 @@ function Nl() {
             <td>Uitvoering van de overeenkomst</td>
           </tr>
           <tr>
-            <td>Klantenservice, klachten en herroepingen</td>
+            <td>Klantenservice, klachten, herroepingen en garantie-aanvragen</td>
             <td>Contactgegevens, berichten</td>
             <td>Uitvoering van de overeenkomst; wettelijke verplichting</td>
           </tr>
@@ -381,7 +381,7 @@ function En() {
           only with your consent, analytics and marketing data via cookies.
         </li>
         <li>
-          <strong>Messages:</strong> what you send us via the contact form, email or the withdrawal function.
+          <strong>Messages:</strong> what you send us via the contact form, email, the withdrawal function or a guarantee request.
         </li>
       </ul>
 
@@ -424,7 +424,7 @@ function En() {
             <td>Performance of the contract</td>
           </tr>
           <tr>
-            <td>Customer service, complaints and withdrawals</td>
+            <td>Customer service, complaints, withdrawals and guarantee requests</td>
             <td>Contact details, messages</td>
             <td>Performance of the contract; legal obligation</td>
           </tr>

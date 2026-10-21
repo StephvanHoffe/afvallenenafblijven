@@ -17,6 +17,7 @@ import {
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 import { euro, euroAmount } from "@/lib/format";
@@ -139,6 +140,7 @@ export function DurationToggle({
 }
 
 export function PricingTable({ only, initialDuration = "3m", launch, onSelect, selectedProduct, highlight = "bundel" }: Props) {
+  const l = useLocale();
   const [duration, setDuration] = useState<DurationId>(initialDuration);
   // Met `only` in de opgegeven volgorde (het product van de pagina eerst), anders de vaste volgorde.
   const list = only ? only.filter((p) => ORDER.includes(p)) : ORDER;
@@ -159,6 +161,7 @@ export function PricingTable({ only, initialDuration = "3m", launch, onSelect, s
           />
         ))}
       </div>
+      <p className="mx-auto max-w-2xl text-center text-xs leading-relaxed text-muted">{resultDisclaimer[l].long}</p>
     </div>
   );
 }

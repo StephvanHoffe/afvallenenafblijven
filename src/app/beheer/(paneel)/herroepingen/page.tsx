@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { markWithdrawalHandled } from "@/app/beheer/actions";
+import { markGuaranteeHandled, markWithdrawalHandled } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { Badge, EmptyRow, NeedsDatabase, Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
+import { Badge, EmptyRow, NeedsDatabase, Notice, PageTitle, Panel, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
-import { formatDate } from "@/lib/format";
+import { site } from "@/config/site";
+import { stripeDashboardUrl } from "@/lib/admin/describe";
+import { guaranteeDeadline } from "@/lib/guarantee";
+import { euro, formatDate } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Herroepingen" };
+export const metadata: Metadata = { title: "Herroepingen en garantie" };
 
 export default function HerroepingenPage({ searchParams }: PageProps<"/beheer/herroepingen">) {
   return (
@@ -22,16 +25,16 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
   if (!isDemoMode()) await connection();
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
-  const [rows, sp] = await Promise.all([adminData().withdrawals(), searchParams]);
+  const [rows, guarantees, sp] = await Promise.all([adminData().withdrawals(), adminData().guaranteeRequests(), searchParams]);
 
   return (
     <>
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
-        title="Herroepingen"
+        title="Herroepingen en garantie"
         intro="Verklaringen via de herroepingsfunctie op de website. De klant heeft direct een ontvangstbevestiging gekregen. Beoordeel of het herroepingsrecht nog gold, betaal zo nodig terug in Stripe en laat het de klant weten."
       />
-      <Panel>
+      <Panel title="Herroepingen">
         <div className={table.wrap}>
           <table className={table.table}>
             <thead>
@@ -71,6 +74,76 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
           </table>
         </div>
       </Panel>
+
+      <div id="garantie" className="mt-6 scroll-mt-6">
+        <Panel title={`Garantie-aanvragen (${site.guarantee.days} dagen geld terug)`}>
+          <p className="border-b border-line px-5 py-3.5 text-sm text-muted">
+            Aangevraagd door de klant in Mijn schema&apos;s. De klant heeft een bevestiging gekregen waarin staat dat we binnen{" "}
+            {site.responseTimeDays} werkdagen terugbetalen. Betaal in Stripe de eerste betaling volledig terug, beëindig het
+            abonnement direct (niet aan het einde van de periode) en markeer de aanvraag daarna als afgehandeld.
+          </p>
+          <div className={table.wrap}>
+            <table className={table.table}>
+              <thead>
+                <tr>
+                  <th className={table.th}>Aangevraagd</th>
+                  <th className={table.th}>Klant</th>
+                  <th className={table.th}>Bestelling</th>
+                  <th className={table.th}>Terug</th>
+                  <th className={table.th}>Reden</th>
+                  <th className={table.th}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guarantees.length === 0 && <EmptyRow colSpan={6}>Geen garantie-aanvragen.</EmptyRow>}
+                {guarantees.map((g) => (
+                  <tr key={g.id}>
+                    <td className={`${table.td} ${table.num}`}>{formatDate(g.createdAt)}</td>
+                    <td className={table.td}>
+                      <span className="font-semibold">{g.order.customerName}</span>
+                      <span className="block text-xs text-muted">{g.order.customerEmail}</span>
+                    </td>
+                    <td className={table.td}>
+                      <span className="font-semibold">{g.order.reference}</span>
+                      <span className="block text-xs text-muted">
+                        {planName(g.order.product, g.order.duration)} · besteld {formatDate(g.order.createdAt)} · termijn t/m{" "}
+                        {formatDate(guaranteeDeadline(g.order.createdAt))}
+                      </span>
+                      {(g.order.stripeSubscriptionId || g.stripeCustomerId) && (
+                        <span className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                          {g.order.stripeSubscriptionId && (
+                            <a href={stripeDashboardUrl("subscriptions", g.order.stripeSubscriptionId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
+                              Abonnement in Stripe
+                            </a>
+                          )}
+                          {g.stripeCustomerId && (
+                            <a href={stripeDashboardUrl("customers", g.stripeCustomerId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
+                              Betalingen in Stripe
+                            </a>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className={`${table.td} ${table.num}`}>{euro(g.order.amountCents)}</td>
+                    <td className={`${table.td} max-w-xs text-muted`}>{g.reason ?? "–"}</td>
+                    <td className={table.td}>
+                      {g.handledAt ? (
+                        <Badge tone="ok">Afgehandeld {formatDate(g.handledAt)}</Badge>
+                      ) : (
+                        <form action={markGuaranteeHandled}>
+                          <input type="hidden" name="aanvraag" value={g.id} />
+                          <input type="hidden" name="terug" value="/beheer/herroepingen" />
+                          <SubmitButton className="btn-secondary !px-3 !py-1.5 text-xs">Terugbetaald, markeer als afgehandeld</SubmitButton>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      </div>
     </>
   );
 }

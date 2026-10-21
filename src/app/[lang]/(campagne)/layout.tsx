@@ -7,6 +7,7 @@ import { CookieSettingsButton } from "@/components/cookies/CookieSettingsButton"
 import { LanguageSwitcher, LanguageSwitcherFallback } from "@/components/i18n/LanguageSwitcher";
 import { Logo } from "@/components/Logo";
 import { companyAddressLine, site } from "@/config/site";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import Link from "@/i18n/Link";
 import { getLocale } from "@/i18n/server";
@@ -96,7 +97,7 @@ export default async function CampaignLayout({ children }: { children: React.Rea
           </ul>
           <p className="text-xs leading-relaxed text-white/50 md:max-w-md md:text-right">
             © <CopyrightYear /> {company.legalName} · {companyAddressLine()} · {c.kvk} {company.kvk} · {c.vat} {company.vat}.{" "}
-            {c.medical}
+            {c.medical} {resultDisclaimer[l].short}
           </p>
         </div>
       </footer>

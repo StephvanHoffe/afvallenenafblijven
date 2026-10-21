@@ -59,6 +59,8 @@ const copy = defineCopy({
     or: "of",
     contact: "neem contact op",
     respond: (days: number) => `. We reageren binnen ${days} werkdagen.`,
+    guarantee: (date: string) => `Niet tevreden? Tot en met ${date} kun je onder onze geld-terug-garantie je eerste betaling terugvragen.`,
+    guaranteeLink: "Zo werkt het",
   },
   en: {
     yourWeight: "Your weight",
@@ -103,6 +105,8 @@ const copy = defineCopy({
     or: "or",
     contact: "get in touch",
     respond: (days: number) => `. We respond within ${days} working days.`,
+    guarantee: (date: string) => `Not satisfied? Until and including ${date}, you can get your first payment back under our money-back guarantee.`,
+    guaranteeLink: "How it works",
   },
 });
 
@@ -294,6 +298,14 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
           </Link>
           {c.respond(site.responseTimeDays)}
         </p>
+        {view.guarantee?.open && !demo && (
+          <p className="mt-2 text-sm text-muted">
+            {c.guarantee(formatDate(view.guarantee.deadline, l))}{" "}
+            <Link href={`${accountHref(base, "abonnement")}#garantie`} className="underline">
+              {c.guaranteeLink}
+            </Link>
+          </p>
+        )}
       </section>
     </div>
   );

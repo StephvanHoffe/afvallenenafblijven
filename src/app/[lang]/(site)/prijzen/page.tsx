@@ -106,7 +106,7 @@ export default async function PrijzenPage() {
   const l = await getLocale();
   const c = copy[l];
   const ids: ProductId[] = ["voeding", "training", "bundel"];
-  const faq = faqFor(l, ["abonnement", "opzeggen", "betalen", "garantie"]);
+  const faq = faqFor(l, ["abonnement", "opzeggen", "betalen", "garantie", "resultaat"]);
   return (
     <>
       <section className="bg-gradient-to-b from-brand-50 to-sand py-14 sm:py-20">

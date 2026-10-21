@@ -90,6 +90,7 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   opgezegd: { tone: "ok", text: "Het abonnement is opgezegd. De klant heeft een bevestiging ontvangen." },
   verwijderd: { tone: "ok", text: "De klant en alle bijbehorende gegevens zijn verwijderd." },
   afgehandeld: { tone: "ok", text: "De herroeping is als afgehandeld gemarkeerd." },
+  "garantie-afgehandeld": { tone: "ok", text: "De garantie-aanvraag is als afgehandeld gemarkeerd." },
   "testmail-verstuurd": { tone: "ok", text: "De testmail is verstuurd naar het beheeradres." },
   "testmail-mislukt": { tone: "warn", text: "De testmail kon niet worden verstuurd. Controleer de SMTP-instellingen." },
   "niet-gevonden": { tone: "warn", text: "Niet gevonden of niet mogelijk in de huidige status." },

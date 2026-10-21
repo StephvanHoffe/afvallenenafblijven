@@ -3,6 +3,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { site, companyAddressLine } from "@/config/site";
 import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
+import { euro } from "@/lib/format";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -395,6 +396,51 @@ export function withdrawalConfirmationEmail(
     l,
   );
   return { to: input.to, subject: c.subject, html, text: `${g.hi(input.name)}\n\n${c.text}\n\n${details}\n\n${g.team(site.name)}` };
+}
+
+const guaranteeCopy = defineCopy({
+  nl: {
+    subject: "We hebben je garantie-aanvraag ontvangen",
+    intro: (ref: string, product: string) =>
+      `We hebben je aanvraag onder onze tevredenheidsgarantie ontvangen, voor bestelling ${ref} (${product}).`,
+    refund: (amount: string, days: number, subscription: boolean) =>
+      `We betalen je ${subscription ? "eerste betaling" : "betaling"} van ${amount} binnen ${days} werkdagen volledig terug via dezelfde betaalmethode${subscription ? " en beëindigen je abonnement direct; er wordt daarna niets meer afgeschreven" : ""}. Je krijgt bericht zodra de terugbetaling is gedaan.`,
+    access: (accountHref: string) =>
+      `De schema's die je al hebt ontvangen, mag je houden. Je vindt ze nog in <a href="${accountHref}" style="color:#1c7a45;">Mijn schema's</a>.`,
+    sorry: "Jammer dat het niet bij je paste. Bedankt dat je het hebt geprobeerd, en heel veel succes!",
+    text: "We hebben je garantie-aanvraag ontvangen.",
+  },
+  en: {
+    subject: "We've received your guarantee request",
+    intro: (ref: string, product: string) => `We've received your request under our satisfaction guarantee, for order ${ref} (${product}).`,
+    refund: (amount: string, days: number, subscription: boolean) =>
+      `We'll refund your ${subscription ? "first payment" : "payment"} of ${amount} in full within ${days} working days, using the same payment method${subscription ? ", and end your subscription straight away; nothing further will be charged" : ""}. We'll let you know as soon as the refund has been made.`,
+    access: (accountHref: string) =>
+      `You're welcome to keep the plans you've already received. You can still find them in <a href="${accountHref}" style="color:#1c7a45;">My plans</a>.`,
+    sorry: "We're sorry it wasn't the right fit for you. Thank you for giving it a try, and the very best of luck!",
+    text: "We've received your guarantee request.",
+  },
+});
+
+export function guaranteeRequestEmail(
+  input: { to: string; name: string; reference: string; productName: string; amountCents: number; subscription: boolean; locale?: Locale },
+  l: Locale = input.locale ?? "nl",
+): Mail {
+  const c = guaranteeCopy[l];
+  const g = common[l];
+  const intro = c.intro(input.reference, productName(input.productName, l));
+  const refund = c.refund(euro(input.amountCents, l), site.responseTimeDays, input.subscription);
+  const html = layout(
+    c.subject,
+    `<p>${g.hi(escapeHtml(input.name))}</p>
+<p>${escapeHtml(intro)}</p>
+<p>${escapeHtml(refund)}</p>
+<p>${c.access(localeUrl(site.url, l, "/account"))}</p>
+<p>${c.sorry}</p>
+<p>${g.team(escapeHtml(site.name))}</p>`,
+    l,
+  );
+  return { to: input.to, subject: c.subject, html, text: `${g.hi(input.name)}\n\n${intro}\n\n${refund}\n\n${g.team(site.name)}` };
 }
 
 /** Melding aan de beheerder (altijd Nederlands). */

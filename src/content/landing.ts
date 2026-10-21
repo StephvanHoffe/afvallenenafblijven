@@ -32,7 +32,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: null,
     goals: ["afvallen", "afvallen_strakker", "afblijven", "sterker"],
     pricing: { highlight: "bundel" },
-    faq: ["snel", "persoonlijk", "opzeggen", "niet-afvallen", "medisch", "betalen"],
+    faq: ["snel", "persoonlijk", "opzeggen", "niet-afvallen", "resultaat", "medisch", "betalen"],
     image: { src: "/images/hero-workout-home.jpg", position: "object-[68%_50%]" },
     preview: ["voeding", "training"],
   },
@@ -40,7 +40,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: "voeding",
     goals: ["afvallen", "afvallen_strakker", "afblijven", "sterker"],
     pricing: { only: ["voeding", "bundel"], highlight: "voeding" },
-    faq: ["snel", "persoonlijk", "allergie", "opzeggen", "niet-afvallen", "betalen"],
+    faq: ["snel", "persoonlijk", "allergie", "opzeggen", "niet-afvallen", "resultaat", "betalen"],
     image: { src: "/images/bowl-salmon.jpg", position: "object-center" },
     preview: ["voeding"],
   },
@@ -48,7 +48,7 @@ export const variantSettings: Record<LandingVariant, VariantSettings> = {
     product: "training",
     goals: ["sterker", "afvallen_strakker", "afvallen", "afblijven"],
     pricing: { only: ["training", "bundel"], highlight: "training" },
-    faq: ["snel", "thuis", "opzeggen", "medisch", "betalen"],
+    faq: ["snel", "thuis", "opzeggen", "resultaat", "medisch", "betalen"],
     image: { src: "/images/woman-overhead-press.jpg", position: "object-[60%_40%]" },
     preview: ["training"],
   },
@@ -153,7 +153,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       previewFull: "Bekijk het volledige voorbeeldschema",
       previewAccount: "Zo ziet Mijn schema's eruit",
       guideEyebrow: "Niet alleen een schema",
-      guideTitle: "Elke week bijgestuurd, tot je je doel haalt",
+      guideTitle: "Elke week bijgestuurd, op weg naar je doel",
       guideIntro:
         "Een schema dat niet meebeweegt, houd je niet vol. Daarom kijk je elke week kort met ons mee en passen we je plan aan op wat er echt gebeurt.",
       guidePoints: [
@@ -166,7 +166,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         text: "Apple Health, Garmin, Fitbit, Oura, Polar of een Withings-weegschaal: dan zie je of je echt traint en wat het oplevert.",
       },
       guideChart: "Zo ziet je voortgang eruit",
-      guideChartNote: "Voorbeeld van een fictieve klant in Mijn schema's.",
+      guideChartNote: "Voorbeeld van een fictieve klant in Mijn schema's. Je eigen verloop is anders.",
       stepsEyebrow: "Zo werkt het",
       stepsTitle: "In 3 stappen naar je persoonlijke plan",
       compareEyebrow: "Waarom dit wél werkt",
@@ -194,7 +194,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaTitle: "Afvallen met een persoonlijk voedings- en trainingsschema",
         metaDescription:
           "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen enkele minuten in je mailbox.",
-        title: ["Eindelijk afvallen met een plan dat ", "écht", " bij je past"],
+        title: ["Eindelijk een afvalplan dat ", "écht", " bij je past"],
         intro:
           "Je persoonlijke voedings- en trainingsschema, berekend op jouw lichaam, smaak en agenda. Zonder crashdieet of honger, elke week bijgestuurd op je voortgang, en binnen enkele minuten in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
@@ -205,12 +205,12 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Wekelijkse bijsturing", text: "We passen je plan aan op hoe het echt gaat." },
         ],
         pains: [
-          { pain: "Je hebt al zoveel diëten geprobeerd, en de kilo's kwamen steeds terug.", answer: "Een realistisch tekort met genoeg eiwit, zodat je afvalt zonder jojo-effect." },
+          { pain: "Je hebt al zoveel diëten geprobeerd, en de kilo's kwamen steeds terug.", answer: "Een realistisch tekort met genoeg eiwit: verantwoord afvallen, met minder kans op een jojo-effect." },
           { pain: "Je hebt vaak honger of trek, en houdt het daardoor niet vol.", answer: "Verzadigende maaltijden met eiwit, vezels en volume. Bij honger sturen we bij." },
           { pain: "Je hebt weinig tijd en geen zin in ingewikkeld koken.", answer: "Recepten binnen jouw bereidingstijd, slim hergebruik en een complete boodschappenlijst." },
         ],
         ctaLabel: "Start je persoonlijke plan",
-        finalTitle: "Over 4 weken ben je blij dat je vandaag begon",
+        finalTitle: "Zet vandaag de eerste stap",
         finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke plan.",
       },
       voeding: {
@@ -292,7 +292,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       previewFull: "See the full sample plan",
       previewAccount: "See what My plans looks like",
       guideEyebrow: "Not just a plan",
-      guideTitle: "Adjusted every week, until you reach your goal",
+      guideTitle: "Adjusted every week, on the way to your goal",
       guideIntro:
         "A plan that doesn't adapt is hard to stick to. That's why you check in briefly every week, and we adjust your plan to what's really happening.",
       guidePoints: [
@@ -305,7 +305,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         text: "Apple Health, Garmin, Fitbit, Oura, Polar or a Withings scale: then you'll see whether you really train and what it achieves.",
       },
       guideChart: "This is what your progress looks like",
-      guideChartNote: "Example of a fictional customer in My plans.",
+      guideChartNote: "Example of a fictional customer in My plans. Your own progress will be different.",
       stepsEyebrow: "How it works",
       stepsTitle: "Your personal plan in 3 steps",
       compareEyebrow: "Why this works",
@@ -333,7 +333,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaTitle: "Lose weight with a personal nutrition and workout plan",
         metaDescription:
           "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within minutes.",
-        title: ["Finally lose weight with a plan that ", "really", " fits you"],
+        title: ["Finally, a weight-loss plan that ", "really", " fits you"],
         intro:
           "Your personal nutrition and workout plan, calculated for your body, taste and schedule. No crash diet, no going hungry, adjusted to your progress every week, and in your inbox within minutes.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
@@ -344,12 +344,12 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           { title: "Weekly adjustments", text: "We adapt your plan to how things are really going." },
         ],
         pains: [
-          { pain: "You've tried so many diets, and the kilos kept coming back.", answer: "A realistic deficit with enough protein, so you lose weight without the yo-yo effect." },
+          { pain: "You've tried so many diets, and the kilos kept coming back.", answer: "A realistic deficit with enough protein: losing weight responsibly, with less risk of the yo-yo effect." },
           { pain: "You're often hungry or craving snacks, so you can't keep it up.", answer: "Filling meals with protein, fibre and volume. If you're hungry, we adjust." },
           { pain: "You're short on time and don't fancy complicated cooking.", answer: "Recipes within your cooking time, smart leftovers and a complete shopping list." },
         ],
         ctaLabel: "Start your personal plan",
-        finalTitle: "Four weeks from now, you'll be glad you started today",
+        finalTitle: "Take the first step today",
         finalText: "Answer a few questions and receive your personal plan within minutes.",
       },
       voeding: {

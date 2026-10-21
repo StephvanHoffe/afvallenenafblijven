@@ -26,7 +26,7 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
   if (!adminDataAvailable()) return <NeedsDatabase />;
   const [o, sp] = await Promise.all([adminData().overview(), searchParams]);
   const conversion = o.checkoutStarts30 > 0 ? Math.round((o.newOrders30 / o.checkoutStarts30) * 100) : null;
-  const attention = o.plansFailed + o.openWithdrawals;
+  const attention = o.plansFailed + o.openWithdrawals + o.openGuaranteeRequests;
   const mixTotal = o.productMix.reduce((s, m) => s + m.count, 0);
 
   return (
@@ -57,7 +57,7 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
           label="Aandacht nodig"
           value={formatNumber(attention)}
           tone={attention > 0 ? "warn" : "default"}
-          hint={`${o.plansFailed} mislukte schema's · ${o.openWithdrawals} open herroepingen`}
+          hint={`${o.plansFailed} mislukte schema's · ${o.openWithdrawals} herroepingen · ${o.openGuaranteeRequests} garantie-aanvragen`}
         />
       </div>
 
@@ -71,6 +71,11 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
           {o.openWithdrawals > 0 && (
             <Link href="/beheer/herroepingen" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
               <CircleAlert className="size-4" aria-hidden /> {o.openWithdrawals} herroeping{o.openWithdrawals === 1 ? "" : "en"} afhandelen
+            </Link>
+          )}
+          {o.openGuaranteeRequests > 0 && (
+            <Link href="/beheer/herroepingen#garantie" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
+              <CircleAlert className="size-4" aria-hidden /> {o.openGuaranteeRequests} garantie-aanvra{o.openGuaranteeRequests === 1 ? "ag" : "gen"} afhandelen
             </Link>
           )}
         </div>

@@ -10,13 +10,13 @@ const copy = defineCopy({
     meta: {
       title: "Bundel: voedingsschema + trainingsschema",
       description:
-        "Voeding en training op elkaar afgestemd, voor het snelste en meest blijvende resultaat. Voordeliger dan los.",
+        "Voeding en training op elkaar afgestemd, zodat ze elkaar versterken. Voordeliger dan los.",
     },
     content: {
       eyebrow: "Bundel · Meest gekozen",
       title: (
         <>
-          Voeding + training: <span className="text-brand-600">de snelste route</span> naar blijvend resultaat
+          Voeding + training, <span className="text-brand-600">volledig op elkaar afgestemd</span>
         </>
       ),
       intro:
@@ -40,7 +40,7 @@ const copy = defineCopy({
         alt: "Sporter tilt een halter van de grond",
         title: "Afvallen zonder spiermassa te verliezen",
         text: "Wie alleen minder eet, verliest naast vet ook spieren, waardoor je stofwisseling daalt. Met voldoende eiwit en krachttraining verlies je vooral vet en houd je je resultaat makkelijker vast.",
-        bullets: ["Sneller zichtbaar resultaat", "Minder kans op het jojo-effect", "Meer energie en een sterker lichaam"],
+        bullets: ["Gericht op vetverlies, niet op spierverlies", "Minder kans op het jojo-effect", "Werken aan meer energie en een sterker lichaam"],
       },
     },
   },
@@ -48,13 +48,13 @@ const copy = defineCopy({
     meta: {
       title: "Bundle: nutrition plan + workout plan",
       description:
-        "Nutrition and training aligned with each other, for the fastest and most lasting results. Better value than buying them separately.",
+        "Nutrition and training aligned with each other, so they reinforce each other. Better value than buying them separately.",
     },
     content: {
       eyebrow: "Bundle · Most popular",
       title: (
         <>
-          Nutrition + training: <span className="text-brand-600">the fastest route</span> to lasting results
+          Nutrition + training, <span className="text-brand-600">fully aligned</span>
         </>
       ),
       intro:
@@ -78,7 +78,7 @@ const copy = defineCopy({
         alt: "Athlete lifting a barbell off the floor",
         title: "Lose weight without losing muscle",
         text: "If you only eat less, you lose muscle as well as fat, which slows down your metabolism. With enough protein and strength training, you mainly lose fat and find it easier to keep your results.",
-        bullets: ["Visible results sooner", "Less risk of the yo-yo effect", "More energy and a stronger body"],
+        bullets: ["Focused on losing fat, not muscle", "Less risk of the yo-yo effect", "Working towards more energy and a stronger body"],
       },
     },
   },
@@ -100,7 +100,7 @@ export default async function BundelPage() {
         heroImage: "/images/food-flatlay.jpg",
         showcase: { ...c.showcase, image: "/images/deadlift.jpg" },
         pricingProducts: ["bundel"],
-        faq: faqFor(l, ["snel", "abonnement", "opzeggen", "betalen", "niet-afvallen", "afblijven"]),
+        faq: faqFor(l, ["snel", "abonnement", "opzeggen", "betalen", "resultaat", "niet-afvallen", "afblijven"]),
       }}
     />
   );

@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
 import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
@@ -173,6 +174,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
             <div className="mt-5">
               <TrustRow />
             </div>
+            <p className="mt-3 text-xs text-muted">{resultDisclaimer[l].short}</p>
           </div>
 
           <div className="relative mx-auto w-full max-w-xl">

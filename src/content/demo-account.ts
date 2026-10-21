@@ -3,6 +3,8 @@ import type { Locale } from "@/i18n/config";
 import type { AccountView, DashboardPlan } from "@/lib/account-types";
 import type { WeeklyLog } from "@/lib/weekly";
 import type { Intake } from "@/lib/intake";
+import { monthlyPrice } from "@/config/pricing";
+import { guaranteeDeadline } from "@/lib/guarantee";
 import { sampleTargets, sampleTargetsFollowUp } from "@/content/sample-plans";
 
 /**
@@ -203,6 +205,17 @@ export const demoAccountView: AccountView = {
   weekly: demoWeekly,
   weeklyReminders: true,
   health: demoHealth,
+  // In het echt alleen zichtbaar in de eerste dagen na de aankoop; de demo laat zien hoe het eruitziet.
+  guarantee: {
+    orderId: "demo-order",
+    reference: "3F2A9C1B",
+    amountCents: monthlyPrice("bundel", "6m"),
+    subscription: true,
+    deadline: guaranteeDeadline(new Date("2027-01-06T09:12:00+01:00")),
+    open: true,
+    requestedAt: null,
+    handledAt: null,
+  },
   targets: [
     { seq: 1, date: at(PERIODS[0]), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
     { seq: 2, date: at(PERIODS[1]), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },

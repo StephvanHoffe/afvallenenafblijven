@@ -9,7 +9,7 @@ export const adminNav = [
   { href: "/beheer/klanten", label: "Klanten", icon: Users },
   { href: "/beheer/bestellingen", label: "Bestellingen", icon: Receipt },
   { href: "/beheer/schemas", label: "Schema's", icon: FileText },
-  { href: "/beheer/herroepingen", label: "Herroepingen", icon: Undo2 },
+  { href: "/beheer/herroepingen", label: "Herroepingen & garantie", icon: Undo2 },
   { href: "/beheer/instellingen", label: "Instellingen", icon: Settings },
 ];
 

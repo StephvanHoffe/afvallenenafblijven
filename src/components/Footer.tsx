@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { CookieSettingsButton } from "@/components/cookies/CookieSettingsButton";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { companyAddressLine, site } from "@/config/site";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
 
@@ -45,7 +46,7 @@ const copy = defineCopy({
       },
     ],
     intro:
-      "Persoonlijke voedings- en trainingsschema's die passen bij jouw doel, lichaam en agenda. Zodat je niet alleen afvalt, maar ook afblijft.",
+      "Persoonlijke voedings- en trainingsschema's die passen bij jouw doel, lichaam en agenda. Om je te helpen niet alleen af te vallen, maar ook af te blijven.",
     payments: "Veilig betalen met iDEAL | Wero, Bancontact, creditcard en SEPA-incasso.",
     kvk: "KvK",
     vat: "Btw",
@@ -88,7 +89,7 @@ const copy = defineCopy({
       },
     ],
     intro:
-      "Personal nutrition and workout plans that fit your goal, body and schedule. So you don't just lose weight, you keep it off.",
+      "Personal nutrition and workout plans that fit your goal, body and schedule. To help you not just lose weight, but keep it off.",
     payments: "Pay securely with iDEAL | Wero, Bancontact, credit card and SEPA Direct Debit.",
     kvk: "Chamber of Commerce no.",
     vat: "VAT",
@@ -104,7 +105,8 @@ async function CopyrightYear() {
 }
 
 export async function Footer() {
-  const t = copy[await getLocale()];
+  const l = await getLocale();
+  const t = copy[l];
   const c = site.company;
   return (
     <footer className="no-print mt-auto bg-brand-950 text-white/80">
@@ -145,8 +147,8 @@ export async function Footer() {
               {c.email}
             </a>
           </p>
-          <p>
-            {t.medical}{" "}
+          <p className="md:max-w-md md:text-right">
+            {t.medical} {resultDisclaimer[l].short}{" "}
             <Link href="/disclaimer" className="underline hover:text-white">
               {t.disclaimer}
             </Link>

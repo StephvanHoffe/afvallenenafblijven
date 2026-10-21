@@ -1,11 +1,20 @@
 import type { HealthView } from "@/lib/health/view";
-import type { AccountView, DashboardOrder, DashboardPlan } from "@/lib/account-types";
+import type { AccountView, DashboardOrder, DashboardPlan, GuaranteeView } from "@/lib/account-types";
 import { durations, isSubscription } from "@/config/pricing";
 import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
 import { weeklyWindow } from "@/lib/weekly";
 import { addMonthsClamped } from "@/lib/dates";
-import { MAX_PLAN_ATTEMPTS, type CheckinRow, type IntakeRow, type Order, type Plan, type WeeklyLogRow } from "@/lib/repo";
+import { guaranteeAvailable, guaranteeDeadline, guaranteeOrder } from "@/lib/guarantee";
+import {
+  MAX_PLAN_ATTEMPTS,
+  type CheckinRow,
+  type GuaranteeRequestRow,
+  type IntakeRow,
+  type Order,
+  type Plan,
+  type WeeklyLogRow,
+} from "@/lib/repo";
 
 /** Zet bestellingen, schema's, check-ins en de vragenlijst om naar wat Mijn schema's toont. */
 export function toAccountView(input: {
@@ -18,6 +27,7 @@ export function toAccountView(input: {
   intake: IntakeRow | null;
   targets: { seq: number; generated_at: Date | null; targets: NutritionTargets | null }[];
   health?: HealthView | null;
+  guaranteeRequest?: GuaranteeRequestRow | null;
 }): AccountView {
   const { orders, plans, checkins } = input;
   const now = Date.now();
@@ -87,6 +97,7 @@ export function toAccountView(input: {
     weekly: input.weekly.map((w) => ({ seq: w.seq, week: w.week, date: w.created_at, data: w.data, adjustment: w.adjustment, status: w.status })),
     weeklyReminders: input.weeklyReminders,
     health: input.health ?? null,
+    guarantee: toGuaranteeView(orders, input.guaranteeRequest ?? null, now),
     targets: input.targets
       .filter((t) => t.targets)
       .map((t) => ({
@@ -97,5 +108,22 @@ export function toAccountView(input: {
         carbsG: t.targets!.carbsG,
         fatG: t.targets!.fatG,
       })),
+  };
+}
+
+function toGuaranteeView(orders: Order[], request: GuaranteeRequestRow | null, now: number): GuaranteeView | null {
+  const order = (request && orders.find((o) => o.id === request.order_id)) || guaranteeOrder(orders);
+  if (!order) return null;
+  const open = !request && guaranteeAvailable(order, now);
+  if (!open && !request) return null;
+  return {
+    orderId: order.id,
+    reference: order.id.slice(0, 8).toUpperCase(),
+    amountCents: order.amount_cents,
+    subscription: isSubscription(order.duration),
+    deadline: guaranteeDeadline(order.created_at),
+    open,
+    requestedAt: request?.created_at ?? null,
+    handledAt: request?.handled_at ?? null,
   };
 }

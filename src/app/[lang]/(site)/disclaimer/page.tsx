@@ -11,11 +11,11 @@ const PATH = "/disclaimer";
 const copy = defineCopy({
   nl: {
     title: "Disclaimer",
-    description: `Disclaimer van ${site.name}: onze schema's zijn leefstijladvies en geen medisch advies.`,
+    description: `Disclaimer van ${site.name}: onze schema's zijn leefstijladvies, geen medisch advies en geen garantie op resultaat.`,
   },
   en: {
     title: "Disclaimer",
-    description: `Disclaimer of ${site.name}: our plans are lifestyle advice, not medical advice.`,
+    description: `Disclaimer of ${site.name}: our plans are lifestyle advice, not medical advice and not a guarantee of results.`,
   },
 });
 
@@ -63,11 +63,25 @@ function Nl() {
         etiketten, want de samenstelling van producten kan per merk verschillen en veranderen.
       </p>
 
-      <h2>Resultaten</h2>
+      <h2 id="resultaten">Geen garantie op resultaat</h2>
       <p>
-        Resultaten verschillen per persoon. Prognoses op de website, zoals een verwachte datum om je streefgewicht te
-        bereiken, zijn indicaties op basis van gemiddelden en geen garantie.
+        Bij {site.name} koop je een persoonlijk schema en begeleiding, geen gegarandeerd resultaat. We beloven niet dat
+        je een bepaald aantal kilo&apos;s afvalt, je streefgewicht binnen een bepaalde tijd bereikt of een bepaalde
+        hoeveelheid spiermassa opbouwt. Hoeveel je afvalt of aan spiermassa opbouwt, verschilt per persoon en hangt onder
+        meer af van je lichaam, je gezondheid, je slaap, je omstandigheden en hoe goed je het schema volgt.
       </p>
+      <p>
+        Prognoses op de website en in Mijn schema&apos;s, zoals een verwachte datum om je streefgewicht te bereiken of de
+        verwachte voortgang in een grafiek, zijn schattingen op basis van gemiddelden en geen toezeggingen. Voorbeelden en
+        grafieken van fictieve klanten laten zien hoe het werkt, niet wat jij zult bereiken.
+      </p>
+      {site.guarantee.enabled && (
+        <p>
+          Wel heb je {site.guarantee.days} dagen tevredenheidsgarantie op je eerste betaling: ben je niet tevreden over
+          de dienst, dan vraag je je geld terug in Mijn schema&apos;s. Die garantie gaat over je tevredenheid, niet over een
+          bepaald resultaat. Zie <Link href="/algemene-voorwaarden#garantie">artikel 10 van de algemene voorwaarden</Link>.
+        </p>
+      )}
 
       <h2>Informatie op de website</h2>
       <p>
@@ -121,11 +135,25 @@ function En() {
         labels yourself, as the composition of products can differ between brands and can change.
       </p>
 
-      <h2>Results</h2>
+      <h2 id="resultaten">No guaranteed results</h2>
       <p>
-        Results vary from person to person. Forecasts on the website, such as an expected date for reaching your target
-        weight, are indications based on averages and not a guarantee.
+        With {site.name}, you are buying a personal plan and guidance, not a guaranteed result. We do not promise that you
+        will lose a certain number of kilos, reach your target weight within a certain time or build a certain amount of
+        muscle. How much weight you lose or muscle you build varies from person to person and depends on factors such as
+        your body, your health, your sleep, your circumstances and how closely you follow the plan.
       </p>
+      <p>
+        Forecasts on the website and in My plans, such as an expected date for reaching your target weight or the
+        expected progress in a chart, are estimates based on averages and not promises. Examples and charts of fictional
+        customers show how it works, not what you will achieve.
+      </p>
+      {site.guarantee.enabled && (
+        <p>
+          You do have a {site.guarantee.days}-day satisfaction guarantee on your first payment: if you are not satisfied
+          with the service, you can request your money back in My plans. This guarantee concerns your satisfaction, not
+          any particular result. See <Link href="/algemene-voorwaarden#garantie">article 10 of the terms and conditions</Link>.
+        </p>
+      )}
 
       <h2>Information on the website</h2>
       <p>

@@ -156,6 +156,13 @@ export async function markWithdrawalHandled(formData: FormData): Promise<void> {
   back(formData, "afgehandeld");
 }
 
+export async function markGuaranteeHandled(formData: FormData): Promise<void> {
+  await guard(formData);
+  const sql = await db();
+  await sql`update guarantee_requests set handled_at = now() where id = ${String(formData.get("aanvraag") ?? "")} and handled_at is null`;
+  back(formData, "garantie-afgehandeld");
+}
+
 export async function sendTestEmail(formData: FormData): Promise<void> {
   await guard(formData);
   const sent = await sendMail(

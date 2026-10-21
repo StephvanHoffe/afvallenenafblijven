@@ -1,5 +1,6 @@
 import Link from "@/i18n/Link";
 import { cancelSubscription, openBillingPortal, undoCancellation } from "@/app/[lang]/(site)/account/actions";
+import { GuaranteeForm } from "@/app/[lang]/(site)/account/GuaranteeForm";
 import { DemoButton } from "@/components/account/DemoButton";
 import { Pill, orderStatus } from "@/components/account/shared";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -7,7 +8,7 @@ import { durationFor, productFor } from "@/config/pricing";
 import { site } from "@/config/site";
 import { defineCopy, type Locale } from "@/i18n/config";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
-import { formatDate } from "@/lib/format";
+import { euro, formatDate } from "@/lib/format";
 
 const copy = defineCopy({
   nl: {
@@ -39,6 +40,18 @@ const copy = defineCopy({
     or: "of",
     contact: "neem contact op",
     respond: (days: number) => `. We reageren binnen ${days} werkdagen.`,
+    guaranteeTitle: "Niet tevreden? Geld-terug-garantie",
+    guaranteeText: (date: string, amount: string, subscription: boolean) =>
+      `Tot en met ${date} kun je je ${subscription ? "eerste betaling" : "betaling"} van ${amount} volledig terugvragen, zonder opgaaf van reden.${subscription ? " Je abonnement stopt dan direct." : ""}`,
+    guaranteeAction: "Garantie aanvragen",
+    guaranteeExample: (days: number) => `Voorbeeld: zo ziet dit eruit in de eerste ${days} dagen na je aankoop.`,
+    guaranteeRequested: (date: string, days: number) =>
+      `Je hebt op ${date} je eerste betaling teruggevraagd onder de garantie. We betalen binnen ${days} werkdagen terug en laten het je weten.`,
+    guaranteeHandled: (date: string) => `Je garantie-aanvraag is op ${date} afgehandeld en je eerste betaling is terugbetaald.`,
+    guaranteeTerms: "Lees de voorwaarden",
+    requestedTitle: "Je garantie-aanvraag is ontvangen",
+    requestedText: (days: number) =>
+      `We hebben je een bevestiging per e-mail gestuurd en betalen je eerste betaling binnen ${days} werkdagen terug.`,
   },
   en: {
     cancelledTitle: "Your subscription has been cancelled",
@@ -69,6 +82,17 @@ const copy = defineCopy({
     or: "or",
     contact: "get in touch",
     respond: (days: number) => `. We respond within ${days} working days.`,
+    guaranteeTitle: "Not satisfied? Money-back guarantee",
+    guaranteeText: (date: string, amount: string, subscription: boolean) =>
+      `Until and including ${date}, you can get your ${subscription ? "first payment" : "payment"} of ${amount} back in full, no reason needed.${subscription ? " Your subscription will then end straight away." : ""}`,
+    guaranteeAction: "Request the guarantee",
+    guaranteeExample: (days: number) => `Example: this is what you'll see in the first ${days} days after your purchase.`,
+    guaranteeRequested: (date: string, days: number) =>
+      `On ${date}, you asked for your first payment back under the guarantee. We'll refund it within ${days} working days and let you know.`,
+    guaranteeHandled: (date: string) => `Your guarantee request was handled on ${date} and your first payment has been refunded.`,
+    guaranteeTerms: "Read the terms",
+    requestedTitle: "Your guarantee request has been received",
+    requestedText: (days: number) => `We've sent you a confirmation by email and will refund your first payment within ${days} working days.`,
   },
 });
 
@@ -76,6 +100,7 @@ export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; 
   const c = copy[l];
   const activeSubs = view.orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due"));
   const wantsCancel = notice === "opzeggen";
+  const g = view.guarantee;
 
   return (
     <div className="space-y-6">
@@ -83,6 +108,12 @@ export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; 
         <div role="status" className="rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-6">
           <h2 className="text-lg font-bold">{c.cancelledTitle}</h2>
           <p className="mt-1 text-[0.9375rem]">{c.cancelledText}</p>
+        </div>
+      )}
+      {notice === "garantie" && (
+        <div role="status" className="rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-6">
+          <h2 className="text-lg font-bold">{c.requestedTitle}</h2>
+          <p className="mt-1 text-[0.9375rem]">{c.requestedText(site.responseTimeDays)}</p>
         </div>
       )}
       {wantsCancel && activeSubs.length > 0 && (
@@ -168,6 +199,36 @@ export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; 
           .
         </p>
       </section>
+
+      {g && (
+        <section id="garantie" className="scroll-mt-24 rounded-[var(--radius-card)] border border-line p-5 text-sm">
+          {demo && g.open && <p className="mb-2 text-xs font-semibold text-muted">{c.guaranteeExample(site.guarantee.days)}</p>}
+          <h2 className="font-bold">{c.guaranteeTitle}</h2>
+          {g.handledAt ? (
+            <p className="mt-1 text-muted">{c.guaranteeHandled(formatDate(g.handledAt, l))}</p>
+          ) : g.requestedAt ? (
+            <p className="mt-1 text-muted">{c.guaranteeRequested(formatDate(g.requestedAt, l), site.responseTimeDays)}</p>
+          ) : (
+            <>
+              <p className="mt-1 text-muted">
+                {c.guaranteeText(formatDate(g.deadline, l), euro(g.amountCents, l), g.subscription)}{" "}
+                <Link href="/algemene-voorwaarden#garantie" className="underline">
+                  {c.guaranteeTerms}
+                </Link>
+                .
+              </p>
+              <details className="mt-3">
+                <summary className="cursor-pointer font-semibold text-brand-700 underline [&::-webkit-details-marker]:hidden">
+                  {c.guaranteeAction}
+                </summary>
+                <div className="mt-3 max-w-lg">
+                  <GuaranteeForm orderId={g.orderId} amount={euro(g.amountCents, l)} subscription={g.subscription} demo={demo} />
+                </div>
+              </details>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="rounded-[var(--radius-card)] bg-sand p-6">
         <h2 className="text-lg font-bold">{c.questionsTitle}</h2>

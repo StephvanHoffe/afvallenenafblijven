@@ -24,6 +24,22 @@ export interface DashboardOrder {
   lastWeightKg: number | null;
 }
 
+/** De tevredenheidsgarantie op de eerste aankoop, zoals Mijn schema's die toont. */
+export interface GuaranteeView {
+  orderId: string;
+  reference: string;
+  /** De eerste betaling, die de klant terugkrijgt. */
+  amountCents: number;
+  /** Stopt er een abonnement bij de aanvraag? (Niet bij een los schema.) */
+  subscription: boolean;
+  /** Tot en met dit moment kan de garantie worden aangevraagd. */
+  deadline: Date;
+  /** Kan de klant de garantie nu (nog) aanvragen? */
+  open: boolean;
+  requestedAt: Date | null;
+  handledAt: Date | null;
+}
+
 export interface DashboardPlan {
   id: string;
   type: PlanType;
@@ -54,8 +70,10 @@ export interface AccountView {
   targets: { seq: number; date: Date | null; calories: number; proteinG: number; carbsG: number; fatG: number }[];
   /** Gekoppelde gezondheidsapps en hun data (null als de site geen koppelingen heeft). */
   health: HealthView | null;
+  /** Alleen binnen de garantietermijn, of als de klant de garantie heeft aangevraagd. */
+  guarantee: GuaranteeView | null;
 }
 
 export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement";
 
-export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | null;
+export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | "garantie" | null;

@@ -28,8 +28,8 @@ const copy = defineCopy({
     weightTitle: "Je gewicht",
     weightIntro: (projection: boolean) =>
       `Je startgewicht uit de vragenlijst en je gewicht bij elke check-in${projection ? ", naast het verwachte verloop van je plan bij de start" : ""}.`,
-    projectedBefore: "Volgens je plan bij de start haal je je streefgewicht rond",
-    projectedAfter: ". Afvallen gaat niet in een rechte lijn; schommelingen van een kilo zijn normaal.",
+    projectedBefore: "Volgens de schatting bij de start haal je je streefgewicht rond",
+    projectedAfter: ". Dat is een schatting, geen belofte: afvallen gaat niet in een rechte lijn en schommelingen van een kilo zijn normaal.",
     table: "Alle metingen als tabel",
     date: "Datum",
     moment: "Moment",
@@ -71,8 +71,8 @@ const copy = defineCopy({
     weightTitle: "Your weight",
     weightIntro: (projection: boolean) =>
       `Your starting weight from the questionnaire and your weight at each check-in${projection ? ", alongside the expected progress of your plan at the start" : ""}.`,
-    projectedBefore: "According to your plan at the start, you'll reach your target weight around",
-    projectedAfter: ". Weight loss doesn't happen in a straight line; fluctuations of a kilo are normal.",
+    projectedBefore: "Based on the estimate at the start, you could reach your target weight around",
+    projectedAfter: ". That's an estimate, not a promise: weight loss doesn't happen in a straight line, and fluctuations of a kilo are normal.",
     table: "All measurements as a table",
     date: "Date",
     moment: "Measurement",

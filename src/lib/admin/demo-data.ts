@@ -9,6 +9,7 @@ import type {
   AdminCampaignRow,
   AdminCustomerRow,
   AdminData,
+  AdminGuaranteeRow,
   AdminOrderRow,
   AdminPlanRow,
   AdminWithdrawalRow,
@@ -146,6 +147,19 @@ const withdrawals: AdminWithdrawalRow[] = [
   },
 ];
 
+// Garantie-aanvragen: van recente eerste bestellingen (binnen de garantietermijn).
+const guaranteeRequests: AdminGuaranteeRow[] = orders
+  .filter((o) => TODAY - o.createdAt.getTime() < 14 * DAY)
+  .slice(1, 3)
+  .map((order, i) => ({
+    id: id("g", i + 1),
+    order,
+    reason: i === 0 ? "Het past toch niet in mijn drukke werkweek." : null,
+    createdAt: new Date(order.createdAt.getTime() + (i + 2) * DAY),
+    handledAt: i === 1 ? new Date(order.createdAt.getTime() + (i + 3) * DAY) : null,
+    stripeCustomerId: null,
+  }));
+
 
 const within30 = (d: Date) => TODAY - d.getTime() < 30 * DAY;
 
@@ -223,6 +237,7 @@ export const demoAdminData: AdminData = {
       plansFailed: plans.filter((p) => p.status === "failed").length,
       plansInProgress: plans.filter((p) => p.status === "generating" || p.status === "pending").length,
       openWithdrawals: withdrawals.filter((w) => !w.handledAt).length,
+      openGuaranteeRequests: guaranteeRequests.filter((g) => !g.handledAt).length,
       ordersPerDay: perDay,
       productMix: [...mix.values()].sort((a, b) => b.count - a.count),
       recentOrders: orders.slice(0, 8),
@@ -283,5 +298,9 @@ export const demoAdminData: AdminData = {
 
   async withdrawals() {
     return withdrawals;
+  },
+
+  async guaranteeRequests() {
+    return guaranteeRequests;
   },
 };

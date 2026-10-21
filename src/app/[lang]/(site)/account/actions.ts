@@ -7,13 +7,22 @@ import { z } from "zod";
 import { currentCustomer, endSession } from "@/lib/auth";
 import { checkinOptions, checkinWindow, type CheckinData } from "@/lib/checkin";
 import { processOrderPlans, startNextPeriod } from "@/lib/plans";
-import { addCheckin, ordersForCustomer, plansForOrder, setCustomerLocale, setWeeklyReminders } from "@/lib/repo";
+import {
+  addCheckin,
+  createGuaranteeRequest,
+  ordersForCustomer,
+  plansForOrder,
+  setCustomerLocale,
+  setWeeklyReminders,
+} from "@/lib/repo";
 import { processWeeklyLog, recordWeeklyLog, weeklyWindowForOrder } from "@/lib/weekly-server";
 import type { WeeklyData } from "@/lib/weekly";
 import { billingPortalUrl, cancelSubscription as cancelStripeSubscription, resumeSubscription } from "@/lib/stripe";
 import { syncSubscription } from "@/lib/fulfillment";
-import { cancellationEmail, sendMail } from "@/lib/email";
-import { productFor, products } from "@/config/pricing";
+import { adminNotificationEmail, cancellationEmail, guaranteeRequestEmail, sendMail } from "@/lib/email";
+import { guaranteeAvailable, guaranteeOrder } from "@/lib/guarantee";
+import { durations, isSubscription, productFor, products } from "@/config/pricing";
+import { euro, formatDate } from "@/lib/format";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import { requestLocale } from "@/i18n/server";
 import { goalOptions } from "@/lib/intake";
@@ -29,6 +38,9 @@ const copy = defineCopy({
     noPlan: "We konden je schema niet vinden. Ververs de pagina en probeer het opnieuw.",
     weeklyClosed: "Dit weegmoment is niet (meer) open. Ververs de pagina om je actuele status te zien.",
     weeklyInvalid: "Vul je gewicht in kilo's in, bijvoorbeeld 74,5.",
+    guaranteeClosed: "De garantietermijn is verstreken of je hebt de garantie al aangevraagd. Ververs de pagina om je actuele status te zien.",
+    guaranteeConfirm: "Vink aan dat je je eerste betaling terug wilt en dat je abonnement daarmee stopt.",
+    guaranteeConfirmOneOff: "Vink aan dat je je betaling terug wilt.",
   },
   en: {
     loggedOut: "You're not logged in (anymore). Please log in again and try once more.",
@@ -39,6 +51,9 @@ const copy = defineCopy({
     noPlan: "We couldn't find your plan. Refresh the page and try again.",
     weeklyClosed: "This weekly weigh-in isn't open (anymore). Refresh the page to see your current status.",
     weeklyInvalid: "Enter your weight in kilos, for example 74.5.",
+    guaranteeClosed: "The guarantee period has ended or you've already made a request. Refresh the page to see your current status.",
+    guaranteeConfirm: "Please tick the box to confirm you want your first payment back and that this ends your subscription.",
+    guaranteeConfirmOneOff: "Please tick the box to confirm you want your payment back.",
   },
 });
 
@@ -237,6 +252,60 @@ export async function submitWeeklyLog(_prev: FormState, formData: FormData): Pro
   });
   if (id && needsInstructions) after(() => processWeeklyLog(id));
   redirect(localePath(l, "/account/check-in?weegmoment=opgeslagen#weegmoment"));
+}
+
+/**
+ * Tevredenheidsgarantie: de klant vraagt binnen de termijn de eerste betaling
+ * terug. We leggen de aanvraag vast en mailen klant en beheerder; de beheerder
+ * betaalt terug en beëindigt het abonnement in Stripe (zie /beheer/herroepingen).
+ */
+export async function requestGuarantee(_prev: FormState, formData: FormData): Promise<FormState> {
+  const l = await requestLocale();
+  const c = copy[l];
+  const customer = await currentCustomer();
+  if (!customer) return { ok: false, message: c.loggedOut };
+  const order = guaranteeOrder(await ordersForCustomer(customer.id));
+  if (!order || order.id !== String(formData.get("order") ?? "") || !guaranteeAvailable(order)) {
+    return { ok: false, message: c.guaranteeClosed };
+  }
+  const subscription = isSubscription(order.duration);
+  if (formData.get("bevestig") !== "ja") {
+    return { ok: false, message: subscription ? c.guaranteeConfirm : c.guaranteeConfirmOneOff };
+  }
+  const reason = String(formData.get("reden") ?? "").trim().slice(0, 1000) || undefined;
+  const request = await createGuaranteeRequest({ customerId: customer.id, orderId: order.id, reason });
+  if (!request) return { ok: false, message: c.guaranteeClosed };
+
+  const reference = order.id.slice(0, 8).toUpperCase();
+  const product = productFor(order.product, l).name;
+  await Promise.all([
+    sendMail(
+      guaranteeRequestEmail(
+        { to: customer.email, name: customer.name, reference, productName: product, amountCents: order.amount_cents, subscription },
+        l,
+      ),
+    ),
+    sendMail(
+      adminNotificationEmail(
+        "Garantie-aanvraag ontvangen",
+        {
+          Naam: customer.name,
+          "E-mail": customer.email,
+          Bestelling: `${reference} · ${productFor(order.product, "nl").name} · ${durations[order.duration].label} · besteld op ${formatDate(order.created_at)}`,
+          "Terug te betalen": `${euro(order.amount_cents)} (eerste betaling)`,
+          Abonnement: order.stripe_subscription_id
+            ? `${order.stripe_subscription_id}: direct beëindigen in Stripe`
+            : subscription
+              ? "Nog geen Stripe-abonnement bekend"
+              : undefined,
+          Reden: reason,
+          Taal: l === "en" ? "Engels" : undefined,
+        },
+        customer.email,
+      ),
+    ),
+  ]).catch((err) => console.error("Garantie-aanvraag mailen mislukt", err));
+  redirect(localePath(l, "/account/abonnement?garantie=aangevraagd#garantie"));
 }
 
 /** Wekelijkse herinnering per e-mail aan- of uitzetten. */

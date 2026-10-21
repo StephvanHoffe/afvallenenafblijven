@@ -500,6 +500,38 @@ export async function createWithdrawal(input: {
   return row;
 }
 
+// ---------- Tevredenheidsgarantie ----------
+
+export interface GuaranteeRequestRow {
+  id: string;
+  customer_id: string;
+  order_id: string;
+  reason: string | null;
+  created_at: Date;
+  handled_at: Date | null;
+}
+
+export async function guaranteeRequestForCustomer(customerId: string): Promise<GuaranteeRequestRow | null> {
+  const sql = await db();
+  const [row] = await sql<GuaranteeRequestRow[]>`select * from guarantee_requests where customer_id = ${customerId}`;
+  return row ?? null;
+}
+
+/** Legt de aanvraag vast; null als deze klant de garantie al eerder heeft aangevraagd. */
+export async function createGuaranteeRequest(input: {
+  customerId: string;
+  orderId: string;
+  reason?: string;
+}): Promise<GuaranteeRequestRow | null> {
+  const sql = await db();
+  const [row] = await sql<GuaranteeRequestRow[]>`
+    insert into guarantee_requests (customer_id, order_id, reason)
+    values (${input.customerId}, ${input.orderId}, ${input.reason ?? null})
+    on conflict (customer_id) do nothing
+    returning *`;
+  return row ?? null;
+}
+
 // ---------- Bewaartermijnen (zie privacybeleid) ----------
 
 /**

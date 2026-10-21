@@ -81,6 +81,16 @@ export interface AdminWithdrawalRow {
   handledAt: Date | null;
 }
 
+/** Een aanvraag onder de tevredenheidsgarantie (eerste betaling terug). */
+export interface AdminGuaranteeRow {
+  id: string;
+  createdAt: Date;
+  handledAt: Date | null;
+  reason: string | null;
+  order: AdminOrderRow;
+  stripeCustomerId: string | null;
+}
+
 export interface AdminOverview {
   activeSubscriptions: number;
   mrrCents: number;
@@ -92,6 +102,7 @@ export interface AdminOverview {
   plansFailed: number;
   plansInProgress: number;
   openWithdrawals: number;
+  openGuaranteeRequests: number;
   /** Abonnees bij wie de check-in openstaat, en daarvan de verlopen. */
   checkinsOpen: number;
   checkinsOverdue: number;
@@ -120,6 +131,7 @@ export interface AdminData {
   plans(status?: PlanStatus): Promise<AdminPlanRow[]>;
   plan(id: string): Promise<AdminPlanDetail | null>;
   withdrawals(): Promise<AdminWithdrawalRow[]>;
+  guaranteeRequests(): Promise<AdminGuaranteeRow[]>;
 }
 
 const ref = (id: string) => id.slice(0, 8).toUpperCase();
@@ -236,8 +248,9 @@ const dbAdminData: AdminData = {
              count(*) filter (where status = 'failed' and attempts >= 5)::int as failed,
              count(*) filter (where status in ('pending', 'generating') or (status = 'failed' and attempts < 5))::int as in_progress
       from plans`;
-    const [withdrawals] = await sql<{ open: number }[]>`
-      select count(*)::int as open from withdrawals where handled_at is null`;
+    const [withdrawals] = await sql<{ open: number; guarantees: number }[]>`
+      select (select count(*)::int from withdrawals where handled_at is null) as open,
+             (select count(*)::int from guarantee_requests where handled_at is null) as guarantees`;
     const perDay = await sql<{ date: string; count: number }[]>`
       select to_char(d, 'YYYY-MM-DD') as date, count(o.id)::int as count
       from generate_series((now() at time zone 'Europe/Amsterdam')::date - 29,
@@ -283,6 +296,7 @@ const dbAdminData: AdminData = {
       plansFailed: plans.failed,
       plansInProgress: plans.in_progress,
       openWithdrawals: withdrawals.open,
+      openGuaranteeRequests: withdrawals.guarantees,
       ordersPerDay: perDay,
       productMix: mix,
       campaigns: campaigns.map((r) => ({ source: r.source, campaign: r.campaign, started: r.started, orders: r.orders, firstPaymentsCents: r.amount })),
@@ -401,6 +415,28 @@ const dbAdminData: AdminData = {
       message: r.message,
       createdAt: r.created_at,
       handledAt: r.handled_at,
+    }));
+  },
+
+  async guaranteeRequests() {
+    const sql = await db();
+    const rows = await sql<
+      (OrderSql & { request_id: string; reason: string | null; requested_at: Date; handled_at: Date | null; stripe_customer_id: string | null })[]
+    >`
+      select o.*, c.name as customer_name, c.email as customer_email, c.stripe_customer_id, i.campaign,
+             g.id as request_id, g.reason, g.created_at as requested_at, g.handled_at
+      from guarantee_requests g
+      join orders o on o.id = g.order_id
+      join customers c on c.id = g.customer_id
+      left join intakes i on i.id = o.intake_id
+      order by g.created_at desc limit 200`;
+    return rows.map((r) => ({
+      id: r.request_id,
+      createdAt: r.requested_at,
+      handledAt: r.handled_at,
+      reason: r.reason,
+      order: toOrder(r),
+      stripeCustomerId: r.stripe_customer_id,
     }));
   },
 };

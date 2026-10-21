@@ -15,6 +15,7 @@ import { isHealthEnabled } from "@/lib/health/config";
 import { loadHealthView } from "@/lib/health/view-server";
 import {
   checkinsForCustomer,
+  guaranteeRequestForCustomer,
   latestIntakeForCustomer,
   nutritionTargetHistory,
   ordersForCustomer,
@@ -72,13 +73,14 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   if (tab === "overzicht" && sp.opzeggen === "1") redirect(localePath(l, "/account/abonnement?opzeggen=1"));
   if (tab === "overzicht" && sp.opgezegd === "1") redirect(localePath(l, "/account/abonnement?opgezegd=1"));
 
-  const [orders, plans, checkins, weekly, intake, targets] = await Promise.all([
+  const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest] = await Promise.all([
     ordersForCustomer(customer.id),
     plansForCustomer(customer.id),
     checkinsForCustomer(customer.id),
     weeklyLogsForCustomer(customer.id),
     latestIntakeForCustomer(customer.id),
     nutritionTargetHistory(customer.id),
+    guaranteeRequestForCustomer(customer.id),
   ]);
   // Ingeplande trainingen per week: uit de laatste check-in, anders de vragenlijst (alleen met een trainingsschema).
   const trains = orders.some((o) => products[o.product].includes.includes("training"));
@@ -94,9 +96,12 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
     weeklyReminders: customer.weekly_reminders,
     intake,
     targets,
+    guaranteeRequest,
   });
   const notice: AccountNotice =
-    sp.checkin === "ontvangen"
+    sp.garantie === "aangevraagd"
+      ? "garantie"
+      : sp.checkin === "ontvangen"
       ? "checkin"
       : sp.weegmoment === "opgeslagen"
         ? "weegmoment"

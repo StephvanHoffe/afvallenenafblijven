@@ -63,7 +63,7 @@ function Nl() {
           <>
             {" "}
             en geldt onze <Link href="/algemene-voorwaarden#garantie">tevredenheidsgarantie van {site.guarantee.days} dagen</Link>{" "}
-            op je eerste betaling
+            op je eerste betaling. Die vraag je aan in <Link href="/account/abonnement#garantie">Mijn schema&apos;s</Link>
           </>
         ) : null}
         .
@@ -104,7 +104,7 @@ function En() {
             {" "}
             and our{" "}
             <Link href="/algemene-voorwaarden#garantie">{site.guarantee.days}-day satisfaction guarantee</Link> applies to
-            your first payment
+            your first payment. You can request it in <Link href="/account/abonnement#garantie">My plans</Link>
           </>
         ) : null}
         .

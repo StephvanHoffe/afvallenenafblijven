@@ -9,7 +9,8 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - Vragenlijst in stappen (`/start`). De bezoeker ziet direct een persoonlijk resultaat: calorie- en macrodoel en een prognose met streefdatum. Daarna volgen de plankeuze en de betaling.
 - Prijstabel met looptijd-schakelaar (vanaf € 8,95 per maand), kortingslabels, "Meest gekozen"-bundel en een losse aankoop als alternatief.
 - Lanceringsactie (automatische korting op de eerste maand, alleen binnen de ingestelde data).
-- Tevredenheidsgarantie (aan/uit te zetten).
+- Tevredenheidsgarantie van 14 dagen op de eerste betaling (aan/uit te zetten), aan te vragen in Mijn schema's.
+- Bescheiden disclaimers dat je een schema en begeleiding koopt, geen gegarandeerd resultaat: in de footer, onder de prijzen, bij de prognose en het afrekenen, in de veelgestelde vragen en op de disclaimerpagina (teksten in `src/content/disclaimers.ts`).
 - Vaste startknop onderin op mobiel.
 - Conversiemeting voor GA4 en Meta Pixel, pas na cookietoestemming.
 
@@ -20,7 +21,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - "Mijn schema's" (inloggen zonder wachtwoord) met tabbladen: **Overzicht**, **Schema's**, **Voortgang**, **Check-in**, **Mijn gegevens** en **Abonnement**. Elk tabblad heeft een eigen adres (`/account/voortgang` enz.).
   - Voortgang: grafiek van je gewicht (start uit de vragenlijst plus elke check-in) naast het verwachte verloop en je streefgewicht, een voortgangsbalk, taille-omtrek, BMI-schaal, je caloriedoel per periode en een overzicht van je check-in-antwoorden per periode.
   - Mijn gegevens: je antwoorden uit de vragenlijst (bijgewerkt met je check-ins), je energiebehoefte en de verdeling van eiwit, koolhydraten en vet.
-  - Abonnement: opzeggen of de opzegging intrekken, en betaalgegevens en facturen inzien via het Stripe-portaal.
+  - Abonnement: opzeggen of de opzegging intrekken, en betaalgegevens en facturen inzien via het Stripe-portaal. In de eerste 14 dagen na de eerste aankoop staat hier ook, onopvallend, de geld-terug-garantie: de klant vraagt de eerste betaling terug (met een vinkje ter bevestiging) en krijgt een bevestiging per e-mail. Op het Overzicht staat er zolang één regel over. Daarna verdwijnt de optie vanzelf.
 - Overzichtelijke schema's met tabbladen. Voeding: weekmenu in één oogopslag, recepten per dag (inklapbaar), boodschappenlijst om af te vinken en tips. Training: weekoverzicht, per training een compacte oefeningenlijst, opbouw in 4 weken en herstel.
 - Alles als PDF: elk schema, alleen de boodschappenlijst, of alle schema's van een periode in één bestand. Het trainingsschema bevat een logboek om gewichten bij te houden. De PDF's worden op de server gemaakt (`src/lib/pdf/`), in het lettertype van de site.
 - **Verplichte check-in**: elke periode duurt 4 weken. Drie dagen voor het einde opent de check-in en krijgt de klant een uitnodiging, met herinneringen na 3, 7 en 14 dagen (`checkin` in `src/config/site.ts`). Pas na de check-in maakt Claude het nieuwe schema, op basis van de antwoorden: gewicht en taille, hoe goed het schema lukte, honger, energie, slaap, wat de klant lekker vond, hoe zwaar de trainingen waren, aantal trainingsdagen en nieuwe klachten. Het caloriedoel wordt in stappen van 100 kcal bijgesteld als het gewicht anders verloopt dan gepland (maximaal 300 kcal in totaal). Bovenaan elk vervolgschema staat wat er is aangepast en waarom.
@@ -62,7 +63,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - Overzicht: terugkerende omzet per maand, nieuwe bestellingen, conversie van gestarte betalingen, bestellingen per dag en actieve abonnementen per plan.
 - Klanten: zoeken, alle antwoorden uit de vragenlijst, check-ins per periode, de status van de volgende check-in, bestellingen en schema's. Acties: inloglink sturen, een nieuwe periode starten zonder check-in (als de klant zijn gegevens anders heeft doorgegeven), abonnement opzeggen namens de klant, klant volledig verwijderen (AVG).
 - Bestellingen en schema's met filters. Schema's bekijk je zoals de klant ze ziet, ook als PDF. Je kunt ze opnieuw laten maken en de e-mail opnieuw sturen.
-- Herroepingen afhandelen, en een pagina Instellingen die laat zien welke koppelingen werken (met testmail).
+- Herroepingen en garantie-aanvragen afhandelen (terugbetalen en het abonnement direct beëindigen doe je zelf in Stripe; daarna markeer je de aanvraag als afgehandeld), en een pagina Instellingen die laat zien welke koppelingen werken (met testmail).
 - `BEHEER_DEMO=1` toont het beheer met fictieve voorbeelddata en zonder wachtwoord. Alleen voor een demo; zet dit nooit aan op de live site.
 
 **Juridisch (Nederland)**
@@ -147,7 +148,7 @@ Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwi
 
 - **Prijzen**: `monthlyPrices` in `src/config/pricing.ts`, per maand, in centen en inclusief btw. Een gewijzigde prijs maakt automatisch een nieuwe Stripe-prijs aan voor nieuwe klanten; bestaande abonnees houden hun prijs.
 - **Lanceringsactie**: `launchOffer` in `src/config/site.ts`. Hier stel je het percentage, de start- en einddatum in, of zet je de actie uit.
-- **Garantie**: `guarantee` in `src/config/site.ts`. Zet je deze uit, dan verdwijnt de garantie overal, ook uit de voorwaarden.
+- **Garantie**: `guarantee` in `src/config/site.ts` (standaard 14 dagen). Zet je deze uit, dan verdwijnt de garantie overal, ook uit de voorwaarden en Mijn schema's. De termijn loopt tot en met de 14e dag na de besteldag (Nederlandse tijd); de garantie geldt één keer per klant, voor de eerste bestelling.
 
 ## Reviews en social proof
 

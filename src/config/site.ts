@@ -31,7 +31,7 @@ export const site = {
   },
 
   /** Datum van de laatste wijziging van de juridische teksten. */
-  legalUpdated: "20 oktober 2026",
+  legalUpdated: "21 oktober 2026",
 
   /** Hoe snel reageren we op e-mail (gebruikt in contact- en klachtenteksten). */
   responseTimeDays: 2,
@@ -43,7 +43,7 @@ export const site = {
    */
   guarantee: {
     enabled: true,
-    days: 30,
+    days: 14,
   },
 
   /**
