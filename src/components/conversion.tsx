@@ -1,4 +1,4 @@
-import { ArrowRight, Check, HeartCrack, Hourglass, Wallet, X } from "lucide-react";
+import { ArrowRight, Check, HeartCrack, Hourglass, Repeat, Sprout, Wallet, X } from "lucide-react";
 import { SectionHeading } from "@/components/marketing";
 import { painCopy, painLabels, type PainTopic } from "@/content/pains";
 import type { Locale } from "@/i18n/config";
@@ -97,6 +97,51 @@ export function FixSection({ topic, l, className = "container-page py-16" }: { t
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/**
+ * Over 3 maanden: wat er gebeurt als je niets verandert, en als je vandaag
+ * begint. Staat vlak voor de prijzen, zodat de bezoeker in maanden denkt.
+ */
+export function FutureSection({ topic, l, href, cta }: { topic: PainTopic; l: Locale; href: string; cta?: string }) {
+  const c = painLabels[l];
+  const f = painCopy[l][topic].future;
+  return (
+    <section className="container-page py-16">
+      <h2 className="heading-lg mx-auto max-w-2xl text-center">{c.futureTitle}</h2>
+      <div className="mx-auto mt-10 grid max-w-5xl gap-5 md:grid-cols-2">
+        <div className="rounded-[var(--radius-card)] border border-line bg-sand p-6 sm:p-8">
+          <p className="flex items-center gap-2 font-extrabold text-ink/70">
+            <Repeat className="size-5 text-accent-500" aria-hidden /> {c.futureNothing}
+          </p>
+          <ul className="mt-5 space-y-3.5">
+            {f.nothing.map((x) => (
+              <li key={x} className="flex gap-3 text-muted">
+                <X className="mt-0.5 size-5 shrink-0 text-accent-500" aria-hidden />
+                {x}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="rounded-[var(--radius-card)] bg-brand-900 p-6 text-white shadow-[var(--shadow-lift)] sm:p-8">
+          <p className="flex items-center gap-2 font-extrabold text-lime-glow">
+            <Sprout className="size-5" aria-hidden /> {c.futureStart}
+          </p>
+          <ul className="mt-5 space-y-3.5">
+            {f.start.map((x) => (
+              <li key={x} className="flex gap-3">
+                <Check className="mt-0.5 size-5 shrink-0 text-lime-glow" aria-hidden />
+                {x}
+              </li>
+            ))}
+          </ul>
+          <Link href={href} data-lp-cta={cta} className="btn-glow mt-7">
+            {c.futureCta} <ArrowRight className="size-5" aria-hidden />
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }

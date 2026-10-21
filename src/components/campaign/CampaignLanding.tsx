@@ -21,7 +21,7 @@ import {
   TrendingUp,
   Watch,
 } from "lucide-react";
-import { FixSection, PainSection } from "@/components/conversion";
+import { FixSection, FutureSection, PainSection } from "@/components/conversion";
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
@@ -455,6 +455,9 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
           </div>
         </div>
       </section>
+
+      {/* OVER 3 MAANDEN: vlak voor de prijzen */}
+      <FutureSection topic={variant} l={l} href={mainHref} cta="toekomst" />
 
       {/* PRIJZEN */}
       <section id="prijzen" className="container-page scroll-mt-20 py-16">

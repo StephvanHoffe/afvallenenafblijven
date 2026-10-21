@@ -60,7 +60,7 @@ const copy = defineCopy({
     why: (percent: number, from: string, perWeek: string) => [
       {
         title: "Tijd om gewoontes op te bouwen",
-        text: "Eén schema van 4 weken is een begin. Met een abonnement krijg je elke 4 weken een nieuw schema, bijgestuurd op je voortgang, zodat je kunt blijven bijsturen.",
+        text: "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig voordat die vanzelf gaat. Eén schema van 4 weken is dus een begin. Met een abonnement krijg je elke 4 weken een nieuw schema, bijgestuurd op je voortgang.",
       },
       {
         title: "Lagere maandprijs",
@@ -98,7 +98,7 @@ const copy = defineCopy({
     why: (percent: number, from: string, perWeek: string) => [
       {
         title: "Time to build habits",
-        text: "One 4-week plan is a start. With a subscription, you get a new plan every 4 weeks, fine-tuned to your progress, so you can keep adjusting.",
+        text: "According to research, a new habit takes around 66 days on average before it becomes automatic. So one 4-week plan is just a start. With a subscription, you get a new plan every 4 weeks, fine-tuned to your progress.",
       },
       {
         title: "A lower monthly price",

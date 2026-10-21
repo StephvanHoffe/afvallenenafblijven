@@ -24,6 +24,8 @@ export interface PainCopy {
   reframe: { title: string; text: string };
   /** Hoe het meestal gaat, en hoe wij het doen. */
   fixes: { pain: string; answer: string }[];
+  /** Over 3 maanden: als je niets verandert, of als je vandaag begint (zonder beloftes over resultaat). */
+  future: { nothing: string[]; start: string[] };
 }
 
 export const painLabels = defineCopy({
@@ -35,6 +37,10 @@ export const painLabels = defineCopy({
     fixEyebrow: "Zo pakken we het anders aan",
     fixTitle: "Een plan dat zich aanpast aan jou, niet andersom",
     fixLabels: ["Meestal", "Bij ons"] as [string, string],
+    futureTitle: "Over 3 maanden kun je op twee plekken staan",
+    futureNothing: "Als je niets verandert",
+    futureStart: "Als je vandaag begint",
+    futureCta: "Ik kies de tweede",
   },
   en: {
     painsEyebrow: "Sound familiar?",
@@ -44,6 +50,10 @@ export const painLabels = defineCopy({
     fixEyebrow: "How we do things differently",
     fixTitle: "A plan that adapts to you, not the other way round",
     fixLabels: ["Usually", "With us"] as [string, string],
+    futureTitle: "Three months from now, you could be in one of two places",
+    futureNothing: "If nothing changes",
+    futureStart: "If you start today",
+    futureCta: "I choose the second",
   },
 });
 
@@ -52,7 +62,7 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
     afvallen: {
       painTitle: "Maandag begin je. Alweer.",
       painPoints: [
-        "Je begint vol goede moed, en na een paar weken sluipen de oude gewoontes er weer in.",
+        "Je begint vol goede moed, maar één verjaardag of drukke week en je oude gewoontes zijn terug.",
         "Je hebt al van alles geprobeerd: calorieën tellen, shakes, koolhydraatarm. Het werkt even, en dan niet meer.",
         "De kilo's die eraf gingen, kwamen er net zo makkelijk weer bij.",
         "Door alle tegenstrijdige adviezen weet je niet meer wat je nou wel en niet moet eten.",
@@ -74,6 +84,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Recepten die niet in je drukke week passen.", answer: "Recepten binnen jouw bereidingstijd, slim hergebruik en een complete boodschappenlijst." },
         { pain: "Niemand die ziet dat het misgaat.", answer: "Elke week een weegmoment. Wijkt je voortgang af, dan passen we je plan meteen aan." },
       ],
+      future: {
+        nothing: [
+          "Je bent opnieuw begonnen, en opnieuw gestopt.",
+          "Je hebt weer geld uitgegeven aan iets dat je niet volhield.",
+          "Je zegt nog steeds: maandag begin ik.",
+        ],
+        start: [
+          "Je weet elke dag wat je eet, zonder honger of verboden lijstjes.",
+          "Je schema is al een paar keer bijgestuurd op wat er echt gebeurde.",
+          "Je werkt al 3 maanden aan gewoontes die bij je leven passen.",
+        ],
+      },
     },
     voeding: {
       painTitle: "Je eet 'gezond'. En toch schiet het niet op.",
@@ -99,6 +121,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Standaardschema's die geen rekening houden met je allergie of eetpatroon.", answer: "Rekening met allergieën, vegetarisch of veganistisch, en wat je niet lust." },
         { pain: "Honger in de avond, tot het toch misgaat.", answer: "Verzadigende maaltijden met eiwit en vezels. Heb je toch honger, dan sturen we bij." },
       ],
+      future: {
+        nothing: [
+          "Je staat nog steeds om vijf uur te bedenken wat je gaat eten.",
+          "Je eet 'gezond' zonder te weten of het genoeg of te veel is.",
+          "Je denkt nog steeds dat afvallen alleen lukt met saai eten.",
+        ],
+        start: [
+          "Je hebt elke week een menu en een boodschappenlijst klaarliggen.",
+          "Je eet gerechten die je lekker vindt, in hoeveelheden die bij jou passen.",
+          "Je menu is al een paar keer bijgestuurd op je voortgang.",
+        ],
+      },
     },
     training: {
       painTitle: "Je traint wel. Maar het schiet niet op.",
@@ -124,6 +158,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Twijfel over je techniek, of last van een blessure.", answer: "Rekening met je klachten en niveau, met een alternatief voor elke oefening." },
         { pain: "Niemand die ziet of het te zwaar of te licht is.", answer: "Elke week bijgestuurd: we passen gewichten of herhalingen aan op hoe het voelt." },
       ],
+      future: {
+        nothing: [
+          "Je doet nog steeds dezelfde oefeningen, met dezelfde gewichten.",
+          "Je hebt opnieuw een paar weken getraind, en bent weer gestopt.",
+          "Je betaalt je sportschool, maar weet nog steeds niet wat je moet doen.",
+        ],
+        start: [
+          "Je weet bij elke training precies wat je moet doen.",
+          "Je hebt 3 maanden opbouw achter de rug, elke week een stap verder.",
+          "Je schema is al een paar keer aangepast op hoe het voelde.",
+        ],
+      },
     },
     bundel: {
       painTitle: "Hard werken, weinig vooruitgang.",
@@ -149,13 +195,25 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Losse adviezen uit verschillende hoeken.", answer: "Eén plan: voeding en training vanuit dezelfde berekening, volledig op elkaar afgestemd." },
         { pain: "Niemand die bijstuurt als het niet opschiet.", answer: "Elke week een weegmoment. Wijkt je voortgang af, dan passen we voeding of training meteen aan." },
       ],
+      future: {
+        nothing: [
+          "Je eet nog steeds minder en traint hard, zonder dat het opschiet.",
+          "Je voeding en training werken nog steeds langs elkaar heen.",
+          "Je bent opnieuw moe van het diëten, en te moe om te trainen.",
+        ],
+        start: [
+          "Je voeding en training zijn volledig op elkaar afgestemd.",
+          "Je weet wat je op trainingsdagen eet en hoe je traint.",
+          "Je plan is al een paar keer bijgestuurd op wat er echt gebeurde.",
+        ],
+      },
     },
   },
   en: {
     afvallen: {
       painTitle: "Starting again on Monday. Again.",
       painPoints: [
-        "You start full of good intentions, and after a few weeks the old habits creep back in.",
+        "You start full of good intentions, but one birthday or busy week and your old habits are back.",
         "You've tried it all: counting calories, shakes, low-carb. It works for a while, and then it doesn't.",
         "The kilos that came off went straight back on.",
         "With all the conflicting advice, you no longer know what you should and shouldn't eat.",
@@ -177,6 +235,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Recipes that don't fit your busy week.", answer: "Recipes within your cooking time, smart leftovers and a complete shopping list." },
         { pain: "Nobody notices when it's going wrong.", answer: "A weekly weigh-in. If your progress is off track, we adjust your plan straight away." },
       ],
+      future: {
+        nothing: [
+          "You've started again, and stopped again.",
+          "You've spent money again on something you couldn't keep up.",
+          "You're still saying: I'll start on Monday.",
+        ],
+        start: [
+          "You know what you're eating every day, without hunger or forbidden lists.",
+          "Your plan has already been adjusted a few times to what really happened.",
+          "You've spent 3 months working on habits that fit your life.",
+        ],
+      },
     },
     voeding: {
       painTitle: "You're eating 'healthily'. And still not getting anywhere.",
@@ -202,6 +272,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Standard plans that ignore your allergy or way of eating.", answer: "We account for allergies, vegetarian or vegan eating, and foods you dislike." },
         { pain: "Evening hunger, until it goes wrong after all.", answer: "Filling meals with protein and fibre. Still hungry? Then we adjust." },
       ],
+      future: {
+        nothing: [
+          "At five o'clock you're still wondering what to have for dinner.",
+          "You're eating 'healthily' without knowing whether it's enough or too much.",
+          "You still think losing weight only works with boring food.",
+        ],
+        start: [
+          "You have a menu and a shopping list ready every week.",
+          "You eat dishes you enjoy, in amounts that suit you.",
+          "Your menu has already been adjusted a few times to your progress.",
+        ],
+      },
     },
     training: {
       painTitle: "You do train. But you're not getting anywhere.",
@@ -227,6 +309,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Doubts about your technique, or an injury that bothers you.", answer: "We account for your complaints and level, with an alternative for every exercise." },
         { pain: "Nobody checking whether it's too hard or too easy.", answer: "Adjusted every week: we change the weights or reps based on how it feels." },
       ],
+      future: {
+        nothing: [
+          "You're still doing the same exercises with the same weights.",
+          "You've trained for a few weeks again, and stopped again.",
+          "You're paying for the gym, but still don't know what to do.",
+        ],
+        start: [
+          "You know exactly what to do at every workout.",
+          "You have 3 months of build-up behind you, a step further every week.",
+          "Your plan has already been adjusted a few times to how it felt.",
+        ],
+      },
     },
     bundel: {
       painTitle: "Working hard, getting nowhere.",
@@ -252,6 +346,18 @@ export const painCopy = defineCopy<Record<PainTopic, PainCopy>>({
         { pain: "Separate advice from different places.", answer: "One plan: nutrition and training from the same calculation, fully aligned." },
         { pain: "Nobody adjusting things when you're not making progress.", answer: "A weekly weigh-in. If your progress is off track, we adjust your nutrition or training straight away." },
       ],
+      future: {
+        nothing: [
+          "You're still eating less and training hard, without getting anywhere.",
+          "Your nutrition and training are still working against each other.",
+          "You're tired of dieting again, and too tired to train.",
+        ],
+        start: [
+          "Your nutrition and training are fully aligned.",
+          "You know what to eat on training days and how to train.",
+          "Your plan has already been adjusted a few times to what really happened.",
+        ],
+      },
     },
   },
 });

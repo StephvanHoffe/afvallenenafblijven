@@ -181,7 +181,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pricingEyebrow: "Prijzen",
       pricingTitle: "Kies je plan en begin vandaag",
       pricingIntro:
-        "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
+        "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
       safeTitle: "Veilig en verantwoord",
       safeText:
         "We werken met een realistisch tempo, voldoende eiwit en nooit onder een veilig minimum aan calorieën. Bij zwangerschap, een eetstoornis of een ongezond streefgewicht maken we geen schema, en bij medische aandoeningen vragen we eerst om overleg met je arts.",
@@ -305,7 +305,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pricingEyebrow: "Pricing",
       pricingTitle: "Choose your plan and start today",
       pricingIntro:
-        "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
+        "According to research, a new habit takes around 66 days on average. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
       safeTitle: "Safe and responsible",
       safeText:
         "We work at a realistic pace, with enough protein, and never below a safe minimum of calories. We don't create a plan during pregnancy, with an eating disorder or for an unhealthy target weight, and with medical conditions we first ask you to check with your doctor.",

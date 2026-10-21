@@ -14,7 +14,7 @@ import {
 } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
-import { PainSection } from "@/components/conversion";
+import { FutureSection, PainSection } from "@/components/conversion";
 import { faqInOrder } from "@/content/faq";
 import { launchOfferActive } from "@/lib/launch";
 import { site } from "@/config/site";
@@ -131,7 +131,7 @@ const copy = defineCopy<{
     pricingEyebrow: "Prijzen",
     pricingTitle: "Kies je plan en looptijd",
     pricingIntro:
-      "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand. Na de minimale looptijd is elk abonnement maandelijks opzegbaar.",
+      "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand. Na de minimale looptijd is elk abonnement maandelijks opzegbaar.",
     keepEyebrow: "Het geheim zit in het afblijven",
     keepTitle: "Je streefgewicht bereikt? Dan begint het pas.",
     keepText:
@@ -200,7 +200,7 @@ const copy = defineCopy<{
     pricingEyebrow: "Pricing",
     pricingTitle: "Choose your plan and term",
     pricingIntro:
-      "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price. After the minimum term, every subscription can be cancelled monthly.",
+      "According to research, a new habit takes around 66 days on average. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price. After the minimum term, every subscription can be cancelled monthly.",
     keepEyebrow: "The secret is keeping it off",
     keepTitle: "Reached your target weight? That's where it really begins.",
     keepText:
@@ -447,6 +447,9 @@ export default async function HomePage() {
         <SectionHeading eyebrow={c.benefitsEyebrow} title={c.benefitsTitle} />
         <Benefits />
       </section>
+
+      {/* OVER 3 MAANDEN: vlak voor de prijzen */}
+      <FutureSection topic="afvallen" l={l} href="/start" />
 
       {/* PRIJZEN */}
       <section id="prijzen" className="scroll-mt-20 bg-sand py-16 sm:py-20">

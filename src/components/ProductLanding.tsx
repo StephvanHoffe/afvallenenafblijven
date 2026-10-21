@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "@/i18n/Link";
 import { ArrowRight, Check } from "lucide-react";
-import { FixSection, PainSection } from "@/components/conversion";
+import { FixSection, FutureSection, PainSection } from "@/components/conversion";
 import { CtaBanner, FaqJsonLd, FaqList, Guarantee, PageHero, SectionHeading, TrustRow } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
@@ -35,9 +35,9 @@ const copy = defineCopy<{
     pricingEyebrow: "Prijzen",
     pricingTitle: "Kies je looptijd en begin vandaag",
     pricingIntroBundle:
-      "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand. Met de bundel krijg je voeding én training, voor minder dan los.",
+      "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand. Met de bundel krijg je voeding én training, voor minder dan los.",
     pricingIntroSingle:
-      "Gewoontes veranderen kost tijd. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
+      "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
     faqEyebrow: "Veelgestelde vragen",
     faqTitle: "Nog twijfels?",
     finalTitle: {
@@ -55,9 +55,9 @@ const copy = defineCopy<{
     pricingEyebrow: "Pricing",
     pricingTitle: "Choose your term and start today",
     pricingIntroBundle:
-      "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price. The bundle gives you nutrition and training for less than buying them separately.",
+      "According to research, a new habit takes around 66 days on average. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price. The bundle gives you nutrition and training for less than buying them separately.",
     pricingIntroSingle:
-      "Changing habits takes time. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
+      "According to research, a new habit takes around 66 days on average. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
     faqEyebrow: "Frequently asked questions",
     faqTitle: "Still unsure?",
     finalTitle: {
@@ -156,6 +156,8 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
           </div>
         </div>
       </section>
+
+      <FutureSection topic={content.product} l={l} href={startHref} />
 
       <section id="prijzen" className="scroll-mt-20 bg-sand py-16 sm:py-20">
         <div className="container-page">

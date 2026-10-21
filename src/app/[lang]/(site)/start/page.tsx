@@ -49,6 +49,7 @@ async function QuizLoader({ searchParams }: Pick<PageProps<"/[lang]/start">, "se
       initialDuration={duration}
       initialGoal={goal}
       startAtPlan={sp.stap === "plan"}
+      durationPreset={typeof sp.looptijd === "string" && isDurationId(sp.looptijd)}
       launch={launch}
     />
   );

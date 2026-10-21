@@ -32,7 +32,14 @@ const copy = defineCopy({
     popular: "Meest gekozen",
     oneOff: "eenmalig",
     perMonth: "/ maand",
-    oneOffNote: "Eén schema voor 4 weken. Geen abonnement.",
+    oneOffNote: "Eén schema voor 4 weken, daarna geen nieuw schema. Geen abonnement.",
+    nudgeOneOff: (name: string, oneOff: string, monthly: string | null) =>
+      `Een los schema (${name}) kost ${oneOff} voor één schema van 4 weken. Daarna krijg je geen nieuw schema en sta je er weer alleen voor.${monthly ? ` Een maandabonnement is zelfs goedkoper: ${monthly} per maand, elke 4 weken een nieuw, bijgestuurd schema en maandelijks opzegbaar.` : ""}`,
+    nudgeOneOffCta: "Bekijk de abonnementen",
+    nudgeMonthly: (m3: string, m1: string) =>
+      `Tip: met 3 maanden betaal je ${m3} in plaats van ${m1} per maand. En je hebt de tijd die een nieuwe gewoonte nodig heeft: volgens onderzoek gemiddeld zo'n 66 dagen.`,
+    nudgeMonthlyCta: "Kies 3 maanden",
+    recommended: "Advies",
     monthlyNote: "Maandelijks afgeschreven via automatische incasso. Maandelijks opzegbaar.",
     termNote: (term: string, total: string) =>
       `Maandelijks afgeschreven via automatische incasso. Minimaal ${term} (samen ${total}), daarna maandelijks opzegbaar.`,
@@ -54,7 +61,14 @@ const copy = defineCopy({
     popular: "Most popular",
     oneOff: "one-off",
     perMonth: "/ month",
-    oneOffNote: "One plan for 4 weeks. No subscription.",
+    oneOffNote: "One plan for 4 weeks, with no new plan after that. No subscription.",
+    nudgeOneOff: (name: string, oneOff: string, monthly: string | null) =>
+      `A one-off plan (${name}) costs ${oneOff} for a single 4-week plan. After that, you get no new plan and you're on your own again.${monthly ? ` A monthly subscription is actually cheaper: ${monthly} a month, a new, fine-tuned plan every 4 weeks, and you can cancel monthly.` : ""}`,
+    nudgeOneOffCta: "See the subscriptions",
+    nudgeMonthly: (m3: string, m1: string) =>
+      `Tip: with 3 months you pay ${m3} instead of ${m1} a month. And you'll have the time a new habit needs: according to research, around 66 days on average.`,
+    nudgeMonthlyCta: "Choose 3 months",
+    recommended: "For you",
     monthlyNote: "Billed monthly by direct debit. Cancel any month.",
     termNote: (term: string, total: string) =>
       `Billed monthly by direct debit. Minimum ${term} (${total} in total), then cancel any month.`,
@@ -78,6 +92,8 @@ interface Props {
   onSelect?: (product: ProductId, duration: DurationId) => void;
   selectedProduct?: ProductId;
   highlight?: ProductId;
+  /** Looptijd die we de bezoeker aanraden (bijv. op basis van de prognose in de vragenlijst). */
+  recommended?: DurationId;
 }
 
 const ORDER: ProductId[] = ["voeding", "bundel", "training"];
@@ -86,10 +102,12 @@ export function DurationToggle({
   value,
   onChange,
   product = "bundel",
+  recommended,
 }: {
   value: DurationId;
   onChange: (d: DurationId) => void;
   product?: ProductId;
+  recommended?: DurationId;
 }) {
   const c = copy[useLocale()];
   return (
@@ -114,6 +132,11 @@ export function DurationToggle({
               }`}
             >
               {c.shortDuration(durations[d].months)}
+              {d === recommended && (
+                <span className={`block text-[0.625rem] leading-tight font-extrabold uppercase ${active ? "text-lime-glow" : "text-brand-600"}`}>
+                  {c.recommended}
+                </span>
+              )}
               {save > 0 && (
                 <span
                   className={`absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-0.5 text-[0.6875rem] leading-none font-extrabold whitespace-nowrap ${
@@ -139,15 +162,42 @@ export function DurationToggle({
   );
 }
 
-export function PricingTable({ only, initialDuration = "3m", launch, onSelect, selectedProduct, highlight = "bundel" }: Props) {
+export function PricingTable({
+  only,
+  initialDuration = "3m",
+  launch,
+  onSelect,
+  selectedProduct,
+  highlight = "bundel",
+  recommended,
+}: Props) {
   const l = useLocale();
+  const c = copy[l];
   const [duration, setDuration] = useState<DurationId>(initialDuration);
   // Met `only` in de opgegeven volgorde (het product van de pagina eerst), anders de vaste volgorde.
   const list = only ? only.filter((p) => ORDER.includes(p)) : ORDER;
+  // Voor de vergelijking bij een los schema of 1 maand: het gekozen, anders het uitgelichte product.
+  const focus = selectedProduct && list.includes(selectedProduct) ? selectedProduct : list.includes(highlight) ? highlight : list[0];
+  const oneOffPrice = monthlyPrice(focus, "eenmalig");
+  const monthPrice = monthlyPrice(focus, "1m");
 
   return (
     <div className="space-y-10">
-      <DurationToggle value={duration} onChange={setDuration} />
+      <DurationToggle value={duration} onChange={setDuration} product={focus} recommended={recommended} />
+      {duration === "eenmalig" && (
+        <Nudge
+          text={c.nudgeOneOff(productFor(focus, l).shortName, euro(oneOffPrice, l), monthPrice < oneOffPrice ? euro(monthPrice, l) : null)}
+          cta={c.nudgeOneOffCta}
+          onClick={() => setDuration(recommended && recommended !== "eenmalig" ? recommended : "3m")}
+        />
+      )}
+      {duration === "1m" && (
+        <Nudge
+          text={c.nudgeMonthly(euro(monthlyPrice(focus, "3m"), l), euro(monthPrice, l))}
+          cta={c.nudgeMonthlyCta}
+          onClick={() => setDuration("3m")}
+        />
+      )}
       <div className={`mx-auto grid max-w-5xl gap-5 ${list.length === 3 ? "lg:grid-cols-3" : list.length === 2 ? "md:grid-cols-2" : "max-w-md"}`}>
         {list.map((id) => (
           <PriceCard
@@ -162,6 +212,18 @@ export function PricingTable({ only, initialDuration = "3m", launch, onSelect, s
         ))}
       </div>
       <p className="mx-auto max-w-2xl text-center text-xs leading-relaxed text-muted">{resultDisclaimer[l].long}</p>
+    </div>
+  );
+}
+
+/** Eerlijke vergelijking als de bezoeker voor een los schema of 1 maand kiest. */
+function Nudge({ text, cta, onClick }: { text: string; cta: string; onClick: () => void }) {
+  return (
+    <div role="note" className="mx-auto flex max-w-3xl flex-col items-start gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 text-[0.9375rem] sm:flex-row sm:items-center sm:gap-5">
+      <p className="flex-1 leading-relaxed">{text}</p>
+      <button type="button" onClick={onClick} className="btn-secondary shrink-0 !px-4 !py-2 text-sm">
+        {cta}
+      </button>
     </div>
   );
 }

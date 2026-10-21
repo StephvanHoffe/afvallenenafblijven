@@ -2,7 +2,7 @@
 
 import Link from "@/i18n/Link";
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2, Lock, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Lightbulb, Loader2, Lock, ShieldCheck, TriangleAlert } from "lucide-react";
 import {
   applyPercentOff,
   durationFor,
@@ -220,7 +220,15 @@ const copy = defineCopy({
       back: "Terug naar je resultaat",
       title: (name: string) => `${name ? `${name.trim()}, kies` : "Kies"} je plan`,
       basis: (kcal: string, protein: number) => `Je schema wordt gemaakt op ${kcal} kcal en ${protein} g eiwit per dag. `,
-      ready: "Na betaling staat het binnen enkele minuten klaar. Kies je 3 maanden of langer, dan krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
+      ready: "Na betaling staat het binnen enkele minuten klaar.",
+      adviceTitle: (label: string) => `Ons advies voor jou: ${label}`,
+      adviceProjection: (weeks: number, target: string, label: string) =>
+        `Volgens de schatting heb je ongeveer ${weeks} weken nodig om op ${target} te komen. Stop je na een maand, dan ben je nog niet halverwege en sta je er weer alleen voor. Met ${label} krijg je die hele periode elke 4 weken een nieuw schema, bijgestuurd op je voortgang.`,
+      adviceLong: (weeks: number, target: string) =>
+        `Volgens de schatting heb je ongeveer ${weeks} weken nodig om op ${target} te komen. Stop je na een maand, dan ben je nog niet halverwege en sta je er weer alleen voor. Met 6 maanden krijg je een half jaar lang elke 4 weken een nieuw, bijgestuurd schema, en daarna loopt je abonnement maandelijks door zolang je wilt. Met 12 maanden betaal je de laagste maandprijs.`,
+      adviceHabit:
+        "Een nieuwe gewoonte heeft volgens onderzoek gemiddeld zo'n 66 dagen nodig voordat die vanzelf gaat. Stop je na een maand, dan sta je er weer alleen voor terwijl je nog maar net bent begonnen. Met 3 maanden heb je die tijd, krijg je elke 4 weken een nieuw, bijgestuurd schema en betaal je minder per maand.",
+      adviceNote: "Een schatting, geen belofte. Je kiest zelf je looptijd.",
     },
     checkout: {
       title: "Je bestelling",
@@ -259,6 +267,7 @@ const copy = defineCopy({
       aria: (from: number, to: number, weeks: number) => `Verwachte gewichtsdaling van ${from} naar ${to} kilo in ${weeks} weken`,
       now: "Nu",
       week: (n: number) => `Week ${n}`,
+      delay: "Elke week dat je wacht, schuift deze datum een week op.",
       note: "Een schatting op basis van een gemiddeld en veilig tempo, geen belofte. Iedereen is anders: je gewicht schommelt van dag tot dag en je resultaat hangt onder meer af van je lichaam en hoe je het schema volgt.",
     },
   },
@@ -385,7 +394,15 @@ const copy = defineCopy({
       back: "Back to your result",
       title: (name: string) => (name ? `${name.trim()}, choose your plan` : "Choose your plan"),
       basis: (kcal: string, protein: number) => `Your plan will be built around ${kcal} kcal and ${protein} g of protein a day. `,
-      ready: "After payment, it'll be ready within minutes. Choose 3 months or longer and you get a new, fine-tuned plan every 4 weeks, at a lower monthly price.",
+      ready: "After payment, it'll be ready within minutes.",
+      adviceTitle: (label: string) => `Our advice for you: ${label}`,
+      adviceProjection: (weeks: number, target: string, label: string) =>
+        `Based on the estimate, you'll need around ${weeks} weeks to reach ${target}. Stop after one month and you won't be halfway yet, and you'll be on your own again. With ${label}, you get a new plan every 4 weeks for that whole period, fine-tuned to your progress.`,
+      adviceLong: (weeks: number, target: string) =>
+        `Based on the estimate, you'll need around ${weeks} weeks to reach ${target}. Stop after one month and you won't be halfway yet, and you'll be on your own again. With 6 months, you get a new, fine-tuned plan every 4 weeks for half a year, and after that your subscription continues monthly for as long as you like. With 12 months, you pay the lowest monthly price.`,
+      adviceHabit:
+        "According to research, a new habit takes around 66 days on average before it becomes automatic. Stop after one month and you're on your own again when you've only just started. With 3 months you have that time, you get a new, fine-tuned plan every 4 weeks and you pay less per month.",
+      adviceNote: "An estimate, not a promise. You choose your own term.",
     },
     checkout: {
       title: "Your order",
@@ -424,6 +441,7 @@ const copy = defineCopy({
       aria: (from: number, to: number, weeks: number) => `Expected weight loss from ${from} to ${to} kilos in ${weeks} weeks`,
       now: "Now",
       week: (n: number) => `Week ${n}`,
+      delay: "Every week you wait pushes this date back by a week.",
       note: "An estimate based on an average, safe pace, not a promise. Everyone is different: your weight fluctuates from day to day and your result depends on factors such as your body and how closely you follow the plan.",
     },
   },
@@ -538,15 +556,27 @@ function validateStep(step: StepId, s: QuizState, l: Locale): string | null {
   }
 }
 
+/**
+ * Looptijd die past bij de prognose: minimaal 3 maanden (de tijd die een
+ * gewoonte nodig heeft), 6 maanden als de schatting langer is. Daarna loopt
+ * een abonnement maandelijks door, dus langer dan 6 maanden adviseren we niet.
+ */
+function recommendedDuration(weeks: number | null): DurationId {
+  return weeks !== null && weeks > 13 ? "6m" : "3m";
+}
+
 export function Quiz({
   initialProduct,
   initialDuration,
   initialGoal = null,
   startAtPlan,
   launch,
+  durationPreset = false,
 }: {
   initialProduct: ProductId | null;
   initialDuration: DurationId;
+  /** Heeft de bezoeker al een looptijd gekozen (bijv. in de prijstabel)? Dan nemen we die over. */
+  durationPreset?: boolean;
   /** Doel dat al op een landingspagina is gekozen: dan begint de vragenlijst bij de tweede vraag. */
   initialGoal?: Intake["goal"] | null;
   startAtPlan: boolean;
@@ -573,6 +603,8 @@ export function Quiz({
   });
   // Campagnebron uit de advertentielink (utm), alleen in het geheugen; gaat mee met de bestelling.
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  // Zolang de bezoeker zelf geen looptijd heeft gekozen, staat ons advies voorgeselecteerd.
+  const [durationChosen, setDurationChosen] = useState(durationPreset);
   const [error, setError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
   const restored = useRef(false);
@@ -627,6 +659,7 @@ export function Quiz({
   const intake = parsed.success ? parsed.data : null;
   const targets = intake ? nutritionTargets(intake) : null;
   const projection = intake && targets ? weightProjection(intake, targets) : null;
+  const recommended = recommendedDuration(projection?.weeks ?? null);
   const safety = intake ? checkSafety(intake, l) : null;
 
   function update(patch: Partial<Answers>) {
@@ -677,6 +710,7 @@ export function Quiz({
   }
 
   function choosePlan(product: ProductId, duration: DurationId) {
+    setDurationChosen(true);
     const state = { ...s, product, duration };
     // Kiest de klant een plan met onderdelen waarvoor nog geen vragen zijn beantwoord? Stel die eerst.
     const missing = visibleSteps(state, false).find(
@@ -691,12 +725,14 @@ export function Quiz({
     }
   }
 
+  // De looptijd waarmee we afrekenen: de eigen keuze, anders ons advies (zoals voorgeselecteerd in de prijstabel).
+  const orderState: QuizState = durationChosen ? s : { ...s, duration: recommended };
   const payload = JSON.stringify({
     intake: toIntakeInput(s),
     customer: { name: s.name, email: s.email },
     consents: s.consents,
     product: s.product,
-    duration: s.duration,
+    duration: orderState.duration,
     campaign,
   });
 
@@ -1122,16 +1158,35 @@ export function Quiz({
                 {targets ? c.plan.basis(formatNumber(targets.calories, 0, l), targets.proteinG) : ""}
                 {c.plan.ready}
               </p>
+              <div className="mt-6 flex gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-left sm:p-5">
+                <Lightbulb className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+                <div>
+                  <p className="font-bold">{c.plan.adviceTitle(durationFor(recommended, l).label)}</p>
+                  <p className="mt-1 text-[0.9375rem] leading-relaxed">
+                    {projection && projection.weeks > 8 && intake?.targetWeightKg
+                      ? projection.weeks > 26
+                        ? c.plan.adviceLong(projection.weeks, `${formatNumber(intake.targetWeightKg, intake.targetWeightKg % 1 ? 1 : 0, l)} kg`)
+                        : c.plan.adviceProjection(
+                            projection.weeks,
+                            `${formatNumber(intake.targetWeightKg, intake.targetWeightKg % 1 ? 1 : 0, l)} kg`,
+                            durationFor(recommended, l).label,
+                          )
+                      : c.plan.adviceHabit}
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted">{c.plan.adviceNote}</p>
+                </div>
+              </div>
             </div>
             <PricingTable
-              initialDuration={s.duration}
+              initialDuration={durationChosen ? s.duration : recommended}
+              recommended={recommended}
               launch={launch}
               onSelect={choosePlan}
               selectedProduct={s.product ?? undefined}
             />
             {s.product && (
               <CheckoutBox
-                state={s}
+                state={orderState}
                 setConsents={(c) => setS({ ...s, consents: { ...s.consents, ...c } })}
                 launch={launch}
                 payload={payload}
@@ -1562,6 +1617,7 @@ function ProjectionChart({ points, target }: { points: number[]; target: number 
           </>
         )}
       </p>
+      <p className="mt-1 text-sm font-semibold text-accent-600">{c.delay}</p>
       <svg viewBox={`0 0 ${width} ${height}`} className="mt-4 w-full" role="img" aria-label={c.aria(max, target, weeks)}>
         <line x1={pad.l} x2={width - pad.r} y1={y(target)} y2={y(target)} stroke="#b5e4c8" strokeDasharray="6 6" />
         <path d={`${d} L${x(weeks)},${height - pad.b} L${x(0)},${height - pad.b} Z`} fill="#d9f2e2" opacity="0.6" />
