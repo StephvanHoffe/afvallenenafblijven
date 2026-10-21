@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { generateStructured } from "@/lib/ai/generate";
+import { mentionsAllergen } from "@/lib/allergens";
 import type { PlanContent } from "@/lib/ai/schemas";
 import type { Intake } from "@/lib/intake";
 import { formatNumber } from "@/lib/format";
@@ -127,8 +128,10 @@ export async function weeklyInstructions(
 
   const system = l === "en" ? [SYSTEM, LANGUAGE_EN] : SYSTEM;
   const result = await generateStructured(instructionsSchema, system, prompt, { effort: "medium", maxTokens: 8000 });
+  // Noemt een aanpassing toch een allergeen van de klant, dan gebruiken we de vaste tekst.
+  const safe = result.nutrition && !result.nutrition.swaps.some((s) => mentionsAllergen(s.change, intake));
   return {
-    nutrition: wantsNutrition && result.nutrition ? result.nutrition : undefined,
+    nutrition: wantsNutrition && result.nutrition && safe ? result.nutrition : undefined,
     trainingPlan: wantsTraining && result.training ? result.training : undefined,
   };
 }
@@ -137,7 +140,7 @@ const fallbackCopy = defineCopy({
   nl: {
     less: (kcal: number) => `Eet vanaf nu ongeveer ${kcal} kcal per dag minder.`,
     everyDay: "Elke dag",
-    lessTip: "Gebruik de tips onder 'Tussentijds bijsturen' in je schema, bijvoorbeeld wat minder noten, olie of rijst.",
+    lessTip: "Gebruik de tips onder 'Tussentijds bijsturen' in je schema, bijvoorbeeld wat minder olie of een iets kleinere portie bij het avondeten.",
     more: (kcal: number) => `Eet vanaf nu ongeveer ${kcal} kcal per dag meer.`,
     snackMeal: "Tussendoortje (elke dag)",
     snack: (name: string, kcal: number) => `Neem er elke dag een snack bij, bijvoorbeeld: ${name} (${kcal} kcal).`,
@@ -151,7 +154,7 @@ const fallbackCopy = defineCopy({
   en: {
     less: (kcal: number) => `From now on, eat about ${kcal} kcal less per day.`,
     everyDay: "Every day",
-    lessTip: "Use the tips in your plan for adjusting along the way, for example slightly less nuts, oil or rice.",
+    lessTip: "Use the tips in your plan for adjusting along the way, for example slightly less oil or a slightly smaller portion at dinner.",
     more: (kcal: number) => `From now on, eat about ${kcal} kcal more per day.`,
     snackMeal: "Snack (every day)",
     snack: (name: string, kcal: number) => `Add a snack every day, for example: ${name} (${kcal} kcal).`,

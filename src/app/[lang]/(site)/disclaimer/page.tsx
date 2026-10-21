@@ -57,10 +57,20 @@ function Nl() {
         iets niet klopt; we passen het dan kosteloos aan.
       </p>
 
+      <h2>Eigen gegevens en veiligheidscheck</h2>
+      <p>
+        Je schema is gebaseerd op wat jij in de vragenlijst en de check-ins invult. Vul die daarom naar waarheid en
+        volledig in, ook de vragen over je gezondheid. De veiligheidscheck voor de betaling is een eenvoudige eerste
+        selectie op basis van jouw antwoorden, geen medische beoordeling.
+      </p>
+
       <h2>Allergieën</h2>
       <p>
-        We houden rekening met de allergieën en intoleranties die je opgeeft. Lees bij een allergie altijd zelf de
-        etiketten, want de samenstelling van producten kan per merk verschillen en veranderen.
+        We houden rekening met de allergieën en intoleranties die je opgeeft, en controleren elk voedingsschema daarop.
+        Geef ze dus volledig op: wat je niet invult, kunnen we niet meenemen. Een garantie dat een product vrij is van een
+        allergeen of sporen daarvan kunnen we niet geven. Controleer daarom altijd zelf de ingrediënten en etiketten, want de samenstelling van
+        producten kan per merk verschillen en veranderen. Zie ook de{" "}
+        <Link href="/algemene-voorwaarden#artikel-12">algemene voorwaarden</Link>.
       </p>
 
       <h2 id="resultaten">Geen garantie op resultaat</h2>
@@ -129,10 +139,19 @@ function En() {
         isn&apos;t right; we will then adjust it free of charge.
       </p>
 
+      <h2>Your own information and the safety check</h2>
+      <p>
+        Your plan is based on what you fill in in the questionnaire and the check-ins. So answer truthfully and
+        completely, including the questions about your health. The safety check before payment is a simple initial
+        screening based on your answers, not a medical assessment.
+      </p>
+
       <h2>Allergies</h2>
       <p>
-        We take into account the allergies and intolerances you tell us about. If you have an allergy, always read the
-        labels yourself, as the composition of products can differ between brands and can change.
+        We take into account the allergies and intolerances you tell us about, and check every nutrition plan for them.
+        So list them all: we can&apos;t take into account what you don&apos;t tell us. We cannot guarantee that a product is free
+        from an allergen or traces of it. So always check the ingredients and labels yourself, as the composition of products can differ
+        between brands and can change. See also the <Link href="/algemene-voorwaarden#artikel-12">terms and conditions</Link>.
       </p>
 
       <h2 id="resultaten">No guaranteed results</h2>

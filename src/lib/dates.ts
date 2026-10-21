@@ -46,3 +46,13 @@ export function amsterdamMidnight(date: Date, days = 0): Date {
 export function amsterdamWeekday(date: Date): number {
   return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).getUTCDay();
 }
+
+/** Uur van de dag in Nederland (0-23). */
+export function amsterdamHour(date: Date): number {
+  return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).getUTCHours();
+}
+
+/** Kalenderdag in Nederland als "2027-04-26". */
+export function amsterdamDay(date: Date): string {
+  return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).toISOString().slice(0, 10);
+}

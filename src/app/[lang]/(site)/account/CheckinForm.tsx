@@ -14,7 +14,7 @@ import { goalOptions } from "@/lib/intake";
 const copy = defineCopy({
   nl: {
     optional: "(optioneel)",
-    demoSent: "Voorbeeld: in je eigen omgeving wordt je check-in nu opgeslagen en maken we direct je nieuwe schema.",
+    demoSent: "Voorbeeld: in je eigen omgeving wordt je check-in nu opgeslagen en staat je nieuwe schema binnen 2 uur klaar.",
     howTitle: "Hoe gaat het?",
     weight: "Je gewicht nu (kg)",
     weightPlaceholder: "74,5",
@@ -48,7 +48,7 @@ const copy = defineCopy({
   },
   en: {
     optional: "(optional)",
-    demoSent: "Example: in your own account, your check-in would now be saved and we'd create your new plan straight away.",
+    demoSent: "Example: in your own account, your check-in would now be saved and your new plan would be ready within 2 hours.",
     howTitle: "How are you doing?",
     weight: "Your weight now (kg)",
     weightPlaceholder: "74.5",

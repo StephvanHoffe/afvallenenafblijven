@@ -24,9 +24,10 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
   if (!isDemoMode()) await connection();
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
-  const [o, sp] = await Promise.all([adminData().overview(), searchParams]);
+  const [o, sp, approval] = await Promise.all([adminData().overview(), searchParams, adminData().approvalRequired()]);
   const conversion = o.checkoutStarts30 > 0 ? Math.round((o.newOrders30 / o.checkoutStarts30) * 100) : null;
-  const attention = o.plansFailed + o.openWithdrawals + o.openGuaranteeRequests;
+  const toApprove = approval ? o.plansAwaitingApproval : 0;
+  const attention = o.plansFailed + o.openWithdrawals + o.openGuaranteeRequests + toApprove;
   const mixTotal = o.productMix.reduce((s, m) => s + m.count, 0);
 
   return (
@@ -57,12 +58,17 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
           label="Aandacht nodig"
           value={formatNumber(attention)}
           tone={attention > 0 ? "warn" : "default"}
-          hint={`${o.plansFailed} mislukte schema's · ${o.openWithdrawals} herroepingen · ${o.openGuaranteeRequests} garantie-aanvragen`}
+          hint={`${approval ? `${toApprove} goed te keuren · ` : ""}${o.plansFailed} mislukte schema's · ${o.openWithdrawals} herroepingen · ${o.openGuaranteeRequests} garantie-aanvragen`}
         />
       </div>
 
       {attention > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
+          {toApprove > 0 && (
+            <Link href="/beheer/schemas?status=goedkeuren" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
+              <CircleAlert className="size-4" aria-hidden /> {toApprove} schema{toApprove === 1 ? "" : "'s"} goedkeuren
+            </Link>
+          )}
           {o.plansFailed > 0 && (
             <Link href="/beheer/schemas?status=failed" className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-3.5 py-1.5 text-sm font-bold text-accent-600">
               <CircleAlert className="size-4" aria-hidden /> {o.plansFailed} mislukte schema&apos;s bekijken

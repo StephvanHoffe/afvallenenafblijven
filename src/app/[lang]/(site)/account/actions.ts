@@ -8,6 +8,8 @@ import { currentCustomer, endSession } from "@/lib/auth";
 import { checkinOptions, checkinWindow, type CheckinData } from "@/lib/checkin";
 import { processOrderPlans, startNextPeriod } from "@/lib/plans";
 import { newPeriodStartsAt } from "@/lib/schedule";
+import { deliveryTime } from "@/lib/delivery";
+import { site } from "@/config/site";
 import {
   addCheckin,
   createGuaranteeRequest,
@@ -195,8 +197,9 @@ export async function submitCheckin(_prev: FormState, formData: FormData): Promi
   await setCustomerLocale(customer.id, l);
   // Dubbel verstuurd? Dan bestaat de check-in al; het schema starten is veilig om te herhalen.
   await addCheckin(customer.id, order.id, window.seq, parsed.data as CheckinData);
-  // Het nieuwe schema staat zo klaar en start op de maandag van de nieuwe periode (of meteen, als die al begonnen is).
-  await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt));
+  // Het nieuwe schema wordt direct gemaakt, staat binnen 2 uur klaar en start op de maandag van de nieuwe
+  // periode (of meteen, als die al begonnen is).
+  await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt), site.delivery.afterCheckin ? deliveryTime() : new Date());
   after(() => processOrderPlans(order.id));
   redirect(localePath(l, "/account?checkin=ontvangen"));
 }

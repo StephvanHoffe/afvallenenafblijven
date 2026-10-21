@@ -9,8 +9,9 @@ import { loginUrl } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminNotificationEmail, cancellationEmail, loginEmail, plansReadyEmail, sendMail } from "@/lib/email";
 import { syncSubscription } from "@/lib/fulfillment";
-import { processOrderPlans, processPlan, startNextPeriod } from "@/lib/plans";
-import { getCustomer, getOrder, plansForOrder } from "@/lib/repo";
+import { processOrderPlans, processPlan, releaseAndNotify, startNextPeriod } from "@/lib/plans";
+import { approvePlan as approvePlanInDb, getCustomer, getOrder, plansForOrder } from "@/lib/repo";
+import { setPlanApproval } from "@/lib/settings";
 import { cancelSubscription } from "@/lib/stripe";
 import { connectionsForCustomer } from "@/lib/health/repo";
 import { disconnect } from "@/lib/health/sync";
@@ -50,13 +51,19 @@ export async function adminLogout(): Promise<void> {
   redirect("/beheer/inloggen");
 }
 
-/** Zet een (mislukt of bestaand) schema terug in de wachtrij en maakt het opnieuw. */
+/**
+ * Zet een (mislukt of bestaand) schema terug in de wachtrij en maakt het
+ * opnieuw. Was het nog niet bij de klant, dan moet de nieuwe versie (als
+ * goedkeuring aanstaat) opnieuw worden goedgekeurd.
+ */
 export async function retryPlan(formData: FormData): Promise<void> {
   await guard(formData);
   const planId = String(formData.get("plan") ?? "");
   const sql = await db();
   const [row] = await sql<{ id: string }[]>`
-    update plans set status = 'pending', attempts = 0, error = null, started_at = null
+    update plans set status = 'pending', attempts = 0, error = null, started_at = null,
+      approved_at = case when released_at is null then null else approved_at end,
+      review_requested_at = case when released_at is null then null else review_requested_at end
     where id = ${planId} and status <> 'generating' returning id`;
   if (!row) back(formData, "niet-gevonden");
   after(() => processPlan(planId));
@@ -72,7 +79,7 @@ export async function resendPlanEmail(formData: FormData): Promise<void> {
     select order_id, seq, customer_id from plans where id = ${planId}`;
   const customer = plan ? await getCustomer(plan.customer_id) : null;
   if (!plan || !customer) back(formData, "niet-gevonden");
-  const period = (await plansForOrder(plan.order_id)).filter((p) => p.seq === plan.seq && p.status === "ready");
+  const period = (await plansForOrder(plan.order_id)).filter((p) => p.seq === plan.seq && p.status === "ready" && p.released_at);
   if (period.length === 0) back(formData, "nog-niet-klaar");
   const l = toLocale(customer.locale);
   await sendMail(
@@ -87,6 +94,30 @@ export async function resendPlanEmail(formData: FormData): Promise<void> {
     }),
   );
   back(formData, "mail-verstuurd");
+}
+
+/**
+ * Keurt een schema goed. Het gaat op het geplande moment naar de klant (of
+ * direct als dat moment al voorbij is), samen met de andere schema's van de
+ * periode. Met "nu" gaat het meteen.
+ */
+export async function approvePlan(formData: FormData): Promise<void> {
+  await guard(formData);
+  const now = formData.get("nu") === "1";
+  const period = await approvePlanInDb(String(formData.get("plan") ?? ""), now);
+  if (!period) back(formData, "niet-gevonden");
+  const released = await releaseAndNotify({ orderId: period.order_id });
+  back(formData, released > 0 ? "vrijgegeven" : "goedgekeurd");
+}
+
+/** Zet goedkeuren vóór levering aan of uit (zie /beheer/instellingen). */
+export async function setApprovalMode(formData: FormData): Promise<void> {
+  await guard(formData);
+  const on = formData.get("aan") === "1";
+  await setPlanApproval(on);
+  // Uitgezet: wat al klaarstond en waarvan het moment voorbij is, gaat nu naar de klant.
+  if (!on) await releaseAndNotify({ approval: false });
+  back(formData, on ? "goedkeuring-aan" : "goedkeuring-uit");
 }
 
 export async function sendCustomerLoginLink(formData: FormData): Promise<void> {

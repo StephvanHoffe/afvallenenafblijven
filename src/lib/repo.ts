@@ -71,7 +71,21 @@ export interface Plan {
   emailed_at: Date | null;
   /** Begin van de periode; kan in de toekomst liggen als het schema al klaarstaat. */
   starts_at: Date;
+  /** Vroegste moment waarop de klant het schema te zien krijgt (willekeurig, binnen 2 uur). */
+  release_after: Date;
+  /** Wanneer het schema aan de klant is vrijgegeven; tot die tijd ziet de klant "wordt gemaakt". */
+  released_at: Date | null;
+  /** Goedgekeurd door de beheerder (alleen nodig als goedkeuring aanstaat). */
+  approved_at: Date | null;
+  /** Wanneer de beheerder om goedkeuring is gevraagd. */
+  review_requested_at: Date | null;
   created_at: Date;
+}
+
+/** Een periode van een bestelling: de schema's met hetzelfde volgnummer. */
+export interface PeriodRef {
+  order_id: string;
+  seq: number;
 }
 
 export const MAX_PLAN_ATTEMPTS = 5;
@@ -220,13 +234,15 @@ export async function createPlans(
   types: PlanType[],
   seq: number,
   startsAt: Date = new Date(),
+  /** Vanaf wanneer de klant de schema's te zien krijgt (één moment voor de hele periode). */
+  releaseAfter: Date = new Date(),
 ): Promise<string[]> {
   const sql = await db();
   const ids: string[] = [];
   for (const type of types) {
     const [row] = await sql<{ id: string }[]>`
-      insert into plans (order_id, customer_id, type, seq, starts_at)
-      values (${orderId}, ${customerId}, ${type}, ${seq}, ${startsAt})
+      insert into plans (order_id, customer_id, type, seq, starts_at, release_after)
+      values (${orderId}, ${customerId}, ${type}, ${seq}, ${startsAt}, ${releaseAfter})
       on conflict (order_id, type, seq) do nothing
       returning id`;
     if (row) ids.push(row.id);
@@ -238,6 +254,8 @@ export async function createPlans(
  * Claimt een schema voor generatie. Voorkomt dat twee processen (webhook,
  * bedankpagina en cron) hetzelfde schema tegelijk maken. Een generatie die
  * langer dan 15 minuten "bezig" is, geldt als vastgelopen en mag opnieuw.
+ * Een mislukt schema wacht steeds langer voor de volgende poging (5, 10, 20
+ * en 40 minuten), zodat een korte storing niet alle pogingen opmaakt.
  */
 export async function claimPlan(planId: string): Promise<Plan | null> {
   const sql = await db();
@@ -245,7 +263,9 @@ export async function claimPlan(planId: string): Promise<Plan | null> {
     update plans set status = 'generating', attempts = attempts + 1, started_at = now(), error = null
     where id = ${planId}
       and attempts < ${MAX_PLAN_ATTEMPTS}
-      and (status in ('pending', 'failed') or (status = 'generating' and started_at < now() - interval '15 minutes'))
+      and (status = 'pending'
+        or (status = 'failed' and (started_at is null or started_at < now() - interval '5 minutes' * power(2, greatest(attempts - 1, 0))))
+        or (status = 'generating' and started_at < now() - interval '15 minutes'))
     returning *`;
   return row ?? null;
 }
@@ -278,7 +298,8 @@ export async function plansForOrder(orderId: string): Promise<Plan[]> {
 export async function plansForCustomer(customerId: string): Promise<Plan[]> {
   const sql = await db();
   return sql<Plan[]>`
-    select id, order_id, customer_id, type, seq, status, null as content, error, attempts, generated_at, emailed_at, starts_at, created_at
+    select id, order_id, customer_id, type, seq, status, null as content, error, attempts, generated_at, emailed_at, starts_at,
+           release_after, released_at, approved_at, review_requested_at, created_at
     from plans where customer_id = ${customerId} order by created_at desc, type`;
 }
 
@@ -287,8 +308,8 @@ export async function readyPlansForPeriod(customerId: string, seq?: number): Pro
   const sql = await db();
   return sql<Plan[]>`
     select * from plans
-    where customer_id = ${customerId} and status = 'ready'
-      and seq = ${seq ?? sql`(select max(seq) from plans where customer_id = ${customerId} and status = 'ready')`}
+    where customer_id = ${customerId} and status = 'ready' and released_at is not null
+      and seq = ${seq ?? sql`(select max(seq) from plans where customer_id = ${customerId} and status = 'ready' and released_at is not null)`}
     order by type`;
 }
 
@@ -298,8 +319,8 @@ export async function nutritionTargetHistory(
 ): Promise<{ seq: number; generated_at: Date | null; targets: NutritionTargets | null }[]> {
   const sql = await db();
   return sql<{ seq: number; generated_at: Date | null; targets: NutritionTargets | null }[]>`
-    select seq, generated_at, content -> 'targets' as targets from plans
-    where customer_id = ${customerId} and type = 'voeding' and status = 'ready'
+    select seq, coalesce(released_at, generated_at) as generated_at, content -> 'targets' as targets from plans
+    where customer_id = ${customerId} and type = 'voeding' and status = 'ready' and released_at is not null
     order by seq asc, generated_at asc`;
 }
 
@@ -316,10 +337,105 @@ export async function pendingPlanIds(limit: number): Promise<string[]> {
   const rows = await sql<{ id: string }[]>`
     select id from plans
     where attempts < ${MAX_PLAN_ATTEMPTS}
-      and (status in ('pending', 'failed') or (status = 'generating' and started_at < now() - interval '15 minutes'))
+      and (status = 'pending'
+        or (status = 'failed' and (started_at is null or started_at < now() - interval '5 minutes' * power(2, greatest(attempts - 1, 0))))
+        or (status = 'generating' and started_at < now() - interval '15 minutes'))
     order by created_at asc
     limit ${limit}`;
   return rows.map((r) => r.id);
+}
+
+/**
+ * Geeft periodes vrij waarvan alle schema's klaar zijn en het geplande moment
+ * is aangebroken; staat goedkeuring aan, dan moeten ze ook zijn goedgekeurd.
+ * Veilig om tegelijk vaker aan te roepen: elke periode wordt één keer vrijgegeven.
+ */
+export async function releaseDuePeriods(opts: { approval: boolean; customerId?: string; orderId?: string }): Promise<PeriodRef[]> {
+  const sql = await db();
+  const rows = await sql<PeriodRef[]>`
+    with due as (
+      select order_id, seq from plans
+      where released_at is null
+        ${opts.customerId ? sql`and customer_id = ${opts.customerId}` : sql``}
+        ${opts.orderId ? sql`and order_id = ${opts.orderId}` : sql``}
+      group by order_id, seq
+      having bool_and(status = 'ready') and max(release_after) <= now()
+        ${opts.approval ? sql`and bool_and(approved_at is not null)` : sql``}
+    )
+    update plans p set released_at = now()
+    from due where p.order_id = due.order_id and p.seq = due.seq and p.released_at is null
+    returning p.order_id, p.seq`;
+  return uniquePeriods(rows);
+}
+
+function uniquePeriods(rows: PeriodRef[]): PeriodRef[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    const key = `${r.order_id}:${r.seq}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** Vrijgegeven periodes waarvoor de klant nog geen "je schema staat klaar"-mail heeft gehad. */
+export async function releasedUnmailedPeriods(limit: number): Promise<PeriodRef[]> {
+  const sql = await db();
+  return sql<PeriodRef[]>`
+    select order_id, seq from plans
+    where released_at is not null and emailed_at is null and status = 'ready'
+    group by order_id, seq order by min(released_at) limit ${limit}`;
+}
+
+/**
+ * Vraagt de beheerder om goedkeuring zodra alle schema's van een periode klaar
+ * zijn. Geeft de schema's terug als dat nu voor het eerst gebeurt (anders leeg).
+ */
+export async function requestReview(orderId: string, seq: number): Promise<Plan[]> {
+  const sql = await db();
+  return sql<Plan[]>`
+    update plans set review_requested_at = now()
+    where order_id = ${orderId} and seq = ${seq} and review_requested_at is null and released_at is null
+      and not exists (select 1 from plans q where q.order_id = ${orderId} and q.seq = ${seq} and q.status <> 'ready')
+    returning *`;
+}
+
+/** Keurt een schema goed; met `now` gaat de hele periode ook direct naar de klant (niet pas op het geplande moment). */
+export async function approvePlan(planId: string, now: boolean): Promise<PeriodRef | null> {
+  const sql = await db();
+  const [row] = await sql<PeriodRef[]>`
+    update plans set approved_at = coalesce(approved_at, now())
+    where id = ${planId} and status = 'ready' and released_at is null
+    returning order_id, seq`;
+  if (!row) return null;
+  if (now) await sql`update plans set release_after = now() where order_id = ${row.order_id} and seq = ${row.seq} and released_at is null`;
+  return row;
+}
+
+// ---------- Instellingen ----------
+
+export async function getSetting<T>(key: string): Promise<T | null> {
+  const sql = await db();
+  const [row] = await sql<{ value: T }[]>`select value from settings where key = ${key}`;
+  return row?.value ?? null;
+}
+
+export async function setSetting(key: string, value: unknown): Promise<void> {
+  const sql = await db();
+  await sql`
+    insert into settings (key, value) values (${key}, ${sql.json(value as never)})
+    on conflict (key) do update set value = excluded.value, updated_at = now()`;
+}
+
+/** Claimt de dagelijkse run voor deze dag; geeft false als die vandaag al is gedaan. */
+export async function claimDailyRun(day: string): Promise<boolean> {
+  const sql = await db();
+  const rows = await sql`
+    insert into settings (key, value) values ('daily_run', ${sql.json(day)})
+    on conflict (key) do update set value = excluded.value, updated_at = now()
+      where settings.value is distinct from excluded.value
+    returning key`;
+  return rows.length > 0;
 }
 
 /** Markeert schema's als gemaild; geeft alleen de schema's terug die nog niet gemaild waren. */

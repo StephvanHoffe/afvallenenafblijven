@@ -155,11 +155,11 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
         message:
           l === "en"
             ? subscription
-              ? `You pay for the first month now. After that we collect the amount automatically every month by SEPA Direct Debit.${months > 1 ? ` The minimum term is ${months} months; after that you can cancel your subscription monthly.` : " You can cancel your subscription monthly."} Your plan will be created right away.`
-              : "Your plan is created straight after payment. This is a one-off purchase, not a subscription."
+              ? `You pay for the first month now. After that we collect the amount automatically every month by SEPA Direct Debit.${months > 1 ? ` The minimum term is ${months} months; after that you can cancel your subscription monthly.` : " You can cancel your subscription monthly."} Your plan will be ready within 2 hours.`
+              : "We start on your plan straight after payment; it will be ready within 2 hours. This is a one-off purchase, not a subscription."
             : subscription
-              ? `Je betaalt nu de eerste maand. Daarna schrijven we elke maand automatisch af via SEPA-incasso.${months > 1 ? ` De minimale looptijd is ${months} maanden, daarna is je abonnement maandelijks opzegbaar.` : " Je abonnement is maandelijks opzegbaar."} Je schema wordt direct gemaakt.`
-              : "Je schema wordt direct na betaling gemaakt. Dit is een eenmalige aankoop, geen abonnement.",
+              ? `Je betaalt nu de eerste maand. Daarna schrijven we elke maand automatisch af via SEPA-incasso.${months > 1 ? ` De minimale looptijd is ${months} maanden, daarna is je abonnement maandelijks opzegbaar.` : " Je abonnement is maandelijks opzegbaar."} Binnen 2 uur staat je schema klaar.`
+              : "We beginnen direct na betaling aan je schema; binnen 2 uur staat het klaar. Dit is een eenmalige aankoop, geen abonnement.",
       },
     },
   });

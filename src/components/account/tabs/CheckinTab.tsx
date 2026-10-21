@@ -20,7 +20,7 @@ const copy = defineCopy({
     why: "Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten, zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.",
     preview: "Bekijk hoe de check-in eruitziet",
     submitted: "Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.",
-    overdue: "Je nieuwe periode is begonnen. Vul je check-in in, dan maken we direct je nieuwe schema; tot die tijd volg je je huidige schema.",
+    overdue: "Je nieuwe periode is begonnen. Vul je check-in in, dan staat je nieuwe schema binnen 2 uur klaar; tot die tijd volg je je huidige schema.",
     open: (advised: string, start: string) =>
       `Je nieuwe periode start op ${start}. Vul je check-in uiterlijk ${advised} in, dan staat je nieuwe schema met boodschappenlijst op tijd klaar voor je boodschappen. Het nieuwe schema start op ${start}; tot die tijd volg je je huidige schema.`,
     duration: "Het kost je ongeveer 2 minuten.",
@@ -38,7 +38,7 @@ const copy = defineCopy({
     why: "We only create your new plan after your check-in. That way it matches your progress exactly: eating more or less, training harder or lighter, or switching to maintaining your weight once you've reached your goal.",
     preview: "See what the check-in looks like",
     submitted: "We've received your check-in. Your new plan is being created.",
-    overdue: "Your new period has started. Complete your check-in and we'll create your new plan straight away; until then, keep following your current plan.",
+    overdue: "Your new period has started. Complete your check-in and your new plan will be ready within 2 hours; until then, keep following your current plan.",
     open: (advised: string, start: string) =>
       `Your new period starts on ${start}. Fill in your check-in by ${advised}, and your new plan with shopping list will be ready in time for your shopping. The new plan starts on ${start}; until then, keep following your current plan.`,
     duration: "It takes about 2 minutes.",

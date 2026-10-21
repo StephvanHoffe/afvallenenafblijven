@@ -21,13 +21,13 @@ export async function GET(request: Request, ctx: RouteContext<"/[lang]/schema/[i
   const customer = await currentCustomer();
   if (!customer) return Response.redirect(new URL(localePath(l, "/inloggen"), request.url), 303);
   const plan = await getPlan(id);
-  if (!plan || plan.customer_id !== customer.id || plan.status !== "ready" || !plan.content) {
+  if (!plan || plan.customer_id !== customer.id || plan.status !== "ready" || !plan.content || !plan.released_at) {
     return notFound();
   }
   const part = new URL(request.url).searchParams.get("deel") === "boodschappen" && plan.content.type === "voeding" ? "boodschappen" : "schema";
   const weekly = (await weeklyLogsForOrder(plan.order_id)).map((w) => ({ ...w, date: w.created_at }));
   const plans: PdfPlan[] = [
-    { content: plan.content, seq: plan.seq, generatedAt: plan.generated_at, adjustments: adjustmentsFor(weekly, plan.seq, plan.type) },
+    { content: plan.content, seq: plan.seq, generatedAt: plan.released_at, adjustments: adjustmentsFor(weekly, plan.seq, plan.type) },
   ];
   return pdfResponse(await renderPlansPdf(plans, customer.name, part, l), pdfFileName(plans, part, l));
 }

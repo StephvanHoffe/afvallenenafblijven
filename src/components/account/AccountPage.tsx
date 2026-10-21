@@ -1,7 +1,7 @@
 import Link from "@/i18n/Link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { AccountTabView } from "@/components/account/AccountTabView";
 import type { ConnectionNotice } from "@/components/account/health/HealthConnections";
 import { products } from "@/config/pricing";
@@ -13,6 +13,7 @@ import { currentCustomer } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { isHealthEnabled } from "@/lib/health/config";
 import { loadHealthView } from "@/lib/health/view-server";
+import { notifyReleased, releaseForCustomer } from "@/lib/plans";
 import {
   checkinsForCustomer,
   guaranteeRequestForCustomer,
@@ -73,6 +74,9 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   if (tab === "overzicht" && sp.opzeggen === "1") redirect(localePath(l, "/account/abonnement?opzeggen=1"));
   if (tab === "overzicht" && sp.opgezegd === "1") redirect(localePath(l, "/account/abonnement?opgezegd=1"));
 
+  // Is het geplande moment van een klaar schema aangebroken, dan ziet de klant het nu meteen (de mail volgt).
+  const released = await releaseForCustomer(customer.id);
+  if (released.length > 0) after(() => notifyReleased(released));
   const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest] = await Promise.all([
     ordersForCustomer(customer.id),
     plansForCustomer(customer.id),

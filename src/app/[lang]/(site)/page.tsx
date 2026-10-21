@@ -79,7 +79,7 @@ const copy = defineCopy<{
   allQuestions: string;
 }>({
   nl: {
-    badge: "Persoonlijk schema in 2 minuten",
+    badge: "In 2 minuten ingevuld · binnen 2 uur je schema",
     title: ["De kilo's gaan eraf, en komen ", "steeds weer terug", "?"],
     intro:
       "Tijd voor een aanpak die wél bij je leven past: een persoonlijk voedings- en trainingsschema op jouw lichaam, smaak en agenda, elke week bijgestuurd, met daarna een plan om op gewicht te blijven. Zonder crashdieet of honger, en binnen enkele minuten in je mailbox.",
@@ -147,7 +147,7 @@ const copy = defineCopy<{
     allQuestions: "Bekijk alle vragen",
   },
   en: {
-    badge: "Your personal plan in 2 minutes",
+    badge: "2 minutes to fill in · your plan within 2 hours",
     title: ["The kilos come off, then ", "keep coming back", "?"],
     intro:
       "Time for an approach that actually fits your life: a personal nutrition and workout plan built around your body, taste and schedule, adjusted every week, followed by a plan to keep the weight off. No crash diet, no going hungry, and in your inbox within minutes.",

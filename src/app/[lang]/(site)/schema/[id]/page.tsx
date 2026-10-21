@@ -16,7 +16,7 @@ const copy = defineCopy({
   nl: {
     title: "Mijn schema",
     generating: "Je schema wordt gemaakt",
-    generatingText: "Dit duurt meestal een paar minuten. Je ontvangt een e-mail zodra het klaar is.",
+    generatingText: "Binnen 2 uur staat het voor je klaar. Je ontvangt dan een e-mail.",
     back: "Terug naar Mijn schema's",
     upcoming: (start: string) => `Dit schema start op ${start}. Tot die tijd volg je je huidige schema.`,
     upcomingShopping: "Doe alvast je boodschappen met de boodschappenlijst van dit schema.",
@@ -24,7 +24,7 @@ const copy = defineCopy({
   en: {
     title: "My plan",
     generating: "Your plan is being created",
-    generatingText: "This usually takes a few minutes. You'll receive an email as soon as it's ready.",
+    generatingText: "It will be ready for you within 2 hours. We'll send you an email when it is.",
     back: "Back to My plans",
     upcoming: (start: string) => `This plan starts on ${start}. Until then, keep following your current plan.`,
     upcomingShopping: "You can already do your shopping with this plan's shopping list.",
@@ -60,7 +60,8 @@ async function PlanContent({ params }: Pick<PageProps<"/[lang]/schema/[id]">, "p
   if (!customer) redirect(localePath(l, "/inloggen"));
   const plan = await getPlan(id);
   if (!plan || plan.customer_id !== customer.id) notFound();
-  if (plan.status !== "ready" || !plan.content) {
+  // Nog niet vrijgegeven (gepland binnen 2 uur): de klant ziet "wordt gemaakt".
+  if (plan.status !== "ready" || !plan.content || !plan.released_at) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="heading-lg">{c.generating}</h1>
@@ -90,7 +91,7 @@ async function PlanContent({ params }: Pick<PageProps<"/[lang]/schema/[id]">, "p
       adjustments={adjustmentsFor(weekly, plan.seq, plan.type)}
       content={plan.content}
       customerName={customer.name}
-      generatedAt={plan.generated_at}
+      generatedAt={plan.released_at}
       pdfHref={`/schema/${plan.id}/pdf`}
       shoppingPdfHref={plan.content.type === "voeding" ? `/schema/${plan.id}/pdf?deel=boodschappen` : undefined}
       storageKey={`afb-boodschappen-${plan.id}`}

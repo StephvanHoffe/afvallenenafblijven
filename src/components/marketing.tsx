@@ -23,7 +23,7 @@ import { getLocale } from "@/i18n/server";
 const copy = defineCopy({
   nl: {
     trust: {
-      inbox: "Binnen minuten in je mailbox",
+      inbox: "Binnen 2 uur in je mailbox",
       cancel: "Maandelijks opzegbaar",
       pay: "Veilig betalen met iDEAL | Wero",
       guarantee: (days: number) => `${days} dagen geld-terug-garantie`,
@@ -39,7 +39,7 @@ const copy = defineCopy({
       },
       {
         title: "Ontvang je schema",
-        text: "Binnen enkele minuten staat je persoonlijke schema klaar. Na elke 4 weken een korte check-in, en je krijgt een nieuw, bijgestuurd schema.",
+        text: "Binnen 2 uur staat je persoonlijke schema klaar. Na elke 4 weken een korte check-in, en je krijgt een nieuw, bijgestuurd schema.",
       },
     ],
     benefits: [
@@ -75,14 +75,14 @@ const copy = defineCopy({
     },
     cta: {
       title: "Wacht niet weer tot maandag",
-      text: "Beantwoord een paar vragen in 2 minuten en ontvang vandaag nog je persoonlijke schema. Je betaalt pas als je een plan kiest.",
+      text: "Beantwoord een paar vragen in 2 minuten en ontvang binnen 2 uur je persoonlijke schema. Je betaalt pas als je een plan kiest.",
       label: "Maak mijn persoonlijke plan",
       risk: (days: number) => ` Ben je niet tevreden, dan vraag je binnen ${days} dagen je eerste betaling terug.`,
     },
   },
   en: {
     trust: {
-      inbox: "In your inbox within minutes",
+      inbox: "In your inbox within 2 hours",
       cancel: "Cancel monthly",
       pay: "Pay securely with iDEAL | Wero",
       guarantee: (days: number) => `${days}-day money-back guarantee`,
@@ -98,7 +98,7 @@ const copy = defineCopy({
       },
       {
         title: "Get your plan",
-        text: "Your personal plan is ready within minutes. Every 4 weeks you do a short check-in and get a new, fine-tuned plan.",
+        text: "Your personal plan is ready within 2 hours. Every 4 weeks you do a short check-in and get a new, fine-tuned plan.",
       },
     ],
     benefits: [
@@ -134,7 +134,7 @@ const copy = defineCopy({
     },
     cta: {
       title: "Don't wait for Monday again",
-      text: "Answer a few questions in 2 minutes and get your personal plan today. You only pay once you choose a plan.",
+      text: "Answer a few questions in 2 minutes and get your personal plan within 2 hours. You only pay once you choose a plan.",
       label: "Create my personal plan",
       risk: (days: number) => ` Not satisfied? Request your first payment back within ${days} days.`,
     },

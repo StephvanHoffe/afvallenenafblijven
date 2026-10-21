@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { CircleAlert, CircleCheck, Mail } from "lucide-react";
-import { sendTestEmail } from "@/app/beheer/actions";
+import { sendTestEmail, setApprovalMode } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
 import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, durations, monthlyPrice, products } from "@/config/pricing";
@@ -13,6 +13,7 @@ import { adminEmail } from "@/lib/email";
 import { db, isDatabaseConfigured } from "@/lib/db";
 import { euro } from "@/lib/format";
 import { launchOfferActive } from "@/lib/launch";
+import { adminData } from "@/lib/admin/data";
 
 export const metadata: Metadata = { title: "Instellingen" };
 
@@ -44,6 +45,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const dbOk = demo || (await databaseReachable());
   const stripeMode = demo ? "test" : (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
   const launch = await launchOfferActive();
+  const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
 
   const checks: { label: string; ok: boolean; detail: string }[] = [
     { label: "Database", ok: dbOk, detail: dbOk ? "Verbonden" : isDatabaseConfigured() ? "Kan niet verbinden" : "DATABASE_URL ontbreekt" },
@@ -51,7 +53,13 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
     { label: "Stripe-webhook", ok: env("STRIPE_WEBHOOK_SECRET"), detail: env("STRIPE_WEBHOOK_SECRET") ? "Ingesteld" : "STRIPE_WEBHOOK_SECRET ontbreekt" },
     { label: "Schema's maken", ok: env("ANTHROPIC_API_KEY"), detail: env("ANTHROPIC_API_KEY") ? `Ingesteld (${process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5"})` : "ANTHROPIC_API_KEY ontbreekt" },
     { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "SMTP_HOST ontbreekt; e-mails komen alleen in de serverlog" },
-    { label: "Dagelijkse taak", ok: env("CRON_SECRET"), detail: env("CRON_SECRET") ? "Ingesteld (elke ochtend om 06:00 UTC)" : "CRON_SECRET ontbreekt" },
+    {
+      label: "Geplande taak",
+      ok: env("CRON_SECRET"),
+      detail: env("CRON_SECRET")
+        ? "Ingesteld: elke 5 minuten (schema's vrijgeven en mailen); herinneringen dagelijks vanaf 08:00. Vereist Vercel Pro."
+        : "CRON_SECRET ontbreekt",
+    },
     { label: "Websiteadres", ok: env("NEXT_PUBLIC_SITE_URL"), detail: site.url },
     {
       label: "Gezondheidsapps: Withings (optioneel)",
@@ -100,6 +108,31 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
         </Panel>
 
         <div className="space-y-6">
+          <Panel title="Levering van schema's">
+            <div className="space-y-3 px-5 py-4 text-sm">
+              <p>
+                Een nieuw schema wordt direct gemaakt en staat op een willekeurig moment tussen {site.delivery.minMinutes} en{" "}
+                {site.delivery.maxMinutes} minuten later voor de klant klaar (belofte: binnen {site.delivery.promiseHours} uur). De klant
+                krijgt dan een e-mail.{site.delivery.afterCheckin ? " Dit geldt ook na een check-in." : ""}
+              </p>
+              <p className="text-muted">
+                <strong className="text-ink">Schema&apos;s eerst zelf goedkeuren:</strong> {approval ? "staat aan" : "staat uit"}. Staat dit aan,
+                dan gaat een schema pas naar de klant als jij het in het beheer hebt goedgekeurd. Je krijgt per schema een e-mail met
+                het tijdstip waarop de klant het uiterlijk verwacht. Handig als steekproef in de eerste weken.
+              </p>
+            </div>
+            {dbOk && (
+            <form action={setApprovalMode} className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-4">
+              <input type="hidden" name="terug" value="/beheer/instellingen" />
+              <input type="hidden" name="aan" value={approval ? "0" : "1"} />
+              <p className="text-sm text-muted">{approval ? "Weer automatisch laten leveren?" : "Elk schema eerst zelf bekijken?"}</p>
+              <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
+                {approval ? "Goedkeuren uitzetten" : "Goedkeuren aanzetten"}
+              </SubmitButton>
+            </form>
+            )}
+          </Panel>
+
           <Panel title="Acties en garantie">
             <dl className="divide-y divide-line text-sm">
               <div className="flex justify-between gap-4 px-5 py-3">

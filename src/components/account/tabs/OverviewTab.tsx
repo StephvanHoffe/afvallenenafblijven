@@ -24,12 +24,12 @@ const copy = defineCopy({
       `Je gewicht: van ${start} kg bij de start naar ${now} kg nu${target !== null ? `, streefgewicht ${target} kg` : ""}.`,
     checkinDoneTitle: "Dank je, je check-in is binnen!",
     checkinDoneText:
-      "We maken nu je nieuwe schema, afgestemd op je antwoorden. Dat duurt een paar minuten; deze pagina ververst vanzelf en je krijgt een e-mail zodra het klaar is.",
+      "We gaan aan de slag met je nieuwe schema, afgestemd op je antwoorden. Binnen 2 uur staat het klaar; je krijgt dan een e-mail.",
     checkinDoneUpcoming: (start: string) =>
-      `We maken nu je nieuwe schema, afgestemd op je antwoorden. Het staat over een paar minuten klaar en start op ${start}; tot die tijd volg je je huidige schema. Zo kun je alvast je boodschappen doen.`,
+      `We gaan aan de slag met je nieuwe schema, afgestemd op je antwoorden. Binnen 2 uur staat het klaar (je krijgt dan een e-mail) en het start op ${start}; tot die tijd volg je je huidige schema. Zo kun je op tijd je boodschappen doen.`,
     overdueTitle: "Je nieuwe schema wacht op je check-in",
     openTitle: "Tijd voor je check-in!",
-    openText: (seq: number) => `Vul hem in (2 minuten), dan maken we direct je schema voor periode ${seq}, afgestemd op hoe het ging.`,
+    openText: (seq: number) => `Vul hem in (2 minuten), dan staat je schema voor periode ${seq} binnen 2 uur klaar, afgestemd op hoe het ging.`,
     openTextDated: (seq: number, advised: string, start: string) =>
       `Vul hem uiterlijk ${advised} in (2 minuten), dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar voor ${start}.`,
     openCta: "Check-in invullen",
@@ -74,12 +74,12 @@ const copy = defineCopy({
       `Your weight: from ${start} kg at the start to ${now} kg now${target !== null ? `, target weight ${target} kg` : ""}.`,
     checkinDoneTitle: "Thank you, your check-in is in!",
     checkinDoneText:
-      "We're now creating your new plan, tailored to your answers. This takes a few minutes; this page refreshes automatically and you'll get an email as soon as it's ready.",
+      "We're getting to work on your new plan, tailored to your answers. It will be ready within 2 hours, and we'll send you an email.",
     checkinDoneUpcoming: (start: string) =>
-      `We're now creating your new plan, tailored to your answers. It will be ready in a few minutes and starts on ${start}; until then, keep following your current plan. That way, you can already do your shopping.`,
+      `We're getting to work on your new plan, tailored to your answers. It will be ready within 2 hours (we'll send you an email) and starts on ${start}; until then, keep following your current plan. That way, you can do your shopping in time.`,
     overdueTitle: "Your new plan is waiting for your check-in",
     openTitle: "Time for your check-in!",
-    openText: (seq: number) => `Fill it in (2 minutes) and we'll create your plan for period ${seq} straight away, tailored to how things went.`,
+    openText: (seq: number) => `Fill it in (2 minutes) and your plan for period ${seq} will be ready within 2 hours, tailored to how things went.`,
     openTextDated: (seq: number, advised: string, start: string) =>
       `Fill it in by ${advised} (2 minutes), and your plan for period ${seq} with shopping list will be ready in time for ${start}.`,
     openCta: "Complete check-in",

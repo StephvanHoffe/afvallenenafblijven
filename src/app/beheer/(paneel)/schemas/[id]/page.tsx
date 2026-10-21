@@ -3,14 +3,16 @@ import Link from "@/i18n/Link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ArrowLeft, RotateCw, Send } from "lucide-react";
-import { resendPlanEmail, retryPlan } from "@/app/beheer/actions";
+import { ArrowLeft, CircleCheck, RotateCw, Send } from "lucide-react";
+import { approvePlan, resendPlanEmail, retryPlan } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { NeedsDatabase, Notice, Panel, PlanStatusBadge } from "@/components/beheer/ui";
+import { NeedsDatabase, Notice, Panel, PlanDelivery, PlanStatusBadge } from "@/components/beheer/ui";
 import { PlanDocument } from "@/components/plan/PlanDocument";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
-import { formatDate } from "@/lib/format";
+import { deliveryDeadline } from "@/lib/delivery";
+import { formatDateTime } from "@/lib/format";
+import { intakeLabels } from "@/i18n/options";
 
 export const metadata: Metadata = { title: "Schema" };
 
@@ -27,15 +29,18 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const plan = await adminData().plan(id);
+  const [plan, approval] = await Promise.all([adminData().plan(id), adminData().approvalRequired()]);
   if (!plan) notFound();
   const here = `/beheer/schemas/${plan.id}`;
+  const waiting = plan.status === "ready" && !plan.releasedAt;
+  const labels = intakeLabels("nl");
+  const allergies = [...plan.allergies.map((a) => labels.allergy[a]), ...(plan.otherAllergies ? [plan.otherAllergies] : [])];
   const facts: [string, React.ReactNode][] = [
     ["Klant", <Link key="k" href={`/beheer/klanten/${plan.customerId}`} className="font-semibold hover:underline">{plan.customerName}</Link>],
-    ["Status", <PlanStatusBadge key="s" status={plan.status} attempts={plan.attempts} />],
-    ["Aangemaakt", formatDate(plan.createdAt)],
-    ["Klaar", plan.generatedAt ? formatDate(plan.generatedAt) : "–"],
-    ["Gemaild", plan.emailedAt ? formatDate(plan.emailedAt) : "–"],
+    ["Status", <span key="s"><PlanStatusBadge status={plan.status} attempts={plan.attempts} /><PlanDelivery plan={plan} approval={approval} /></span>],
+    ["Aangemaakt", formatDateTime(plan.createdAt)],
+    ["Klaar", plan.generatedAt ? formatDateTime(plan.generatedAt) : "–"],
+    ["Klant verwacht het uiterlijk", plan.releasedAt ? "–" : formatDateTime(deliveryDeadline(plan.createdAt))],
     ["Pogingen", `${plan.attempts} van 5`],
   ];
 
@@ -50,7 +55,26 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
           {plan.type === "voeding" ? "Voedingsschema" : "Trainingsschema"} · periode {plan.seq}
         </h1>
         <div className="flex flex-wrap gap-2">
-          {plan.status === "ready" && (
+          {waiting && approval && !plan.approvedAt && (
+            <form action={approvePlan}>
+              <input type="hidden" name="plan" value={plan.id} />
+              <input type="hidden" name="terug" value={here} />
+              <SubmitButton className="btn-primary !px-3.5 !py-2 text-sm">
+                <CircleCheck className="size-4" aria-hidden /> Goedkeuren
+              </SubmitButton>
+            </form>
+          )}
+          {waiting && (
+            <form action={approvePlan}>
+              <input type="hidden" name="plan" value={plan.id} />
+              <input type="hidden" name="nu" value="1" />
+              <input type="hidden" name="terug" value={here} />
+              <SubmitButton className="btn-secondary !px-3.5 !py-2 text-sm">
+                <Send className="size-4" aria-hidden /> Nu naar de klant
+              </SubmitButton>
+            </form>
+          )}
+          {plan.status === "ready" && plan.releasedAt && (
             <form action={resendPlanEmail}>
               <input type="hidden" name="plan" value={plan.id} />
               <input type="hidden" name="terug" value={here} />
@@ -79,6 +103,24 @@ async function PlanDetail({ params, searchParams }: PageProps<"/beheer/schemas/[
             </div>
           ))}
         </dl>
+        {plan.type === "voeding" && (
+          <p className="border-t border-line px-5 py-3 text-sm">
+            <span className="text-muted">Allergieën en intoleranties: </span>
+            <strong>{allergies.length ? allergies.join(", ") : "geen opgegeven"}</strong>
+            {plan.dislikes && (
+              <>
+                <span className="text-muted"> · Lust niet: </span>
+                {plan.dislikes}
+              </>
+            )}
+            {plan.diet && plan.diet !== "alles" && (
+              <>
+                <span className="text-muted"> · Eetpatroon: </span>
+                {labels.diet[plan.diet]}
+              </>
+            )}
+          </p>
+        )}
         {plan.error && <p className="border-t border-line px-5 py-3 text-sm text-accent-600">Laatste fout: {plan.error}</p>}
       </Panel>
       {plan.content ? (

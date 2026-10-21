@@ -113,8 +113,18 @@ function Nl() {
         </li>
         <li>Je moet minimaal 18 jaar oud zijn om een overeenkomst met ons te sluiten.</li>
         <li>
-          Je bent ervoor verantwoordelijk dat de gegevens die je in de vragenlijst invult juist en volledig zijn. Je schema
-          is gebaseerd op deze gegevens.
+          Je bent zelf verantwoordelijk voor het naar waarheid, juist en volledig invullen van de vragenlijst en de
+          check-ins. Dat geldt in het bijzonder voor de vragen over je gezondheid (zoals zwangerschap of borstvoeding, een
+          eetstoornis, medische aandoeningen, medicijngebruik en blessures) en over allergieën en intoleranties. Verandert
+          daar iets in, geef dat dan zo snel mogelijk aan ons door, bijvoorbeeld in je check-in. Je schema is uitsluitend
+          gebaseerd op de gegevens die je opgeeft; wij controleren die niet.
+        </li>
+        <li>
+          Voor de betaling doen we op basis van je antwoorden een automatische veiligheidscheck. Die check is een
+          eenvoudige eerste selectie aan de hand van jouw eigen antwoorden, en geen medische beoordeling of advies. Hij
+          werkt alleen als je de vragen naar waarheid beantwoordt. Dat je bestelling door de check komt, betekent niet dat
+          een schema voor jou medisch verantwoord is; dat beoordeel je zelf, zo nodig samen met je arts (zie artikel{" "}
+          {g.enabled ? 12 : 11}).
         </li>
         <li>
           We mogen een bestelling weigeren of een overeenkomst niet uitvoeren als er gegronde redenen zijn, bijvoorbeeld
@@ -127,11 +137,12 @@ function Nl() {
       <ol>
         <li>
           Een schema wordt automatisch samengesteld door onze software, op basis van jouw antwoorden, onze berekeningen,
-          instructies en kwaliteitscontroles. We doen ons best om een zorgvuldig en passend schema te maken
-          (inspanningsverplichting).
+          instructies en kwaliteitscontroles (onder meer op calorieën, eiwit en de allergenen die je opgeeft). We doen ons
+          best om een zorgvuldig en passend schema te maken (inspanningsverplichting).
         </li>
         <li>
-          We streven ernaar je schema binnen enkele minuten na de betaling te leveren, en in elk geval binnen 2 werkdagen.
+          We beginnen direct na de betaling aan je schema en streven ernaar het binnen 2 uur te leveren, en in elk geval
+          binnen 2 werkdagen.
           Levering vindt plaats via je persoonlijke omgeving &quot;Mijn schema&apos;s&quot; en een e-mail met een link.
         </li>
         <li>
@@ -139,8 +150,8 @@ function Nl() {
           een maandag en duurt 4 weken; de eerste periode start direct na je bestelling en loopt tot de maandag die het
           dichtst bij 4 weken later ligt (25 tot 31 dagen). Elk vervolgschema maken we op basis van een check-in, waarin je
           je voortgang doorgeeft. De check-in opent op de donderdag voor de nieuwe periode; je ontvangt dan een uitnodiging
-          per e-mail en zo nodig herinneringen. Het nieuwe schema maken we zodra je de check-in hebt ingevuld; het is dan
-          direct zichtbaar en start op de maandag van de nieuwe periode, of meteen als die al is begonnen. Zolang je de
+          per e-mail en zo nodig herinneringen. Het nieuwe schema maken we zodra je de check-in hebt ingevuld; het staat
+          binnen 2 uur voor je klaar en start op de maandag van de nieuwe periode, of meteen als die al is begonnen. Zolang je de
           check-in niet hebt ingevuld, maken we geen nieuw schema; het abonnement en de maandelijkse betaling lopen dan
           gewoon door en je houdt toegang tot je laatste schema.
         </li>
@@ -287,19 +298,24 @@ function Nl() {
       <ol>
         <li>
           Raadpleeg een arts voordat je met een nieuw voedings- of trainingsschema begint als je een medische aandoening
-          hebt, medicijnen gebruikt, ouder bent dan 65, of twijfelt of het voor jou verantwoord is.
+          hebt, medicijnen gebruikt, ouder bent dan 65, of twijfelt of het voor jou verantwoord is. De veiligheidscheck
+          (artikel 5) en de controles van je schema vervangen geen advies van een arts, diëtist of andere zorgverlener.
         </li>
         <li>
           Stop met trainen en raadpleeg een arts of fysiotherapeut als je tijdens het trainen pijn, duizeligheid,
           benauwdheid of andere klachten krijgt.
         </li>
         <li>
-          Heb je een allergie of intolerantie? Controleer dan altijd zelf de etiketten van de producten die je gebruikt;
-          samenstellingen van producten kunnen wijzigen.
+          <strong>Allergieën en intoleranties.</strong> Je geeft zelf op welke allergieën en intoleranties je hebt. We
+          houden in je schema alleen rekening met wat je hebt opgegeven, en controleren elk voedingsschema daar ook op.
+          We kunnen echter niet garanderen dat een schema, gerecht of product vrij is van een allergeen of van sporen
+          daarvan: samenstellingen verschillen per merk en supermarkt en kunnen veranderen. Je bent daarom zelf
+          verantwoordelijk voor het controleren van de ingrediënten en de etiketten van alle producten die je koopt en
+          gebruikt. Twijfel je, gebruik het product dan niet.
         </li>
         <li>
-          Het opvolgen van een schema gebeurt op eigen verantwoordelijkheid, binnen de grenzen van wat redelijk is en
-          met inachtneming van artikel {g.enabled ? 13 : 12}.
+          Het opvolgen van een schema, en de keuze welke producten je koopt en gebruikt, gebeurt op eigen
+          verantwoordelijkheid, binnen de grenzen van wat redelijk is en met inachtneming van artikel {g.enabled ? 13 : 12}.
         </li>
       </ol>
 
@@ -310,8 +326,10 @@ function Nl() {
           gebeurtenis aan ons hebt betaald.
         </li>
         <li>
-          We zijn niet aansprakelijk voor schade die ontstaat doordat je onjuiste of onvolledige gegevens hebt ingevuld,
-          of doordat je de adviezen uit artikel {g.enabled ? 12 : 11} niet opvolgt.
+          We zijn niet aansprakelijk voor schade die ontstaat doordat je onjuiste of onvolledige gegevens hebt ingevuld
+          (bijvoorbeeld over je gezondheid, allergieën of intoleranties), doordat je wijzigingen niet hebt doorgegeven,
+          doordat je de ingrediënten en etiketten niet zelf hebt gecontroleerd, of doordat je de adviezen uit artikel{" "}
+          {g.enabled ? 12 : 11} niet opvolgt.
         </li>
         <li>
           Deze beperkingen gelden niet bij opzet of bewuste roekeloosheid van ons, en laten je dwingende wettelijke rechten
@@ -469,8 +487,17 @@ function En() {
         </li>
         <li>You must be at least 18 years old to enter into a contract with us.</li>
         <li>
-          You are responsible for ensuring that the information you enter in the questionnaire is correct and complete.
-          Your plan is based on this information.
+          You are responsible for filling in the questionnaire and the check-ins truthfully, correctly and completely.
+          This applies in particular to the questions about your health (such as pregnancy or breastfeeding, an eating
+          disorder, medical conditions, medication and injuries) and about allergies and intolerances. If anything
+          changes, let us know as soon as possible, for example in your check-in. Your plan is based solely on the
+          information you provide; we do not verify it.
+        </li>
+        <li>
+          Before payment, we carry out an automatic safety check based on your answers. This check is a simple initial
+          screening based on your own answers, not a medical assessment or advice. It only works if you answer the
+          questions truthfully. If your order passes the check, that does not mean a plan is medically responsible for
+          you; you assess that yourself, together with your doctor if necessary (see article {g.enabled ? 12 : 11}).
         </li>
         <li>
           We may refuse an order or decline to perform a contract if there are valid reasons for doing so, for example if
@@ -483,10 +510,12 @@ function En() {
       <ol>
         <li>
           A plan is put together automatically by our software, based on your answers, our calculations, instructions and
-          quality checks. We do our best to create a careful and suitable plan (obligation of effort).
+          quality checks (including on calories, protein and the allergens you tell us about). We do our best to create a
+          careful and suitable plan (obligation of effort).
         </li>
         <li>
-          We aim to deliver your plan within a few minutes of payment, and in any case within 2 working days. Delivery
+          We start on your plan straight after payment and aim to deliver it within 2 hours, and in any case within 2
+          working days. Delivery
           takes place via your personal environment &quot;My plans&quot; and an email with a link.
         </li>
         <li>
@@ -495,7 +524,7 @@ function En() {
           Monday closest to 4 weeks later (25 to 31 days). We create each follow-up plan on the basis of a check-in, in
           which you tell us about your progress. The check-in opens on the Thursday before the new period; you will then
           receive an invitation by email and, if necessary, reminders. We create the new plan as soon as you have
-          completed the check-in; it is then visible straight away and starts on the Monday of the new period, or
+          completed the check-in; it will be ready for you within 2 hours and starts on the Monday of the new period, or
           immediately if that period has already begun. As long as you have not completed the check-in, we do not create
           a new plan; the subscription and the monthly payment simply continue and you keep access to your latest plan.
         </li>
@@ -645,19 +674,23 @@ function En() {
       <ol>
         <li>
           Consult a doctor before starting a new nutrition or workout plan if you have a medical condition, take
-          medication, are over 65, or are unsure whether it is responsible for you.
+          medication, are over 65, or are unsure whether it is responsible for you. The safety check (article 5) and the
+          checks on your plan do not replace advice from a doctor, dietitian or other healthcare professional.
         </li>
         <li>
           Stop training and consult a doctor or physiotherapist if you experience pain, dizziness, shortness of breath or
           other symptoms while training.
         </li>
         <li>
-          Do you have an allergy or intolerance? Then always check the labels of the products you use yourself; product
-          compositions may change.
+          <strong>Allergies and intolerances.</strong> You tell us which allergies and intolerances you have. In your plan,
+          we only take into account what you have told us, and we check every nutrition plan for it. However, we cannot
+          guarantee that a plan, dish or product is free from an allergen or traces of it: recipes differ between brands
+          and supermarkets and may change. You are therefore responsible for checking the ingredients and labels of all
+          products you buy and use. If in doubt, do not use the product.
         </li>
         <li>
-          You follow a plan at your own responsibility, within the limits of what is reasonable and subject to article{" "}
-          {g.enabled ? 13 : 12}.
+          You follow a plan, and choose which products you buy and use, at your own responsibility, within the limits of
+          what is reasonable and subject to article {g.enabled ? 13 : 12}.
         </li>
       </ol>
 
@@ -668,8 +701,10 @@ function En() {
           damage.
         </li>
         <li>
-          We are not liable for damage resulting from you having entered incorrect or incomplete information, or from you
-          not following the advice in article {g.enabled ? 12 : 11}.
+          We are not liable for damage resulting from you having entered incorrect or incomplete information (for example
+          about your health, allergies or intolerances), from you not having passed on changes, from you not having
+          checked the ingredients and labels yourself, or from you not following the advice in article{" "}
+          {g.enabled ? 12 : 11}.
         </li>
         <li>
           These limitations do not apply in the event of intent or deliberate recklessness on our part, and do not affect

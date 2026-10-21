@@ -2,6 +2,7 @@ import Link from "@/i18n/Link";
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
 import { durations, products, type DurationId, type ProductId } from "@/config/pricing";
+import { formatDateTime } from "@/lib/format";
 
 export function PageTitle({ title, intro, children }: { title: string; intro?: React.ReactNode; children?: React.ReactNode }) {
   return (
@@ -76,6 +77,24 @@ export function PlanStatusBadge({ status, attempts }: { status: PlanStatus; atte
   return <Badge tone={tone}>{label}</Badge>;
 }
 
+/**
+ * Waar een schema staat richting de klant: bij de klant, gepland (willekeurig
+ * moment binnen 2 uur) of wachtend op jouw goedkeuring.
+ */
+export function PlanDelivery({
+  plan,
+  approval,
+}: {
+  plan: { status: PlanStatus; releaseAfter: Date; releasedAt: Date | null; approvedAt: Date | null };
+  approval: boolean;
+}) {
+  if (plan.releasedAt) return <span className="block text-xs text-muted">Bij de klant: {formatDateTime(plan.releasedAt)}</span>;
+  if (plan.status === "ready" && approval && !plan.approvedAt) {
+    return <span className="block text-xs font-semibold text-amber-800">Wacht op je goedkeuring · gepland {formatDateTime(plan.releaseAfter)}</span>;
+  }
+  return <span className="block text-xs text-muted">Gepland voor de klant: {formatDateTime(plan.releaseAfter)}</span>;
+}
+
 export function planName(product: ProductId, duration: DurationId): string {
   const d = duration === "eenmalig" ? "los" : duration === "1m" ? "per maand" : `min. ${durations[duration].label}`;
   return `${products[product].shortName} · ${d}`;
@@ -84,7 +103,11 @@ export function planName(product: ProductId, duration: DurationId): string {
 const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   demo: { tone: "warn", text: "Demo-modus: acties worden niet uitgevoerd." },
   "opnieuw-gestart": { tone: "ok", text: "Het schema wordt opnieuw gemaakt. Ververs de pagina over een paar minuten." },
-  "periode-gestart": { tone: "ok", text: "De nieuwe periode is gestart. De schema's worden nu gemaakt; de klant krijgt een e-mail zodra ze klaar zijn." },
+  goedgekeurd: { tone: "ok", text: "Goedgekeurd. Het schema gaat op het geplande moment naar de klant (zodra alle schema's van de periode zijn goedgekeurd)." },
+  vrijgegeven: { tone: "ok", text: "Het schema staat nu klaar voor de klant; de klant krijgt een e-mail." },
+  "goedkeuring-aan": { tone: "ok", text: "Goedkeuren staat aan: nieuwe schema's gaan pas naar de klant nadat jij ze hebt goedgekeurd." },
+  "goedkeuring-uit": { tone: "ok", text: "Goedkeuren staat uit: nieuwe schema's gaan automatisch op het geplande moment naar de klant." },
+  "periode-gestart": { tone: "ok", text: "De nieuwe periode is gestart. De schema's worden nu gemaakt; de klant krijgt een e-mail zodra ze klaarstaan." },
   "mail-verstuurd": { tone: "ok", text: "De e-mail met de schema's is opnieuw verstuurd." },
   "inloglink-verstuurd": { tone: "ok", text: "De klant heeft een nieuwe inloglink ontvangen." },
   opgezegd: { tone: "ok", text: "Het abonnement is opgezegd. De klant heeft een bevestiging ontvangen." },
@@ -94,7 +117,7 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "testmail-verstuurd": { tone: "ok", text: "De testmail is verstuurd naar het beheeradres." },
   "testmail-mislukt": { tone: "warn", text: "De testmail kon niet worden verstuurd. Controleer de SMTP-instellingen." },
   "niet-gevonden": { tone: "warn", text: "Niet gevonden of niet mogelijk in de huidige status." },
-  "nog-niet-klaar": { tone: "warn", text: "Er zijn nog geen klaarstaande schema's in deze periode." },
+  "nog-niet-klaar": { tone: "warn", text: "De schema's van deze periode zijn nog niet bij de klant; de mail gaat vanzelf mee op het geplande moment." },
   "bevestig-verwijderen": { tone: "warn", text: "Typ VERWIJDER om het verwijderen te bevestigen." },
   "eerst-opzeggen": { tone: "warn", text: "Deze klant heeft nog een lopend abonnement. Zeg dat eerst op." },
 };

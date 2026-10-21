@@ -214,9 +214,9 @@ const checkinCopy = defineCopy({
       reminder === 0
         ? `Je nieuwe periode start op ${start}. Vul je check-in in (2 minuten), het liefst uiterlijk ${advised}: dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. We maken het bewust pas na je check-in, zodat het past bij hoe het nu gaat.`
         : reminder === 1
-          ? `Je nieuwe periode start op ${start}. Vul vandaag je check-in in, dan staat je nieuwe schema binnen een paar minuten klaar en kun je dit weekend je boodschappen doen.`
+          ? `Je nieuwe periode start op ${start}. Vul vandaag je check-in in, dan staat je nieuwe schema binnen 2 uur klaar en kun je dit weekend je boodschappen doen.`
           : reminder === 2
-            ? `Je nieuwe periode is begonnen, maar we hebben je check-in nog niet ontvangen. Vul hem in, dan maken we direct je schema voor periode ${seq}. Tot die tijd volg je gewoon je huidige schema.`
+            ? `Je nieuwe periode is begonnen, maar we hebben je check-in nog niet ontvangen. Vul hem in, dan staat je schema voor periode ${seq} binnen 2 uur klaar. Tot die tijd volg je gewoon je huidige schema.`
             : `We hebben je check-in nog niet ontvangen. Je schema voor periode ${seq} maken we pas als je hem hebt ingevuld, zodat het echt bij je voortgang past. Het kost je 2 minuten.`,
     button: "Check-in invullen",
     askTitle: "Wat we je vragen:",
@@ -225,7 +225,7 @@ const checkinCopy = defineCopy({
       "Hoe goed je het schema kon volgen, en hoe je honger, energie en slaap waren.",
       "Wat je lekker vond, wat je anders wilt en of je nieuwe klachten hebt.",
     ],
-    after: "Binnen een paar minuten na je check-in staat je nieuwe schema klaar en krijg je een e-mail. Het start op de maandag van je nieuwe periode; tot die tijd volg je je huidige schema.",
+    after: "Binnen 2 uur na je check-in staat je nieuwe schema klaar en krijg je een e-mail. Het start op de maandag van je nieuwe periode; tot die tijd volg je je huidige schema.",
     textLink: (link: string) => `Check-in invullen: ${link}`,
   },
   en: {
@@ -241,9 +241,9 @@ const checkinCopy = defineCopy({
       reminder === 0
         ? `Your new period starts on ${start}. Fill in your check-in (2 minutes), ideally by ${advised}: then your plan for period ${seq} with shopping list will be ready in time for your weekend shopping. We deliberately only create it after your check-in, so it matches how things are going now.`
         : reminder === 1
-          ? `Your new period starts on ${start}. Fill in your check-in today, and your new plan will be ready within a few minutes, so you can do your shopping this weekend.`
+          ? `Your new period starts on ${start}. Fill in your check-in today, and your new plan will be ready within 2 hours, so you can do your shopping this weekend.`
           : reminder === 2
-            ? `Your new period has started, but we haven't received your check-in yet. Fill it in and we'll create your plan for period ${seq} straight away. Until then, simply keep following your current plan.`
+            ? `Your new period has started, but we haven't received your check-in yet. Fill it in and your plan for period ${seq} will be ready within 2 hours. Until then, simply keep following your current plan.`
             : `We haven't received your check-in yet. We'll only create your plan for period ${seq} once you've filled it in, so that it truly matches your progress. It only takes 2 minutes.`,
     button: "Fill in your check-in",
     askTitle: "What we'll ask you:",
@@ -252,7 +252,7 @@ const checkinCopy = defineCopy({
       "How well you were able to follow the plan, and how your hunger, energy and sleep were.",
       "What you enjoyed, what you'd like to change and whether you have any new aches or injuries.",
     ],
-    after: "Within a few minutes of your check-in, your new plan will be ready and we'll send you an email. It starts on the Monday of your new period; until then, keep following your current plan.",
+    after: "Within 2 hours of your check-in, your new plan will be ready and we'll send you an email. It starts on the Monday of your new period; until then, keep following your current plan.",
     textLink: (link: string) => `Fill in your check-in: ${link}`,
   },
 });
@@ -549,7 +549,7 @@ const orderCopy = defineCopy({
     renewal: "Verlenging",
     consent:
       "Je hebt bij je bestelling uitdrukkelijk ingestemd met directe levering van je schema en verklaard dat je weet dat je herroepingsrecht vervalt zodra de levering is begonnen.",
-    thanks: "Bedankt voor je bestelling! We maken nu je persoonlijke schema; je ontvangt binnen enkele minuten een aparte e-mail zodra het klaar is.",
+    thanks: "Bedankt voor je bestelling! We gaan aan de slag met je persoonlijke schema. Binnen 2 uur staat het klaar; je ontvangt dan een aparte e-mail met een persoonlijke link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur ontvang je apart van onze betaalpartner Stripe.`,
     textThanks: "Bedankt voor je bestelling!",
@@ -565,7 +565,7 @@ const orderCopy = defineCopy({
     renewal: "Renewal",
     consent:
       "When placing your order, you expressly agreed to immediate delivery of your plan and confirmed that you understand your right of withdrawal lapses once delivery has begun.",
-    thanks: "Thank you for your order! We're now creating your personal plan; you'll receive a separate email within a few minutes as soon as it's ready.",
+    thanks: "Thank you for your order! We're getting to work on your personal plan. It will be ready within 2 hours, and we'll send you a separate email with a personal link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll receive your invoice separately from our payment partner Stripe.`,
     textThanks: "Thank you for your order!",

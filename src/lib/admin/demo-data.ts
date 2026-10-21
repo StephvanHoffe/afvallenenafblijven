@@ -90,6 +90,9 @@ for (let i = 0; i < 48; i++) {
       const created = new Date(createdAt.getTime() + (seq - 1) * 28 * DAY + 60 * 1000);
       const newest = daysAgo === 0 && i === 0 && seq === periods;
       const failed = i === 3 && seq === periods && type === "training";
+      // Klaar, maar nog niet bij de klant: gaat op het geplande moment (binnen 2 uur) naar de klant.
+      const scheduled = daysAgo === 0 && i === 1 && seq === periods;
+      const releasedAt = newest || failed || scheduled ? null : new Date(created.getTime() + (23 + ((i * 37) % 87)) * 60 * 1000);
       plans.push({
         id: id(`p${type}`, (i + 1) * 100 + seq * 2 + (type === "voeding" ? 0 : 1)),
         orderId,
@@ -104,7 +107,10 @@ for (let i = 0; i < 48; i++) {
         createdAt: created,
         startsAt: created,
         generatedAt: newest || failed ? null : new Date(created.getTime() + 4 * 60 * 1000),
-        emailedAt: newest || failed ? null : new Date(created.getTime() + 5 * 60 * 1000),
+        emailedAt: releasedAt,
+        releaseAfter: releasedAt ?? new Date(created.getTime() + (newest ? 74 : 41) * 60 * 1000),
+        releasedAt,
+        approvedAt: null,
       });
       planCount++;
     }
@@ -237,6 +243,7 @@ export const demoAdminData: AdminData = {
       plansReady30: plans.filter((p) => p.status === "ready" && p.generatedAt && within30(p.generatedAt)).length,
       plansFailed: plans.filter((p) => p.status === "failed").length,
       plansInProgress: plans.filter((p) => p.status === "generating" || p.status === "pending").length,
+      plansAwaitingApproval: plans.filter((p) => p.status === "ready" && !p.releasedAt && !p.approvedAt).length,
       openWithdrawals: withdrawals.filter((w) => !w.handledAt).length,
       openGuaranteeRequests: guaranteeRequests.filter((g) => !g.handledAt).length,
       ordersPerDay: perDay,
@@ -278,9 +285,11 @@ export const demoAdminData: AdminData = {
     return status ? orders.filter((o) => o.status === status) : orders;
   },
 
-  async plans(status) {
+  async plans(filter) {
     const list = [...plans].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    return status ? list.filter((p) => p.status === status) : list;
+    if (filter === "gepland") return list.filter((p) => p.status === "ready" && !p.releasedAt);
+    if (filter === "goedkeuren") return list.filter((p) => p.status === "ready" && !p.releasedAt && !p.approvedAt);
+    return filter ? list.filter((p) => p.status === filter) : list;
   },
 
   async plan(planId) {
@@ -288,6 +297,10 @@ export const demoAdminData: AdminData = {
     if (!p) return null;
     return {
       ...p,
+      allergies: demoIntake.allergies,
+      otherAllergies: demoIntake.otherAllergies ?? null,
+      dislikes: demoIntake.dislikes ?? null,
+      diet: demoIntake.diet,
       content:
         p.status !== "ready"
           ? null
@@ -295,6 +308,10 @@ export const demoAdminData: AdminData = {
             ? { type: "voeding", plan: sampleNutritionPlan, targets: sampleTargets }
             : { type: "training", plan: sampleTrainingPlan },
     };
+  },
+
+  async approvalRequired() {
+    return false;
   },
 
   async withdrawals() {

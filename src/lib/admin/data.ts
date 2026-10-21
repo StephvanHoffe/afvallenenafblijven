@@ -8,6 +8,7 @@ import type { Intake } from "@/lib/intake";
 import type { PlanContent } from "@/lib/ai/schemas";
 import { checkinWindow, type CheckinWindow } from "@/lib/checkin";
 import { subscriptionCheckinOrders, weeklyLogsForCustomer, type CheckinData, type OrderStatus, type PlanStatus } from "@/lib/repo";
+import { planApprovalRequired } from "@/lib/settings";
 import type { WeeklyAdjustment, WeeklyData } from "@/lib/weekly";
 
 export interface AdminOrderRow {
@@ -58,11 +59,24 @@ export interface AdminPlanRow {
   startsAt: Date;
   generatedAt: Date | null;
   emailedAt: Date | null;
+  /** Gepland moment waarop de klant het schema krijgt (willekeurig binnen 2 uur). */
+  releaseAfter: Date;
+  /** Wanneer de klant het schema kreeg; null = nog niet. */
+  releasedAt: Date | null;
+  approvedAt: Date | null;
 }
 
 export interface AdminPlanDetail extends AdminPlanRow {
   content: PlanContent | null;
+  /** Uit de vragenlijst, om het schema te controleren. */
+  allergies: Intake["allergies"];
+  otherAllergies: string | null;
+  dislikes: string | null;
+  diet: Intake["diet"] | null;
 }
+
+/** Filter in het schema-overzicht: een status, of nog niet bij de klant (gepland / wacht op goedkeuring). */
+export type AdminPlanFilter = PlanStatus | "gepland" | "goedkeuren";
 
 export interface AdminCustomerDetail {
   customer: AdminCustomerRow;
@@ -103,6 +117,8 @@ export interface AdminOverview {
   plansReady30: number;
   plansFailed: number;
   plansInProgress: number;
+  /** Klaar, maar nog niet goedgekeurd (alleen relevant als goedkeuring aanstaat). */
+  plansAwaitingApproval: number;
   openWithdrawals: number;
   openGuaranteeRequests: number;
   /** Abonnees bij wie de check-in openstaat, en daarvan de verlopen. */
@@ -130,10 +146,12 @@ export interface AdminData {
   customers(query?: string): Promise<AdminCustomerRow[]>;
   customer(id: string): Promise<AdminCustomerDetail | null>;
   orders(status?: OrderStatus): Promise<AdminOrderRow[]>;
-  plans(status?: PlanStatus): Promise<AdminPlanRow[]>;
+  plans(filter?: AdminPlanFilter): Promise<AdminPlanRow[]>;
   plan(id: string): Promise<AdminPlanDetail | null>;
   withdrawals(): Promise<AdminWithdrawalRow[]>;
   guaranteeRequests(): Promise<AdminGuaranteeRow[]>;
+  /** Staat "schema's eerst goedkeuren" aan? */
+  approvalRequired(): Promise<boolean>;
 }
 
 const ref = (id: string) => id.slice(0, 8).toUpperCase();
@@ -186,6 +204,9 @@ type PlanSql = {
   starts_at: Date;
   generated_at: Date | null;
   emailed_at: Date | null;
+  release_after: Date;
+  released_at: Date | null;
+  approved_at: Date | null;
   content?: PlanContent | null;
 };
 
@@ -204,6 +225,9 @@ const toPlan = (r: PlanSql): AdminPlanRow => ({
   startsAt: r.starts_at,
   generatedAt: r.generated_at,
   emailedAt: r.emailed_at,
+  releaseAfter: r.release_after,
+  releasedAt: r.released_at,
+  approvedAt: r.approved_at,
 });
 
 type CustomerSql = {
@@ -247,10 +271,11 @@ const dbAdminData: AdminData = {
       from orders where created_at > now() - interval '30 days'`;
     const [intakes30] = await sql<{ count: number }[]>`
       select count(*)::int as count from intakes where created_at > now() - interval '30 days'`;
-    const [plans] = await sql<{ ready30: number; failed: number; in_progress: number }[]>`
+    const [plans] = await sql<{ ready30: number; failed: number; in_progress: number; awaiting: number }[]>`
       select count(*) filter (where status = 'ready' and generated_at > now() - interval '30 days')::int as ready30,
              count(*) filter (where status = 'failed' and attempts >= 5)::int as failed,
-             count(*) filter (where status in ('pending', 'generating') or (status = 'failed' and attempts < 5))::int as in_progress
+             count(*) filter (where status in ('pending', 'generating') or (status = 'failed' and attempts < 5))::int as in_progress,
+             count(*) filter (where status = 'ready' and released_at is null and approved_at is null)::int as awaiting
       from plans`;
     const [withdrawals] = await sql<{ open: number; guarantees: number }[]>`
       select (select count(*)::int from withdrawals where handled_at is null) as open,
@@ -299,6 +324,7 @@ const dbAdminData: AdminData = {
       plansReady30: plans.ready30,
       plansFailed: plans.failed,
       plansInProgress: plans.in_progress,
+      plansAwaitingApproval: plans.awaiting,
       openWithdrawals: withdrawals.open,
       openGuaranteeRequests: withdrawals.guarantees,
       ordersPerDay: perDay,
@@ -338,7 +364,8 @@ const dbAdminData: AdminData = {
       where o.customer_id = ${id} order by o.created_at desc`;
     const plans = await sql<PlanSql[]>`
       select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
-             p.generated_at, p.emailed_at, c.name as customer_name, c.email as customer_email
+             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at,
+             c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       where p.customer_id = ${id} order by p.created_at desc, p.type`;
     const [intake] = await sql<{ data: Intake; consents: Record<string, unknown>; created_at: Date }[]>`
@@ -386,13 +413,22 @@ const dbAdminData: AdminData = {
     return rows.map(toOrder);
   },
 
-  async plans(status) {
+  async plans(filter) {
     const sql = await db();
+    const where =
+      filter === "gepland"
+        ? sql`where p.status = 'ready' and p.released_at is null`
+        : filter === "goedkeuren"
+          ? sql`where p.status = 'ready' and p.released_at is null and p.approved_at is null`
+          : filter
+            ? sql`where p.status = ${filter}`
+            : sql``;
     const rows = await sql<PlanSql[]>`
       select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
-             p.generated_at, p.emailed_at, c.name as customer_name, c.email as customer_email
+             p.generated_at, p.emailed_at, p.release_after, p.released_at, p.approved_at,
+             c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
-      ${status ? sql`where p.status = ${status}` : sql``}
+      ${where}
       order by p.created_at desc limit 300`;
     return rows.map(toPlan);
   },
@@ -400,11 +436,23 @@ const dbAdminData: AdminData = {
   async plan(id) {
     if (!UUID.test(id)) return null;
     const sql = await db();
-    const [r] = await sql<PlanSql[]>`
-      select p.*, c.name as customer_name, c.email as customer_email
-      from plans p join customers c on c.id = p.customer_id where p.id = ${id}`;
-    return r ? { ...toPlan(r), content: r.content ?? null } : null;
+    const [r] = await sql<(PlanSql & { intake: Intake | null })[]>`
+      select p.*, c.name as customer_name, c.email as customer_email, i.data as intake
+      from plans p join customers c on c.id = p.customer_id
+      join orders o on o.id = p.order_id left join intakes i on i.id = o.intake_id
+      where p.id = ${id}`;
+    if (!r) return null;
+    return {
+      ...toPlan(r),
+      content: r.content ?? null,
+      allergies: r.intake?.allergies ?? [],
+      otherAllergies: r.intake?.otherAllergies ?? null,
+      dislikes: r.intake?.dislikes ?? null,
+      diet: r.intake?.diet ?? null,
+    };
   },
+
+  approvalRequired: planApprovalRequired,
 
   async withdrawals() {
     const sql = await db();

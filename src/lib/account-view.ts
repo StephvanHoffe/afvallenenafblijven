@@ -75,14 +75,15 @@ export function toAccountView(input: {
         null,
     };
   });
+  // Tot een schema is vrijgegeven (op een willekeurig moment binnen 2 uur) ziet de klant "wordt gemaakt".
   const dashboardPlans = plans.map(
     (p): DashboardPlan => ({
       id: p.id,
       type: p.type,
       seq: p.seq,
       startsAt: p.starts_at,
-      status: p.status,
-      generatedAt: p.generated_at,
+      status: p.released_at ? p.status : p.status === "failed" ? "failed" : "generating",
+      generatedAt: p.released_at,
       failed: p.status === "failed" && p.attempts >= MAX_PLAN_ATTEMPTS,
       href: `/schema/${p.id}`,
       pdfHref: `/schema/${p.id}/pdf`,

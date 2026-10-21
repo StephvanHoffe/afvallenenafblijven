@@ -21,7 +21,7 @@ const copy = {
   en: {
     title: `${site.name} – Personal nutrition and workout plans`,
     description:
-      "Personal nutrition plans and workout plans, tailored to your goal, body and schedule. In your inbox within minutes. Cancel monthly.",
+      "Personal nutrition plans and workout plans, tailored to your goal, body and schedule. In your inbox within 2 hours. Cancel monthly.",
     ogAlt: "Healthy meals",
     ogLocale: "en_GB",
   },

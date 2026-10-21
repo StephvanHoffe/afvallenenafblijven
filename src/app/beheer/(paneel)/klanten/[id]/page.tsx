@@ -14,7 +14,7 @@ import {
   startPeriodWithoutCheckin,
 } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { NeedsDatabase, Notice, OrderStatusBadge, Panel, PlanStatusBadge, planName, table } from "@/components/beheer/ui";
+import { NeedsDatabase, Notice, OrderStatusBadge, Panel, PlanDelivery, PlanStatusBadge, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { describeCheckin, describeIntake, stripeDashboardUrl } from "@/lib/admin/describe";
@@ -52,7 +52,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const detail = await adminData().customer(id);
+  const [detail, approval] = await Promise.all([adminData().customer(id), adminData().approvalRequired()]);
   if (!detail) notFound();
   const { customer: c, orders, plans, intake, checkins, weekly } = detail;
   const here = `/beheer/klanten/${c.id}`;
@@ -193,10 +193,11 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                       </td>
                       <td className={table.td}>
                         <PlanStatusBadge status={p.status} attempts={p.attempts} />
+                        <PlanDelivery plan={p} approval={approval} />
                       </td>
                       <td className={`${table.td} ${table.num}`}>{p.generatedAt ? formatDate(p.generatedAt) : "–"}</td>
                       <td className={`${table.td} text-right`}>
-                        {p.status === "ready" && (
+                        {p.status === "ready" && p.releasedAt && (
                           <form action={resendPlanEmail} className="inline">
                             <input type="hidden" name="plan" value={p.id} />
                             <input type="hidden" name="terug" value={here} />

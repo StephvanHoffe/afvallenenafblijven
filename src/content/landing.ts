@@ -124,7 +124,7 @@ interface SharedCopy {
 export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<LandingVariant, VariantCopy> }>({
   nl: {
     shared: {
-      badge: "Persoonlijk plan in 2 minuten",
+      badge: "In 2 minuten ingevuld · binnen 2 uur je plan",
       launchBadge: (label, pct, until) => `${label}: ${pct}% korting op je eerste betaling, t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
       pickNote: "Kies je doel en beantwoord nog een paar vragen. Duurt ongeveer 2 minuten; je betaalt pas als je een plan kiest.",
@@ -132,7 +132,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       priceFrom: (price, perWeek) => `Vanaf ${price} per maand (${perWeek} per week)`,
       priceNote: "maandelijks opzegbaar na de minimale looptijd",
       getsEyebrow: "Wat je krijgt",
-      getsTitle: "Binnen enkele minuten in je mailbox",
+      getsTitle: "Binnen 2 uur in je mailbox",
       previewEyebrow: "Een kijkje in je schema",
       previewTitle: "Concreet, overzichtelijk en meteen te gebruiken",
       previewIntro: "Uit een echt voorbeeldschema. Jouw schema maken we op basis van jouw antwoorden.",
@@ -193,10 +193,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       afvallen: {
         metaTitle: "Afvallen met een persoonlijk voedings- en trainingsschema",
         metaDescription:
-          "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen enkele minuten in je mailbox.",
+          "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen 2 uur in je mailbox.",
         title: ["Klaar met diëten die ", "na drie weken", " alweer stranden?"],
         intro:
-          "Je wéét wat gezond is. Maar met een standaard dieet val je steeds terug in hetzelfde patroon. Wij maken een voedings- en trainingsschema op jouw lichaam, smaak en agenda, en sturen het elke week bij. Zonder crashdieet of honger, en binnen enkele minuten in je mailbox.",
+          "Je wéét wat gezond is. Maar met een standaard dieet val je steeds terug in hetzelfde patroon. Wij maken een voedings- en trainingsschema op jouw lichaam, smaak en agenda, en sturen het elke week bij. Zonder crashdieet of honger, en binnen 2 uur in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
         gets: [
           { title: "Jouw dagdoelen", text: "Calorieën en eiwit, berekend voor jouw lichaam en doel." },
@@ -206,15 +206,15 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Maak mijn persoonlijke plan",
         finalTitle: "Wacht niet weer tot maandag",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke plan. Je betaalt pas als je een plan kiest.",
+        finalText: "Beantwoord een paar vragen en ontvang binnen 2 uur je persoonlijke plan. Je betaalt pas als je een plan kiest.",
       },
       voeding: {
         metaTitle: "Persoonlijk voedingsschema: afvallen met eten dat je lekker vindt",
         metaDescription:
-          "Een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak en allergieën. Binnen enkele minuten in je mailbox.",
+          "Een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak en allergieën. Binnen 2 uur in je mailbox.",
         title: ["Afvallen met eten dat je ", "wél", " lekker vindt"],
         intro:
-          "Elke dag kipfilet met broccoli? Geen wonder dat je het niet volhoudt. Je krijgt een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak, allergieën en tijd om te koken. Elke week bijgestuurd, en binnen enkele minuten in je mailbox.",
+          "Elke dag kipfilet met broccoli? Geen wonder dat je het niet volhoudt. Je krijgt een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak, allergieën en tijd om te koken. Elke week bijgestuurd, en binnen 2 uur in je mailbox.",
         heroAlt: "Bowl met zalm, ei en verse groente",
         gets: [
           { title: "Jouw calorie- en eiwitdoel", text: "Berekend voor jouw lichaam, activiteit en tempo." },
@@ -224,7 +224,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Maak mijn voedingsschema",
         finalTitle: "Weet vanavond al wat je morgen eet",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke weekmenu. Je betaalt pas als je een plan kiest.",
+        finalText: "Beantwoord een paar vragen en ontvang binnen 2 uur je persoonlijke weekmenu. Je betaalt pas als je een plan kiest.",
       },
       training: {
         metaTitle: "Persoonlijk trainingsschema voor thuis of de sportschool",
@@ -242,13 +242,13 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Maak mijn trainingsschema",
         finalTitle: "Maak je volgende training de eerste mét plan",
-        finalText: "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke trainingsschema. Je betaalt pas als je een plan kiest.",
+        finalText: "Beantwoord een paar vragen en ontvang binnen 2 uur je persoonlijke trainingsschema. Je betaalt pas als je een plan kiest.",
       },
     },
   },
   en: {
     shared: {
-      badge: "Personal plan in 2 minutes",
+      badge: "2 minutes to fill in · your plan within 2 hours",
       launchBadge: (label, pct, until) => `${label}: ${pct}% off your first payment, until ${until}`,
       pickTitle: "What would you like to work on?",
       pickNote: "Choose your goal and answer a few more questions. Takes about 2 minutes; you only pay once you choose a plan.",
@@ -256,7 +256,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       priceFrom: (price, perWeek) => `From ${price} a month (${perWeek} a week)`,
       priceNote: "cancel monthly after the minimum term",
       getsEyebrow: "What you get",
-      getsTitle: "In your inbox within minutes",
+      getsTitle: "In your inbox within 2 hours",
       previewEyebrow: "A look inside your plan",
       previewTitle: "Practical, clear and ready to use",
       previewIntro: "Taken from a real sample plan. We create yours based on your answers.",
@@ -317,10 +317,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       afvallen: {
         metaTitle: "Lose weight with a personal nutrition and workout plan",
         metaDescription:
-          "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within minutes.",
+          "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within 2 hours.",
         title: ["Tired of diets that fall apart ", "after three weeks", "?"],
         intro:
-          "You know what healthy looks like. But with a standard diet, you keep slipping back into the same pattern. We create a nutrition and workout plan around your body, taste and schedule, and adjust it every week. No crash diet, no going hungry, and in your inbox within minutes.",
+          "You know what healthy looks like. But with a standard diet, you keep slipping back into the same pattern. We create a nutrition and workout plan around your body, taste and schedule, and adjust it every week. No crash diet, no going hungry, and in your inbox within 2 hours.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
         gets: [
           { title: "Your daily targets", text: "Calories and protein, calculated for your body and goal." },
@@ -330,15 +330,15 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Create my personal plan",
         finalTitle: "Don't wait for Monday again",
-        finalText: "Answer a few questions and receive your personal plan within minutes. You only pay once you choose a plan.",
+        finalText: "Answer a few questions and receive your personal plan within 2 hours. You only pay once you choose a plan.",
       },
       voeding: {
         metaTitle: "Personal nutrition plan: lose weight eating food you enjoy",
         metaDescription:
-          "A personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste and allergies. In your inbox within minutes.",
+          "A personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste and allergies. In your inbox within 2 hours.",
         title: ["Lose weight eating food you ", "actually", " enjoy"],
         intro:
-          "Chicken and broccoli every day? No wonder you can't keep it up. You get a personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste, allergies and cooking time. Adjusted every week, and in your inbox within minutes.",
+          "Chicken and broccoli every day? No wonder you can't keep it up. You get a personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste, allergies and cooking time. Adjusted every week, and in your inbox within 2 hours.",
         heroAlt: "Bowl with salmon, egg and fresh vegetables",
         gets: [
           { title: "Your calorie and protein target", text: "Calculated for your body, activity and pace." },
@@ -348,7 +348,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Create my nutrition plan",
         finalTitle: "Know tonight what you'll eat tomorrow",
-        finalText: "Answer a few questions and receive your personal weekly meal plan within minutes. You only pay once you choose a plan.",
+        finalText: "Answer a few questions and receive your personal weekly meal plan within 2 hours. You only pay once you choose a plan.",
       },
       training: {
         metaTitle: "Personal workout plan for home or the gym",
@@ -366,7 +366,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         ],
         ctaLabel: "Create my workout plan",
         finalTitle: "Make your next workout the first one with a plan",
-        finalText: "Answer a few questions and receive your personal workout plan within minutes. You only pay once you choose a plan.",
+        finalText: "Answer a few questions and receive your personal workout plan within 2 hours. You only pay once you choose a plan.",
       },
     },
   },

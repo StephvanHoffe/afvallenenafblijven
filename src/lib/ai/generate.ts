@@ -19,6 +19,7 @@ import {
   type TrainingPlan,
 } from "@/lib/ai/schemas";
 import { dayTotals } from "@/lib/ai/plan-math";
+import { allergenProblems } from "@/lib/allergens";
 import type { Locale } from "@/i18n/config";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5";
@@ -100,6 +101,8 @@ export function reviewNutritionPlan(
       problems.push(`${day.day} bevat ${t.proteinG} g eiwit terwijl het doel minimaal ${targets.proteinG} g is.`);
     }
   }
+  // Allergenen: elk ingrediënt, gerecht en product op de boodschappenlijst wordt nagelopen.
+  problems.push(...allergenProblems(plan, intake));
   return problems;
 }
 
@@ -117,7 +120,7 @@ export function reviewTrainingPlan(plan: TrainingPlan, intake: Intake): string[]
 
 /**
  * Genereert een voedingsschema. Voldoet de eerste versie niet aan de harde
- * eisen (calorieën, eiwit, aantal maaltijden), dan vragen we één keer om een
+ * eisen (calorieën, eiwit, aantal maaltijden, allergenen), dan vragen we één keer om een
  * gecorrigeerde versie. Blijft er een kleine afwijking over, dan accepteren
  * we die binnen een ruimere marge; anders falen we zodat het later opnieuw
  * geprobeerd wordt.

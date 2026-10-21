@@ -8,6 +8,7 @@ import {
   productFor,
   products,
 } from "@/config/pricing";
+import { deliveryTime } from "@/lib/delivery";
 import { orderConfirmationEmail, sendMail } from "@/lib/email";
 import { euro } from "@/lib/format";
 import {
@@ -96,7 +97,8 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
   });
   if (!order) return getOrderBySession(session.id);
 
-  await createPlans(order.id, customer.id, products[product].includes, 1);
+  // Het schema wordt direct gemaakt en staat op een willekeurig moment binnen 2 uur voor de klant klaar.
+  await createPlans(order.id, customer.id, products[product].includes, 1, new Date(), deliveryTime());
 
   const l = toLocale(customer.locale);
   const c = orderCopy[l];

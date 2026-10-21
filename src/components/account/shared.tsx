@@ -22,13 +22,13 @@ const copy = defineCopy({
     upcomingText: (seq: number, opens: string, advised: string) =>
       `Je check-in voor periode ${seq} opent op ${opens}. Vul hem uiterlijk ${advised} in, dan staat je nieuwe schema met boodschappenlijst op tijd klaar.`,
     openTitle: "Wacht op je check-in",
-    openText: (seq: number) => `Vul je check-in in, dan maken we direct je schema voor periode ${seq}.`,
+    openText: (seq: number) => `Vul je check-in in, dan staat je schema voor periode ${seq} binnen 2 uur klaar.`,
     openSoonText: (seq: number, advised: string) =>
       `Vul je check-in uiterlijk ${advised} in, dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar.`,
     readyTitle: (start: string) => `Klaar, start ${start}`,
     readyText: "Je nieuwe schema staat al klaar. Tot de start volg je je huidige schema.",
     busyTitle: "Wordt nu gemaakt",
-    busyText: "Je check-in is binnen. Binnen een paar minuten staat je nieuwe schema klaar.",
+    busyText: "Je check-in is binnen. Binnen 2 uur staat je nieuwe schema klaar; je krijgt dan een e-mail.",
   },
   en: {
     plans: { voeding: "Nutrition plan", training: "Workout plan" },
@@ -44,13 +44,13 @@ const copy = defineCopy({
     upcomingText: (seq: number, opens: string, advised: string) =>
       `Your check-in for period ${seq} opens on ${opens}. Fill it in by ${advised}, and your new plan with shopping list will be ready in time.`,
     openTitle: "Waiting for your check-in",
-    openText: (seq: number) => `Complete your check-in and we'll create your plan for period ${seq} straight away.`,
+    openText: (seq: number) => `Complete your check-in and your plan for period ${seq} will be ready within 2 hours.`,
     openSoonText: (seq: number, advised: string) =>
       `Fill in your check-in by ${advised}, and your plan for period ${seq} with shopping list will be ready in time.`,
     readyTitle: (start: string) => `Ready, starts ${start}`,
     readyText: "Your new plan is already ready. Until it starts, keep following your current plan.",
     busyTitle: "Being created now",
-    busyText: "Your check-in is in. Your new plan will be ready within a few minutes.",
+    busyText: "Your check-in is in. Your new plan will be ready within 2 hours, and we'll send you an email.",
   },
 });
 

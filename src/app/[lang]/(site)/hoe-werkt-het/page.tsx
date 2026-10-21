@@ -13,9 +13,9 @@ const copy = defineCopy({
   nl: {
     metaTitle: "Hoe werkt het?",
     metaDescription:
-      "Zo werkt Afvallen & Afblijven: vragenlijst invullen, plan kiezen en binnen enkele minuten je persoonlijke voedings- en trainingsschema ontvangen.",
+      "Zo werkt Afvallen & Afblijven: vragenlijst invullen, plan kiezen en binnen 2 uur je persoonlijke voedings- en trainingsschema ontvangen.",
     eyebrow: "Hoe werkt het",
-    title: "Van vragenlijst naar persoonlijk schema in een paar minuten",
+    title: "Van vragenlijst naar persoonlijk schema binnen 2 uur",
     intro: "Geen wachtlijst, geen intakegesprek en geen standaardlijstje dat je na drie weken weer opgeeft. Wel een schema dat helemaal van jou is, en dat meebeweegt als het even tegenzit.",
     details: [
       {
@@ -30,12 +30,12 @@ const copy = defineCopy({
       },
       {
         title: "3. Je schema wordt gemaakt en gecontroleerd",
-        text: "Na je betaling stelt ons systeem jouw persoonlijke schema samen volgens onze strenge richtlijnen. Elk voedingsschema wordt automatisch gecontroleerd: klopt het aantal calorieën en eiwit per dag, en het aantal maaltijden? Zo niet, dan wordt het opnieuw gemaakt. Binnen enkele minuten staat het voor je klaar.",
+        text: "Na je betaling stelt ons systeem jouw persoonlijke schema samen volgens onze strenge richtlijnen. Elk voedingsschema wordt gecontroleerd: klopt het aantal calorieën en eiwit per dag, het aantal maaltijden, en komt er niets in voor waarvoor je een allergie hebt opgegeven? Zo niet, dan wordt het opnieuw gemaakt. Binnen 2 uur staat het voor je klaar en krijg je een e-mail.",
         alt: "Gegrilde kip met groente en citroen",
       },
       {
         title: "4. Elke week bijsturen, elke 4 weken een nieuw schema",
-        text: "Elke week, het liefst in het weekend, vul je in 1 minuut je gewicht in en hoe het ging. Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen, op tijd voor je boodschappen. Heb je een abonnement? Elke periode duurt 4 weken en start op maandag. Vanaf de donderdag ervoor vul je een korte check-in in: je gewicht, hoe goed het lukte, je honger, energie en slaap, en hoe de trainingen voelden. Op basis daarvan maken we direct je nieuwe schema: met bijgestelde calorieën, nieuwe gerechten en een volgende stap in je training. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst klaar voordat de nieuwe week begint. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
+        text: "Elke week, het liefst in het weekend, vul je in 1 minuut je gewicht in en hoe het ging. Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen, op tijd voor je boodschappen. Heb je een abonnement? Elke periode duurt 4 weken en start op maandag. Vanaf de donderdag ervoor vul je een korte check-in in: je gewicht, hoe goed het lukte, je honger, energie en slaap, en hoe de trainingen voelden. Op basis daarvan maken we je nieuwe schema, dat binnen 2 uur klaarstaat: met bijgestelde calorieën, nieuwe gerechten en een volgende stap in je training. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst klaar voordat de nieuwe week begint. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
         alt: "Sporter traint met hulp van een begeleider",
       },
     ],
@@ -45,9 +45,9 @@ const copy = defineCopy({
   en: {
     metaTitle: "How does it work?",
     metaDescription:
-      "This is how Afvallen & Afblijven works: fill in the questionnaire, choose your plan and receive your personal nutrition and workout plan within minutes.",
+      "This is how Afvallen & Afblijven works: fill in the questionnaire, choose your plan and receive your personal nutrition and workout plan within 2 hours.",
     eyebrow: "How it works",
-    title: "From questionnaire to personal plan in just a few minutes",
+    title: "From questionnaire to personal plan within 2 hours",
     intro: "No waiting list, no intake interview and no generic list you give up on after three weeks. Just a plan that's entirely yours, and that adapts when things get tough.",
     details: [
       {
@@ -62,12 +62,12 @@ const copy = defineCopy({
       },
       {
         title: "3. Your plan is created and checked",
-        text: "Once you've paid, our system puts together your personal plan according to our strict guidelines. Every nutrition plan is checked automatically: are the calories and protein per day right, and the number of meals? If not, the plan is created again. Within minutes, it's ready for you.",
+        text: "Once you've paid, our system puts together your personal plan according to our strict guidelines. Every nutrition plan is checked: are the calories and protein per day right, is the number of meals right, and does it contain nothing you've told us you're allergic to? If not, the plan is created again. Within 2 hours, it's ready for you and we'll send you an email.",
         alt: "Grilled chicken with vegetables and lemon",
       },
       {
         title: "4. Weekly fine-tuning, a new plan every 4 weeks",
-        text: "Every week, ideally at the weekend, you take 1 minute to log your weight and how things went. If your progress is off track, we adjust your plan straight away: eating a little more or less, or training harder or lighter, in time for your shopping. Got a subscription? Each period lasts 4 weeks and starts on a Monday. From the Thursday before, you complete a short check-in: your weight, how well it went, your hunger, energy and sleep, and how the workouts felt. Based on that, we create your new plan right away, with adjusted calories, new dishes and the next step in your training. Fill it in by Saturday, and it will be ready with its shopping list before the new week begins. Reached your goal? Then we move you onto a plan to maintain your weight.",
+        text: "Every week, ideally at the weekend, you take 1 minute to log your weight and how things went. If your progress is off track, we adjust your plan straight away: eating a little more or less, or training harder or lighter, in time for your shopping. Got a subscription? Each period lasts 4 weeks and starts on a Monday. From the Thursday before, you complete a short check-in: your weight, how well it went, your hunger, energy and sleep, and how the workouts felt. Based on that, we create your new plan, ready within 2 hours, with adjusted calories, new dishes and the next step in your training. Fill it in by Saturday, and it will be ready with its shopping list before the new week begins. Reached your goal? Then we move you onto a plan to maintain your weight.",
         alt: "Athlete training with the help of a coach",
       },
     ],

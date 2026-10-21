@@ -151,6 +151,31 @@ update plans set starts_at = created_at where starts_at is null;
 alter table plans alter column starts_at set default now();
 alter table plans alter column starts_at set not null;
 
+-- Levering: een schema wordt direct gemaakt maar pas na release_after (een
+-- willekeurig moment binnen 2 uur) vrijgegeven aan de klant, eventueel pas na
+-- goedkeuring door de beheerder. Bestaande schema's waren al zichtbaar.
+alter table plans add column if not exists release_after timestamptz;
+update plans set release_after = created_at where release_after is null;
+alter table plans alter column release_after set default now();
+alter table plans alter column release_after set not null;
+alter table plans add column if not exists approved_at timestamptz;
+alter table plans add column if not exists review_requested_at timestamptz;
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_name = 'plans' and column_name = 'released_at') then
+    alter table plans add column released_at timestamptz;
+    update plans set released_at = coalesce(emailed_at, generated_at, created_at) where status = 'ready';
+    update plans set emailed_at = released_at where emailed_at is null and released_at is not null;
+  end if;
+end $$;
+create index if not exists plans_unreleased_idx on plans(order_id, seq) where released_at is null;
+
+-- Instellingen uit het beheer (bijv. schema's eerst goedkeuren) en de laatste dagelijkse run.
+create table if not exists settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 -- Aanvragen onder de tevredenheidsgarantie (eerste betaling terug), één per klant.
 create table if not exists guarantee_requests (
   id uuid primary key default gen_random_uuid(),

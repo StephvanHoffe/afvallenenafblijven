@@ -3,6 +3,7 @@
 import Link from "@/i18n/Link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleCheck, Loader2, Mail, TriangleAlert } from "lucide-react";
+import { site } from "@/config/site";
 import { trackEvent } from "@/lib/consent";
 import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
@@ -15,9 +16,16 @@ type Status = {
   plans?: { type: "voeding" | "training"; status: string }[];
 };
 
+const hours = site.delivery.promiseHours;
+
 const copy = defineCopy({
   nl: {
-    steps: ["Betaling ontvangen", "Je dagdoelen berekenen", "Gerechten en trainingen samenstellen", "Kwaliteitscontrole"],
+    steps: ["Betaling ontvangen", "We stellen je schema samen en controleren het", "Je schema staat klaar en je krijgt een e-mail"],
+    processingTitle: `Binnen ${hours} uur staat je schema klaar`,
+    processingText:
+      "We stellen je persoonlijke schema nu samen. Zodra het klaarstaat, krijg je een e-mail met een persoonlijke link; je hoeft deze pagina dus niet open te laten.",
+    spam: "Geen e-mail gezien? Kijk dan ook even in je spammap.",
+    account: "Naar Mijn schema's",
     readyTitle: "Je schema staat klaar!",
     readyText: "We hebben je ook een e-mail gestuurd met een persoonlijke link.",
     readyButton: "Bekijk mijn schema",
@@ -29,12 +37,14 @@ const copy = defineCopy({
     unknownTitle: "Bedankt voor je bestelling!",
     unknownText: "Je ontvangt je schema per e-mail zodra het klaar is. Check ook je spammap.",
     awaitingPayment: "We wachten op de bevestiging van je betaling…",
-    processing: "Je schema wordt nu gemaakt…",
-    duration:
-      "Dit duurt meestal een paar minuten. Je mag deze pagina open laten staan; je ontvangt ook een e-mail zodra je schema klaar is.",
   },
   en: {
-    steps: ["Payment received", "Calculating your daily targets", "Putting together meals and workouts", "Quality check"],
+    steps: ["Payment received", "We're putting your plan together and checking it", "Your plan is ready and we'll email you"],
+    processingTitle: `Your plan will be ready within ${hours} hours`,
+    processingText:
+      "We're putting your personal plan together now. As soon as it's ready, we'll send you an email with a personal link, so there's no need to keep this page open.",
+    spam: "No email? Be sure to check your spam folder too.",
+    account: "Go to My plans",
     readyTitle: "Your plan is ready!",
     readyText: "We've also sent you an email with a personal link.",
     readyButton: "View my plan",
@@ -46,9 +56,6 @@ const copy = defineCopy({
     unknownTitle: "Thank you for your order!",
     unknownText: "You'll receive your plan by email as soon as it's ready. Be sure to check your spam folder too.",
     awaitingPayment: "We're waiting for confirmation of your payment…",
-    processing: "Your plan is being created now…",
-    duration:
-      "This usually takes a few minutes. You can leave this page open; you'll also receive an email as soon as your plan is ready.",
   },
 });
 
@@ -56,13 +63,14 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
   const l = useLocale();
   const c = copy[l];
   const steps = c.steps;
-  const [status, setStatus] = useState<Status>({ state: "processing" });
-  const [tick, setTick] = useState(0);
+  // Zonder bestelnummer (bijv. de pagina direct geopend) valt er niets op te vragen.
+  const [status, setStatus] = useState<Status>({ state: sessionId ? "awaiting_payment" : "unknown" });
   const tracked = useRef(false);
 
   useEffect(() => {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
+    if (!sessionId) return;
     async function poll() {
       try {
         const res = await fetch(`/api/bestelling/status?session_id=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
@@ -73,17 +81,17 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
           tracked.current = true;
           trackEvent("purchase", { value: data.value, currency: "EUR", transaction_id: sessionId });
         }
-        if (data.state === "processing" || data.state === "awaiting_payment") timer = setTimeout(poll, 5000);
+        // Wachten op de betaling: vaak kijken. Daarna rustig: het schema staat binnen 2 uur klaar.
+        if (data.state === "awaiting_payment") timer = setTimeout(poll, 5000);
+        else if (data.state === "processing") timer = setTimeout(poll, 30000);
       } catch {
-        if (!stop) timer = setTimeout(poll, 8000);
+        if (!stop) timer = setTimeout(poll, 10000);
       }
     }
     poll();
-    const ticker = setInterval(() => setTick((t) => t + 1), 4000);
     return () => {
       stop = true;
       clearTimeout(timer);
-      clearInterval(ticker);
     };
   }, [sessionId]);
 
@@ -122,15 +130,25 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
     );
   }
 
-  const active = status.state === "awaiting_payment" ? 0 : Math.min(1 + Math.floor(tick / 2), steps.length - 1);
+  if (status.state === "awaiting_payment") {
+    return (
+      <div className="card p-8" role="status" aria-live="polite">
+        <div className="flex items-center gap-3">
+          <Loader2 className="size-8 animate-spin text-brand-600" aria-hidden />
+          <h2 className="heading-md">{c.awaitingPayment}</h2>
+        </div>
+      </div>
+    );
+  }
+
+  const active = 1;
   return (
     <div className="card p-8" role="status" aria-live="polite">
       <div className="flex items-center gap-3">
-        <Loader2 className="size-8 animate-spin text-brand-600" aria-hidden />
-        <h2 className="heading-md">
-          {status.state === "awaiting_payment" ? c.awaitingPayment : c.processing}
-        </h2>
+        <Mail className="size-8 shrink-0 text-brand-600" aria-hidden />
+        <h2 className="heading-md">{c.processingTitle}</h2>
       </div>
+      <p className="mt-3 text-muted">{c.processingText}</p>
       <ol className="mt-6 space-y-3">
         {steps.map((s, i) => (
           <li key={s} className={`flex items-center gap-3 ${i <= active ? "text-ink" : "text-muted/60"}`}>
@@ -145,7 +163,12 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
           </li>
         ))}
       </ol>
-      <p className="mt-6 text-sm text-muted">{c.duration}</p>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+        <p className="text-sm text-muted">{c.spam}</p>
+        <a href={`/api/bestelling/inloggen?session_id=${encodeURIComponent(sessionId)}&taal=${l}`} className="btn-secondary !py-2.5 text-sm">
+          {c.account} <ArrowRight className="size-4" aria-hidden />
+        </a>
+      </div>
     </div>
   );
 }

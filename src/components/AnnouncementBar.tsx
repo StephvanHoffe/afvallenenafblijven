@@ -36,8 +36,8 @@ export async function AnnouncementBar() {
             <Zap className="size-4 shrink-0 text-lime-glow" aria-hidden />
             <span>
               {l === "en"
-                ? "Your personal plan in your inbox within minutes · Cancel monthly"
-                : "Je persoonlijke schema binnen enkele minuten in je mailbox · Maandelijks opzegbaar"}
+                ? "Your personal plan in your inbox within 2 hours · Cancel monthly"
+                : "Je persoonlijke schema binnen 2 uur in je mailbox · Maandelijks opzegbaar"}
             </span>
           </>
         )}

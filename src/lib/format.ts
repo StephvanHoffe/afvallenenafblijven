@@ -42,3 +42,22 @@ export function formatDayDate(date: Date | string, l: Locale = "nl"): string {
   }
   return f.format(typeof date === "string" ? new Date(date) : date);
 }
+
+const dateTimeFormatters = new Map<Locale, Intl.DateTimeFormat>();
+
+/** "21 oktober 2026 om 14:32" (Engels: "21 October 2026 at 14:32"), Nederlandse tijd. */
+export function formatDateTime(date: Date | string, l: Locale = "nl"): string {
+  let f = dateTimeFormatters.get(l);
+  if (!f) {
+    f = new Intl.DateTimeFormat(intlLocale(l), {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Amsterdam",
+    });
+    dateTimeFormatters.set(l, f);
+  }
+  return f.format(typeof date === "string" ? new Date(date) : date);
+}

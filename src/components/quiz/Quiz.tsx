@@ -160,6 +160,8 @@ const copy = defineCopy({
       allergies: "Allergieën of intoleranties",
       otherAllergies: "Andere allergieën (optioneel)",
       otherAllergiesPlaceholder: "Bijv. selderij of kiwi",
+      allergyNote:
+        "Geef alle allergieën en intoleranties op: we houden alleen rekening met wat je hier invult. Controleer daarnaast altijd zelf de etiketten.",
     },
     meals: {
       title: "Jouw eetmomenten en keuken",
@@ -220,7 +222,7 @@ const copy = defineCopy({
       back: "Terug naar je resultaat",
       title: (name: string) => `${name ? `${name.trim()}, kies` : "Kies"} je plan`,
       basis: (kcal: string, protein: number) => `Je schema wordt gemaakt op ${kcal} kcal en ${protein} g eiwit per dag. `,
-      ready: "Na betaling staat het binnen enkele minuten klaar.",
+      ready: "Na betaling staat het binnen 2 uur voor je klaar.",
       adviceTitle: (label: string) => `Ons advies voor jou: ${label}`,
       adviceProjection: (weeks: number, target: string, label: string) =>
         `Volgens de schatting heb je ongeveer ${weeks} weken nodig om op ${target} te komen. Stop je na een maand, dan ben je nog niet halverwege en sta je er weer alleen voor. Met ${label} krijg je die hele periode elke 4 weken een nieuw schema, bijgestuurd op je voortgang.`,
@@ -247,7 +249,7 @@ const copy = defineCopy({
       healthData:
         "Ik geef uitdrukkelijk toestemming om mijn gezondheidsgegevens (zoals gewicht, lengte en eventuele aandoeningen) te gebruiken om mijn schema te maken. Zie het",
       privacy: "privacybeleid",
-      terms: "Ik ga akkoord met de",
+      terms: "Ik heb de vragen naar waarheid en volledig ingevuld, ook over mijn gezondheid en allergieën, en ik ga akkoord met de",
       termsLink: "algemene voorwaarden",
       immediateDelivery:
         "Ik wil dat jullie direct na mijn betaling beginnen met het maken van mijn schema. Ik weet dat ik daardoor mijn herroepingsrecht verlies zodra het schema aan mij is geleverd.",
@@ -334,6 +336,7 @@ const copy = defineCopy({
       allergies: "Allergies or intolerances",
       otherAllergies: "Other allergies (optional)",
       otherAllergiesPlaceholder: "E.g. celery or kiwi",
+      allergyNote: "List all your allergies and intolerances: we only take into account what you enter here. And always check the labels yourself.",
     },
     meals: {
       title: "Your meals and kitchen",
@@ -394,7 +397,7 @@ const copy = defineCopy({
       back: "Back to your result",
       title: (name: string) => (name ? `${name.trim()}, choose your plan` : "Choose your plan"),
       basis: (kcal: string, protein: number) => `Your plan will be built around ${kcal} kcal and ${protein} g of protein a day. `,
-      ready: "After payment, it'll be ready within minutes.",
+      ready: "After payment, it'll be ready for you within 2 hours.",
       adviceTitle: (label: string) => `Our advice for you: ${label}`,
       adviceProjection: (weeks: number, target: string, label: string) =>
         `Based on the estimate, you'll need around ${weeks} weeks to reach ${target}. Stop after one month and you won't be halfway yet, and you'll be on your own again. With ${label}, you get a new plan every 4 weeks for that whole period, fine-tuned to your progress.`,
@@ -421,7 +424,7 @@ const copy = defineCopy({
       healthData:
         "I explicitly consent to my health data (such as weight, height and any conditions) being used to create my plan. See the",
       privacy: "privacy policy",
-      terms: "I agree to the",
+      terms: "I have answered the questions truthfully and completely, including about my health and allergies, and I agree to the",
       termsLink: "terms and conditions",
       immediateDelivery:
         "I want you to start creating my plan immediately after my payment. I understand that I will therefore lose my right of withdrawal as soon as the plan has been delivered to me.",
@@ -909,6 +912,7 @@ export function Quiz({
               onChange={(v) => update({ otherAllergies: v })}
               placeholder={c.diet.otherAllergiesPlaceholder}
             />
+            <p className="text-sm text-muted">{c.diet.allergyNote}</p>
             <NextButton onClick={() => next()} />
           </Step>
         )}

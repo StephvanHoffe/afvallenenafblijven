@@ -29,9 +29,16 @@ import {
   weeklyReminderOrders,
   markWeeklyReminded,
   pendingWeeklyLogIds,
+  releaseDuePeriods,
+  releasedUnmailedPeriods,
+  requestReview,
   type Order,
+  type PeriodRef,
   type Plan,
 } from "@/lib/repo";
+import { deliveryDeadline } from "@/lib/delivery";
+import { formatDateTime } from "@/lib/format";
+import { planApprovalRequired } from "@/lib/settings";
 import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
 import { newPeriodStartsAt } from "@/lib/schedule";
 import { processWeeklyLog } from "@/lib/weekly-server";
@@ -193,7 +200,7 @@ export async function processPlan(planId: string): Promise<void> {
     }
 
     await completePlan(plan.id, content);
-    await notifyIfOrderPeriodReady(order.id, plan.seq);
+    await afterPlanReady(order.id, plan.seq);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`Schema ${plan.id} mislukt (poging ${plan.attempts})`, err);
@@ -205,18 +212,77 @@ export async function processPlan(planId: string): Promise<void> {
           Bestelling: plan.order_id,
           Type: plan.type,
           Fout: message,
-          "Wat te doen":
-            "Controleer de API-sleutel en logs. Zet de status in de database terug op 'pending' en attempts op 0 om het opnieuw te proberen.",
+          "Wat te doen": `Controleer de oorzaak (meestal de API-sleutel of het tegoed bij Anthropic; zie de fout hierboven). Open daarna het schema in het beheer en klik op "Opnieuw maken": ${site.url}/beheer/schemas/${plan.id}`,
         }),
       ).catch(() => {});
     }
   }
 }
 
-/** Mailt de klant zodra alle schema's van een periode klaar zijn (één e-mail per periode). */
-async function notifyIfOrderPeriodReady(orderId: string, seq: number): Promise<void> {
+/**
+ * Na een klaar schema: vraag zo nodig de beheerder om goedkeuring, en geef de
+ * periode direct vrij als het geplande moment al voorbij is (bijvoorbeeld na
+ * een herhaalde poging). Anders doet de geplande taak dat op het juiste moment.
+ */
+async function afterPlanReady(orderId: string, seq: number): Promise<void> {
+  const approval = await planApprovalRequired();
+  if (approval) await askForReview(orderId, seq);
+  await releaseAndNotify({ approval, orderId });
+}
+
+/** Mailt de beheerder dat een periode op goedkeuring wacht (één keer per periode). */
+async function askForReview(orderId: string, seq: number): Promise<void> {
+  const plans = await requestReview(orderId, seq);
+  if (plans.length === 0) return;
+  const customer = await getCustomer(plans[0].customer_id);
+  const created = plans.reduce((min, p) => (p.created_at < min ? p.created_at : min), plans[0].created_at);
+  const planned = plans.reduce((max, p) => (p.release_after > max ? p.release_after : max), plans[0].release_after);
+  await sendMail(
+    adminNotificationEmail("Schema wacht op je goedkeuring", {
+      Klant: customer ? `${customer.name} (${customer.email})` : undefined,
+      Periode: String(seq),
+      "Gepland voor de klant": formatDateTime(planned),
+      "Klant verwacht het uiterlijk": formatDateTime(deliveryDeadline(created)),
+      "Schema's": plans.map((p) => `${site.url}/beheer/schemas/${p.id}`).join("  "),
+      "Wat te doen":
+        'Bekijk het schema en klik op "Goedkeuren". Het gaat dan op het geplande moment naar de klant, of direct als dat moment al voorbij is. Niet goed? Klik op "Opnieuw maken".',
+    }),
+  ).catch((err) => console.error("Goedkeuringsmail versturen mislukt", err));
+}
+
+/**
+ * Geeft klare periodes vrij waarvan het geplande moment is aangebroken (en die
+ * zijn goedgekeurd, als dat aanstaat) en mailt de klant. Geeft het aantal
+ * vrijgegeven periodes terug.
+ */
+export async function releaseAndNotify(opts: { approval?: boolean; customerId?: string; orderId?: string } = {}): Promise<number> {
+  const approval = opts.approval ?? (await planApprovalRequired());
+  const released = await releaseDuePeriods({ approval, customerId: opts.customerId, orderId: opts.orderId });
+  await notifyReleased(released);
+  return released.length;
+}
+
+/**
+ * Geeft de klare periodes van een klant vrij, zonder te mailen. Voor Mijn
+ * schema's: de klant ziet het schema precies op het geplande moment, ook als
+ * de geplande taak nog niet is langs geweest. Mail de periodes daarna met
+ * notifyReleased (bijv. in after()).
+ */
+export async function releaseForCustomer(customerId: string): Promise<PeriodRef[]> {
+  return releaseDuePeriods({ approval: await planApprovalRequired(), customerId });
+}
+
+/** Stuurt de "je schema staat klaar"-mail voor vrijgegeven periodes (dubbel versturen kan niet). */
+export async function notifyReleased(periods: PeriodRef[]): Promise<void> {
+  for (const p of periods) {
+    await notifyPeriodReleased(p.order_id, p.seq).catch((err) => console.error(`Klaar-mail voor ${p.order_id}/${p.seq} mislukt`, err));
+  }
+}
+
+/** Mailt de klant zodra alle schema's van een periode zijn vrijgegeven (één e-mail per periode). */
+async function notifyPeriodReleased(orderId: string, seq: number): Promise<void> {
   const plans = (await plansForOrder(orderId)).filter((p) => p.seq === seq);
-  if (plans.length === 0 || plans.some((p) => p.status !== "ready")) return;
+  if (plans.length === 0 || plans.some((p) => p.status !== "ready" || !p.released_at)) return;
   const newlyMarked = await markPlansEmailed(plans.map((p) => p.id));
   if (newlyMarked.length === 0) return; // al gemaild
 
@@ -245,34 +311,40 @@ export async function processOrderPlans(orderId: string): Promise<void> {
 
 /**
  * Start de volgende periode van een abonnement: maakt de schema's aan en
- * zet ze in de wachtrij. Het schema is direct zichtbaar en begint op
- * `startsAt` (de maandag van de nieuwe periode, of nu). Geeft de periode
- * terug (of null als die al bestond).
+ * zet ze in de wachtrij. Het schema wordt direct gemaakt, staat vanaf
+ * `releaseAfter` voor de klant klaar en begint op `startsAt` (de maandag van
+ * de nieuwe periode, of nu). Geeft de periode terug (of null als die al bestond).
  */
 export async function startNextPeriod(
   order: Pick<Order, "id" | "customer_id" | "product">,
   seq: number,
   startsAt: Date = new Date(),
+  releaseAfter: Date = new Date(),
 ): Promise<number | null> {
-  const ids = await createPlans(order.id, order.customer_id, products[order.product].includes, seq, startsAt);
+  const ids = await createPlans(order.id, order.customer_id, products[order.product].includes, seq, startsAt, releaseAfter);
   return ids.length > 0 ? seq : null;
 }
 
 /**
- * Dagelijkse taak:
- * - nodigt abonnees uit voor hun check-in en herinnert ze eraan (een nieuw
- *   schema maken we pas na de check-in);
+ * Geplande taak (elke 5 minuten):
+ * - geeft klare schema's vrij op hun geplande moment en mailt de klant;
  * - zet schema's klaar voor check-ins die wel zijn ingevuld maar nog geen
  *   schema hebben (bijvoorbeeld na een storing);
- * - probeert mislukte of vastgelopen schema's opnieuw.
+ * - probeert mislukte of vastgelopen schema's opnieuw (steeds iets later).
+ * Eén keer per dag (`daily`, 's ochtends) ook:
+ * - nodigt abonnees uit voor hun check-in en herinnert ze eraan (een nieuw
+ *   schema maken we pas na de check-in), plus de weegmoment-herinneringen;
+ * - werkt de gekoppelde gezondheidsapps bij.
  * Stopt op tijd om binnen de maximale looptijd van de serverfunctie te blijven.
  */
 export async function runScheduledWork(
   budgetMs: number,
-): Promise<{ scheduled: number; reminders: number; weeklyReminders: number; healthSynced: number; processed: number }> {
+  { daily }: { daily: boolean },
+): Promise<{ released: number; scheduled: number; reminders: number; weeklyReminders: number; healthSynced: number; processed: number }> {
   const started = Date.now();
   let scheduled = 0;
   let reminders = 0;
+  let released = await releaseAndNotify();
 
   for (const order of await subscriptionCheckinOrders()) {
     const window = checkinWindow({
@@ -286,9 +358,11 @@ export async function runScheduledWork(
     });
     if (!window || window.status === "upcoming") continue;
     if (window.status === "submitted") {
+      // Vangnet na een storing: de klant wacht al, dus dit schema gaat zodra het klaar is naar de klant.
       if (await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt, started))) scheduled++;
       continue;
     }
+    if (!daily) continue;
     const sent = order.checkin_reminded_seq === window.seq ? order.checkin_reminders : 0;
     const schedule = site.checkin.reminderDays;
     if (sent >= schedule.length || started - window.opensAt.getTime() < schedule[sent] * DAY) continue;
@@ -325,7 +399,7 @@ export async function runScheduledWork(
 
   // Wekelijkse herinnering voor het weegmoment (klant kan dit uitzetten).
   let weeklyReminders = 0;
-  for (const order of await weeklyReminderOrders()) {
+  for (const order of daily ? await weeklyReminderOrders() : []) {
     const window = weeklyWindow({
       duration: order.duration,
       status: order.status,
@@ -354,10 +428,12 @@ export async function runScheduledWork(
   }
 
   // Gekoppelde gezondheidsapps bijwerken (vangnet naast de meldingen/webhooks).
-  const healthSynced = await syncAllConnections(started + Math.min(60_000, budgetMs / 4)).catch((err) => {
-    console.error("Gezondheidsdata synchroniseren mislukt", err);
-    return 0;
-  });
+  const healthSynced = daily
+    ? await syncAllConnections(started + Math.min(60_000, budgetMs / 4)).catch((err) => {
+        console.error("Gezondheidsdata synchroniseren mislukt", err);
+        return 0;
+      })
+    : 0;
 
   // Aanwijzingen bij weegmomenten die nog niet klaar zijn (bijv. na een storing).
   for (const id of await pendingWeeklyLogIds(10)) {
@@ -375,7 +451,10 @@ export async function runScheduledWork(
     await Promise.all(batch.map((id) => processPlan(id)));
     processed += batch.length;
   }
-  return { scheduled, reminders, weeklyReminders, healthSynced, processed };
+  released += await releaseAndNotify();
+  // Vangnet: vrijgegeven schema's waarvan de klaar-mail niet is verstuurd (bijv. na een storing bij het mailen).
+  await notifyReleased(await releasedUnmailedPeriods(20));
+  return { released, scheduled, reminders, weeklyReminders, healthSynced, processed };
 }
 
 const planTitleCopy = defineCopy({

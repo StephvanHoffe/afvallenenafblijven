@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// Na een check-in wordt het nieuwe schema op de achtergrond gemaakt; dat kan enkele minuten duren.
+// Na een check-in wordt het nieuwe schema op de achtergrond gemaakt (en binnen 2 uur vrijgegeven).
 export const maxDuration = 300;
 
 export default function OverzichtPage({ searchParams }: PageProps<"/[lang]/account">) {

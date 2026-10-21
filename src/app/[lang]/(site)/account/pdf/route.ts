@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     .map((p) => ({
       content: p.content!,
       seq: p.seq,
-      generatedAt: p.generated_at,
+      generatedAt: p.released_at,
       adjustments: adjustmentsFor(
         weekly.filter((w) => w.order_id === p.order_id),
         p.seq,

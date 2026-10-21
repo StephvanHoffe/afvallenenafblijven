@@ -51,7 +51,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   nl: {
     snel: {
       q: "Hoe snel ontvang ik mijn schema?",
-      a: "Direct na je betaling gaan we aan de slag. Meestal staat je schema binnen 10 minuten voor je klaar: je ziet het meteen op je scherm en je ontvangt een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
+      a: "Direct na je betaling gaan we aan de slag. Binnen 2 uur staat je schema voor je klaar in Mijn schema's en ontvang je een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
     },
     persoonlijk: {
       q: "Hoe persoonlijk is het schema?",
@@ -67,7 +67,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     allergie: {
       q: "Ik ben vegetariër, veganist of heb een allergie. Kan dat?",
-      a: "Zeker. Je geeft je eetpatroon en allergieën of intoleranties op in de vragenlijst (zoals gluten, lactose, noten, pinda, ei, soja, vis of schaaldieren) en ook wat je niet lust. Die producten komen dan niet in je schema voor. Lees bij een ernstige allergie altijd zelf de etiketten van de producten die je koopt.",
+      a: "Zeker. Je geeft je eetpatroon en allergieën of intoleranties op in de vragenlijst (zoals gluten, lactose, noten, pinda, ei, soja, vis of schaaldieren) en ook wat je niet lust. Die producten houden we buiten je schema, en we lopen elk voedingsschema daar nog eens extra op na. We houden wel alleen rekening met wat je opgeeft: vul je allergieën dus volledig in. Controleer daarnaast altijd zelf de ingrediënten en de etiketten van wat je koopt; samenstellingen verschillen per merk en kunnen veranderen.",
     },
     thuis: {
       q: "Ik heb geen sportschool. Werkt het trainingsschema ook thuis?",
@@ -107,7 +107,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     "check-in": {
       q: "Is de check-in verplicht?",
-      a: "Ja, en dat is juist de kracht ervan. Je nieuwe schema maken we pas als je de check-in hebt ingevuld, zodat het echt past bij je voortgang in plaats van een standaard vervolg. De check-in opent op de donderdag voor je nieuwe periode (die altijd op maandag start); je krijgt dan een e-mail en zo nodig een herinnering. Invullen kost ongeveer 2 minuten. Direct daarna maken we je nieuwe schema. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. Eerder maken we het bewust niet, zodat het aansluit op hoe het nu met je gaat.",
+      a: "Ja, en dat is juist de kracht ervan. Je nieuwe schema maken we pas als je de check-in hebt ingevuld, zodat het echt past bij je voortgang in plaats van een standaard vervolg. De check-in opent op de donderdag voor je nieuwe periode (die altijd op maandag start); je krijgt dan een e-mail en zo nodig een herinnering. Invullen kost ongeveer 2 minuten; binnen 2 uur daarna staat je nieuwe schema klaar. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. Eerder maken we het bewust niet, zodat het aansluit op hoe het nu met je gaat.",
     },
     afblijven: {
       q: "Wat betekent 'afblijven'?",
@@ -117,7 +117,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   en: {
     snel: {
       q: "How quickly will I get my plan?",
-      a: "We get started the moment you've paid. Your plan is usually ready within 10 minutes: you'll see it on your screen straight away and receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
+      a: "We get started the moment you've paid. Within 2 hours, your plan is ready for you in My plans and you'll receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
     },
     persoonlijk: {
       q: "How personal is the plan?",
@@ -133,7 +133,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     allergie: {
       q: "I'm vegetarian or vegan, or I have an allergy. Is that OK?",
-      a: "Absolutely. In the questionnaire you tell us how you eat and about any allergies or intolerances (such as gluten, lactose, tree nuts, peanuts, egg, soy, fish or shellfish), plus any foods you don't like. Those products then won't appear in your plan. If you have a severe allergy, always check the labels of the products you buy yourself.",
+      a: "Absolutely. In the questionnaire you tell us how you eat and about any allergies or intolerances (such as gluten, lactose, tree nuts, peanuts, egg, soy, fish or shellfish), plus any foods you don't like. We keep those products out of your plan, and we check every nutrition plan for them once more. We can only take into account what you tell us, though, so list all your allergies. And always check the ingredients and labels of what you buy yourself; recipes differ between brands and can change.",
     },
     thuis: {
       q: "I don't have a gym. Does the workout plan work at home too?",
@@ -173,7 +173,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     "check-in": {
       q: "Is the check-in required?",
-      a: "Yes, and that's exactly what makes it work. We only create your new plan once you've completed the check-in, so it truly matches your progress instead of being a standard follow-up. The check-in opens on the Thursday before your new period (which always starts on a Monday); you'll get an email and, if needed, a reminder. It takes about 2 minutes to complete, and we create your new plan right after. Fill it in by Saturday, and your plan with shopping list will be ready in time for your weekend shopping. We deliberately don't create it any earlier, so it matches how you're doing right now.",
+      a: "Yes, and that's exactly what makes it work. We only create your new plan once you've completed the check-in, so it truly matches your progress instead of being a standard follow-up. The check-in opens on the Thursday before your new period (which always starts on a Monday); you'll get an email and, if needed, a reminder. It takes about 2 minutes to complete, and your new plan will be ready within 2 hours. Fill it in by Saturday, and your plan with shopping list will be ready in time for your weekend shopping. We deliberately don't create it any earlier, so it matches how you're doing right now.",
     },
     afblijven: {
       q: "What does 'afblijven' (keeping it off) mean?",

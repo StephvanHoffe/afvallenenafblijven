@@ -13,11 +13,11 @@ const copy = defineCopy({
   nl: {
     title: "Start je persoonlijke plan",
     description:
-      "Beantwoord een paar vragen en ontvang binnen enkele minuten je persoonlijke voedings- en/of trainingsschema.",
+      "Beantwoord een paar vragen en ontvang binnen 2 uur je persoonlijke voedings- en/of trainingsschema.",
   },
   en: {
     title: "Start your personal plan",
-    description: "Answer a few questions and receive your personal nutrition and/or workout plan within minutes.",
+    description: "Answer a few questions and receive your personal nutrition and/or workout plan within 2 hours.",
   },
 });
 

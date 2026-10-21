@@ -15,7 +15,7 @@ export const site = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://afvallenenafblijven.nl",
   tagline: "Persoonlijke voedings- en trainingsschema's die écht bij jou passen",
   description:
-    "Persoonlijke voedingsschema's en trainingsschema's, afgestemd op jouw doel, lichaam en agenda. Binnen enkele minuten in je mailbox. Maandelijks opzegbaar.",
+    "Persoonlijke voedingsschema's en trainingsschema's, afgestemd op jouw doel, lichaam en agenda. Binnen 2 uur in je mailbox. Maandelijks opzegbaar.",
 
   company: {
     legalName: "[Bedrijfsnaam / handelsnaam]",
@@ -76,6 +76,23 @@ export const site = {
     advisedDaysBefore: 2,
     /** Uitnodiging en herinneringen: dagen na het openen van de check-in (do, za, ma, maandag erna). */
     reminderDays: [0, 2, 4, 11],
+  },
+
+  /**
+   * Levering: een nieuw schema wordt direct gemaakt, maar staat pas op een
+   * willekeurig moment tussen `minMinutes` en `maxMinutes` klaar (de ene klant
+   * na 23 minuten, de andere na anderhalf uur). De klant krijgt dan een e-mail.
+   * We beloven "binnen `promiseHours` uur"; houd `maxMinutes` daar ruim onder,
+   * want de geplande taak draait elke 5 minuten. `afterCheckin` geldt hetzelfde
+   * voor het nieuwe schema na een check-in. De teksten op de website, in de
+   * e-mails en in de voorwaarden noemen "2 uur"; pas die mee aan als je de
+   * belofte verandert.
+   */
+  delivery: {
+    minMinutes: 20,
+    maxMinutes: 110,
+    promiseHours: 2,
+    afterCheckin: true,
   },
 
   social: {
