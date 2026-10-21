@@ -44,6 +44,8 @@ export interface DashboardPlan {
   id: string;
   type: PlanType;
   seq: number;
+  /** Begin van de periode; ligt in de toekomst als het schema al klaarstaat voor de volgende periode. */
+  startsAt: Date;
   status: PlanStatus;
   generatedAt: Date | null;
   failed: boolean;
@@ -53,6 +55,8 @@ export interface DashboardPlan {
 
 /** Alles wat de persoonlijke omgeving (alle tabbladen) van een klant toont. */
 export interface AccountView {
+  /** Het moment waarop de weergave geldt (in de voorbeeldomgeving een vaste datum). */
+  now: Date;
   name: string;
   orders: DashboardOrder[];
   plans: DashboardPlan[];

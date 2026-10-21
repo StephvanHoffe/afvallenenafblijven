@@ -8,6 +8,9 @@ import { getLocale } from "@/i18n/server";
 import { currentCustomer } from "@/lib/auth";
 import { getPlan, weeklyLogsForOrder } from "@/lib/repo";
 import { adjustmentsFor } from "@/lib/weekly";
+import { formatDayDate } from "@/lib/format";
+import { startsLater } from "@/lib/schedule";
+import { CalendarCheck } from "lucide-react";
 
 const copy = defineCopy({
   nl: {
@@ -15,12 +18,16 @@ const copy = defineCopy({
     generating: "Je schema wordt gemaakt",
     generatingText: "Dit duurt meestal een paar minuten. Je ontvangt een e-mail zodra het klaar is.",
     back: "Terug naar Mijn schema's",
+    upcoming: (start: string) => `Dit schema start op ${start}. Tot die tijd volg je je huidige schema.`,
+    upcomingShopping: "Doe alvast je boodschappen met de boodschappenlijst van dit schema.",
   },
   en: {
     title: "My plan",
     generating: "Your plan is being created",
     generatingText: "This usually takes a few minutes. You'll receive an email as soon as it's ready.",
     back: "Back to My plans",
+    upcoming: (start: string) => `This plan starts on ${start}. Until then, keep following your current plan.`,
+    upcomingShopping: "You can already do your shopping with this plan's shopping list.",
   },
 });
 
@@ -66,8 +73,20 @@ async function PlanContent({ params }: Pick<PageProps<"/[lang]/schema/[id]">, "p
   }
 
   const weekly = (await weeklyLogsForOrder(plan.order_id)).map((w) => ({ ...w, date: w.created_at }));
+  // Staat het schema al klaar voor de volgende periode, dan zeggen we wanneer het start.
+  const upcoming = startsLater(plan.starts_at);
   return (
-    <PlanDocument
+    <>
+      {upcoming && (
+        <p role="note" className="mb-6 flex gap-3 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-4 text-[0.9375rem] sm:p-5">
+          <CalendarCheck className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+          <span>
+            <strong>{c.upcoming(formatDayDate(plan.starts_at, l))}</strong>
+            {plan.content.type === "voeding" ? ` ${c.upcomingShopping}` : ""}
+          </span>
+        </p>
+      )}
+      <PlanDocument
       adjustments={adjustmentsFor(weekly, plan.seq, plan.type)}
       content={plan.content}
       customerName={customer.name}
@@ -77,5 +96,6 @@ async function PlanContent({ params }: Pick<PageProps<"/[lang]/schema/[id]">, "p
       storageKey={`afb-boodschappen-${plan.id}`}
       l={l}
     />
+    </>
   );
 }

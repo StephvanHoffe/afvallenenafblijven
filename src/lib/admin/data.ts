@@ -54,6 +54,8 @@ export interface AdminPlanRow {
   attempts: number;
   error: string | null;
   createdAt: Date;
+  /** Begin van de periode (kan in de toekomst liggen als het schema al klaarstaat). */
+  startsAt: Date;
   generatedAt: Date | null;
   emailedAt: Date | null;
 }
@@ -181,6 +183,7 @@ type PlanSql = {
   attempts: number;
   error: string | null;
   created_at: Date;
+  starts_at: Date;
   generated_at: Date | null;
   emailed_at: Date | null;
   content?: PlanContent | null;
@@ -198,6 +201,7 @@ const toPlan = (r: PlanSql): AdminPlanRow => ({
   attempts: r.attempts,
   error: r.error,
   createdAt: r.created_at,
+  startsAt: r.starts_at,
   generatedAt: r.generated_at,
   emailedAt: r.emailed_at,
 });
@@ -333,7 +337,7 @@ const dbAdminData: AdminData = {
       from orders o join customers c on c.id = o.customer_id left join intakes i on i.id = o.intake_id
       where o.customer_id = ${id} order by o.created_at desc`;
     const plans = await sql<PlanSql[]>`
-      select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at,
+      select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
              p.generated_at, p.emailed_at, c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       where p.customer_id = ${id} order by p.created_at desc, p.type`;
@@ -349,7 +353,7 @@ const dbAdminData: AdminData = {
         const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);
         const lastStart = own
           .filter((p) => p.seq === lastSeq)
-          .reduce<Date | null>((min, p) => (!min || p.created_at < min ? p.created_at : min), null);
+          .reduce<Date | null>((min, p) => (!min || p.starts_at < min ? p.starts_at : min), null);
         return {
           ...toOrder(o),
           checkin: checkinWindow({
@@ -385,7 +389,7 @@ const dbAdminData: AdminData = {
   async plans(status) {
     const sql = await db();
     const rows = await sql<PlanSql[]>`
-      select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at,
+      select p.id, p.order_id, p.customer_id, p.type, p.seq, p.status, p.attempts, p.error, p.created_at, p.starts_at,
              p.generated_at, p.emailed_at, c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       ${status ? sql`where p.status = ${status}` : sql``}

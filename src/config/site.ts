@@ -60,14 +60,22 @@ export const site = {
     labelEn: "Launch offer",
   },
 
-  /** Lengte van een periode: abonnees krijgen elke 28 dagen een nieuw schema, na hun check-in. */
+  /**
+   * Lengte van een periode: abonnees krijgen elke 4 weken een nieuw schema, na
+   * hun check-in. Elke periode start op dezelfde weekdag (zie src/lib/schedule.ts),
+   * zodat het nieuwe schema met boodschappenlijst op tijd voor het weekend klaarstaat.
+   */
   planIntervalDays: 28,
+  /** Weekdag waarop elke periode start: 1 = maandag (0 = zondag … 6 = zaterdag). */
+  periodStartWeekday: 1,
 
   checkin: {
-    /** Zoveel dagen voor het einde van een periode opent de check-in. */
-    opensDaysBefore: 3,
-    /** Uitnodiging en herinneringen: dagen na het openen van de check-in (0 = uitnodiging). */
-    reminderDays: [0, 3, 7, 14],
+    /** Zoveel dagen voor de start van de nieuwe periode opent de check-in (4 = donderdag). */
+    opensDaysBefore: 4,
+    /** Zoveel dagen voor de start adviseren we de check-in uiterlijk in te vullen (2 = zaterdag), voor de boodschappen. */
+    advisedDaysBefore: 2,
+    /** Uitnodiging en herinneringen: dagen na het openen van de check-in (do, za, ma, maandag erna). */
+    reminderDays: [0, 2, 4, 11],
   },
 
   social: {

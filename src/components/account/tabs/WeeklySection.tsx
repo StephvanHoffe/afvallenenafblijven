@@ -9,7 +9,8 @@ import { PlanStatusRefresher } from "@/components/account/PlanStatusRefresher";
 import { defineCopy, type Locale } from "@/i18n/config";
 import { checkinLabel } from "@/i18n/options";
 import type { AccountNotice, AccountView, DashboardOrder } from "@/lib/account-types";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatDayDate, formatNumber } from "@/lib/format";
+import { currentPeriod } from "@/components/account/tabs/PlanCards";
 import type { TrainingDirection, WeeklyLog } from "@/lib/weekly";
 
 const copy = defineCopy({
@@ -20,10 +21,12 @@ const copy = defineCopy({
     alsoLink: "schema's",
     alsoAfter: "en in de PDF.",
     title: (week: number | null) => `Weegmoment${week ? ` week ${week}` : ""}`,
-    intro: "Elke week een korte meting tussen de check-ins. Wijkt je voortgang af, dan sturen we je schema meteen bij.",
+    intro:
+      "Elke week een korte meting tussen de check-ins. Het weegmoment opent op zaterdag: weeg je in het weekend, dan kun je een eventuele bijsturing meenemen in je boodschappen voor de week erna.",
     period: (seq: number) => `Periode ${seq}`,
     checkinFirst: "Deze periode is bijna voorbij: vul nu je check-in in. Daarna gaan de weegmomenten van je nieuwe periode van start.",
     none: "Er is op dit moment geen weegmoment. Met een lopend schema kun je elke week je gewicht en hoe het gaat doorgeven.",
+    newPeriod: (start: string) => `Je nieuwe schema staat klaar en start op ${start}. Daarna gaan de weegmomenten van je nieuwe periode van start.`,
     nextBefore: "Je volgende weegmoment is vanaf",
     lastTime: (kg: string) => ` Vorige keer: ${kg} kg.`,
     allDone: "Je hebt alle weegmomenten van deze periode ingevuld.",
@@ -52,10 +55,12 @@ const copy = defineCopy({
     alsoLink: "plans",
     alsoAfter: "and in the PDF.",
     title: (week: number | null) => `Weekly weigh-in${week ? `, week ${week}` : ""}`,
-    intro: "A quick check every week between check-ins. If your progress is off track, we'll adjust your plan straight away.",
+    intro:
+      "A quick check every week between check-ins. The weigh-in opens on Saturday: weigh yourself at the weekend, and you can take any adjustment into account in your shopping for the week ahead.",
     period: (seq: number) => `Period ${seq}`,
     checkinFirst: "This period is almost over: complete your check-in now. After that, the weekly weigh-ins for your new period begin.",
     none: "There's no weekly weigh-in right now. With an active plan, you can share your weight and how things are going every week.",
+    newPeriod: (start: string) => `Your new plan is ready and starts on ${start}. After that, the weekly weigh-ins for your new period begin.`,
     nextBefore: "Your next weekly weigh-in opens on",
     lastTime: (kg: string) => ` Last time: ${kg} kg.`,
     allDone: "You've completed all the weekly weigh-ins for this period.",
@@ -139,6 +144,7 @@ export function WeeklySection({ view, base, demo, notice, l }: { view: AccountVi
   const latest = periodLogs.at(-1) ?? null;
   const pending = periodLogs.some((x) => x.status !== "ready");
   const checkin = order?.checkin ?? null;
+  const { upcoming } = currentPeriod(view.plans, view.now);
 
   return (
     <section id="weegmoment" className="card scroll-mt-24 p-6 sm:p-8">
@@ -161,7 +167,13 @@ export function WeeklySection({ view, base, demo, notice, l }: { view: AccountVi
 
       <div className="mt-5">
         {!order || !w ? (
-          <p className="text-[0.9375rem] text-muted">{checkin?.status === "open" || checkin?.status === "overdue" ? c.checkinFirst : c.none}</p>
+          <p className="text-[0.9375rem] text-muted">
+            {upcoming
+              ? c.newPeriod(formatDayDate(upcoming.startsAt, l))
+              : checkin?.status === "open" || checkin?.status === "overdue"
+                ? c.checkinFirst
+                : c.none}
+          </p>
         ) : w.status === "open" ? (
           notice === "weegmoment" ? null : (
             <WeeklyForm

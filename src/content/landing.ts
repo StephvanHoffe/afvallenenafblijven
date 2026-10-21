@@ -156,7 +156,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         "Een los schema houdt je niet bij en stuurt niet bij als het tegenzit. Wij wel: elke week kijk je kort met ons mee, en we passen je plan aan op wat er echt gebeurt.",
       guidePoints: [
         { title: "Wekelijks weegmoment", text: "Gewicht en een paar vragen in 1 minuut. Wijkt je voortgang af, dan sturen we je calorieën of training meteen bij." },
-        { title: "Elke 4 weken een nieuw schema", text: "Na een korte check-in maken we je volgende schema: wat werkte blijft, wat niet werkte gaat eruit." },
+        { title: "Elke 4 weken een nieuw schema", text: "Na een korte check-in maken we je volgende schema: wat werkte blijft, wat niet werkte gaat eruit. Het staat klaar voordat je nieuwe week begint, op tijd voor je boodschappen." },
         { title: "Je voortgang in grafieken", text: "Gewicht, taille, je caloriedoel per periode en hoe het ging, overzichtelijk in Mijn schema's." },
       ],
       guideHealth: {
@@ -280,7 +280,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         "A one-off plan doesn't keep track of you or adjust when things get tough. We do: every week you check in briefly, and we adapt your plan to what's really happening.",
       guidePoints: [
         { title: "Weekly weigh-in", text: "Your weight and a few questions in 1 minute. If your progress is off track, we adjust your calories or training straight away." },
-        { title: "A new plan every 4 weeks", text: "After a short check-in we create your next plan: what worked stays, what didn't goes." },
+        { title: "A new plan every 4 weeks", text: "After a short check-in we create your next plan: what worked stays, what didn't goes. It's ready before your new week begins, in time for your shopping." },
         { title: "Your progress in charts", text: "Weight, waist, your calorie target per period and how it went, all clearly laid out in My plans." },
       ],
       guideHealth: {

@@ -1,5 +1,6 @@
 import { defineCopy, type Locale } from "@/i18n/config";
 import { intakeLabels } from "@/i18n/options";
+import { periodStarts, periodsAt } from "@/lib/schedule";
 import type { AccountView } from "@/lib/account-types";
 import { bmi, nutritionTargets, weightProjection } from "@/lib/calculations";
 import { wantsWeightLoss, type Intake } from "@/lib/intake";
@@ -147,7 +148,6 @@ export function currentProfile(view: AccountView): Intake | null {
 
 /** Begin van de lopende periode: het moment waarop de laatste schema's klaarstonden. */
 export function latestPeriodStart(view: AccountView): Date | null {
-  const seq = view.plans.reduce((m, x) => Math.max(m, x.seq), 0);
-  const dates = view.plans.filter((x) => x.seq === seq && x.generatedAt).map((x) => new Date(x.generatedAt!).getTime());
-  return dates.length ? new Date(Math.min(...dates)) : null;
+  // De periode die al loopt; een volgende die al klaarstaat telt nog niet mee.
+  return periodsAt(periodStarts(view.plans, (x) => x.seq, (x) => new Date(x.startsAt)), view.now.getTime()).current?.start ?? null;
 }

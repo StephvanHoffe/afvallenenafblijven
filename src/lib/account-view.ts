@@ -6,6 +6,7 @@ import { checkinWindow } from "@/lib/checkin";
 import { weeklyWindow } from "@/lib/weekly";
 import { addMonthsClamped } from "@/lib/dates";
 import { guaranteeAvailable, guaranteeDeadline, guaranteeOrder } from "@/lib/guarantee";
+import { periodStarts, periodsAt } from "@/lib/schedule";
 import {
   MAX_PLAN_ATTEMPTS,
   type CheckinRow,
@@ -34,9 +35,11 @@ export function toAccountView(input: {
   const dashboardOrders = orders.map((o): DashboardOrder => {
     const own = plans.filter((p) => p.order_id === o.id);
     const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);
-    const lastStart = own
-      .filter((p) => p.seq === lastSeq)
-      .reduce<Date | null>((min, p) => (!min || p.created_at < min ? p.created_at : min), null);
+    const starts = periodStarts(own, (p) => p.seq, (p) => p.starts_at);
+    // De laatste periode kan al klaarstaan maar nog moeten beginnen (maandag); de check-in gaat daarna verder.
+    const lastStart = starts.get(lastSeq) ?? null;
+    // Weegmomenten horen bij de periode die al loopt.
+    const running = periodsAt(starts, now).current;
     const months = durations[o.duration].months;
     const commitmentEnd = months > 1 ? addMonthsClamped(new Date(o.created_at), months) : null;
     return {
@@ -61,9 +64,9 @@ export function toAccountView(input: {
       weekly: weeklyWindow({
         duration: o.duration,
         status: o.status,
-        lastSeq,
-        lastPeriodStart: lastStart,
-        loggedWeeks: input.weekly.filter((w) => w.order_id === o.id && w.seq === lastSeq).map((w) => w.week),
+        lastSeq: running?.seq ?? 0,
+        lastPeriodStart: running?.start ?? null,
+        loggedWeeks: input.weekly.filter((w) => w.order_id === o.id && w.seq === running?.seq).map((w) => w.week),
         now,
       }),
       lastWeightKg:
@@ -77,6 +80,7 @@ export function toAccountView(input: {
       id: p.id,
       type: p.type,
       seq: p.seq,
+      startsAt: p.starts_at,
       status: p.status,
       generatedAt: p.generated_at,
       failed: p.status === "failed" && p.attempts >= MAX_PLAN_ATTEMPTS,
@@ -86,6 +90,7 @@ export function toAccountView(input: {
   );
   const firstOrder = orders.reduce<Date | null>((min, o) => (!min || o.created_at < min ? o.created_at : min), null);
   return {
+    now: new Date(now),
     name: input.name,
     orders: dashboardOrders,
     plans: dashboardPlans,

@@ -4,6 +4,7 @@ import { site, companyAddressLine } from "@/config/site";
 import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro } from "@/lib/format";
+import { nextPeriodStart } from "@/lib/schedule";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -90,6 +91,11 @@ ${c.questions} <a href="mailto:${site.company.email}" style="color:#1c7a45;">${s
 </td></tr></table></td></tr></table></body></html>`;
 }
 
+/** "maandag 16 november" in de taal van de klant. */
+function weekdayDate(date: Date, l: Locale): string {
+  return new Intl.DateTimeFormat(intlLocale(l), { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(date);
+}
+
 function button(href: string, label: string): string {
   return `<p style="margin:28px 0;"><a href="${href}" style="background:#1c7a45;color:#ffffff;text-decoration:none;font-weight:bold;padding:14px 24px;border-radius:999px;display:inline-block;">${escapeHtml(label)}</a></p>`;
 }
@@ -101,17 +107,20 @@ const plansReadyCopy = defineCopy({
     what: (types: PlanTypes): string =>
       types.length === 2 ? "je voedingsschema en trainingsschema" : types[0] === "voeding" ? "je voedingsschema" : "je trainingsschema",
     introNext: (what: string) => `Er staat een nieuwe periode voor je klaar! We hebben ${what} vernieuwd, afgestemd op je voortgang.`,
+    introUpcoming: (what: string, start: string, shopping: boolean) =>
+      `Je nieuwe schema staat klaar! We hebben ${what} vernieuwd, afgestemd op je check-in. Het start op ${start}; tot die tijd volg je gewoon je huidige schema.${shopping ? " Zo kun je alvast je boodschappen doen met de nieuwe boodschappenlijst." : ""}`,
+    subjectUpcoming: (name: string, start: string) => `Je schema voor ${start} staat klaar, ${name}`,
     introFirst: (what: string, both: boolean) =>
       `Goed nieuws: ${what} ${both ? "staan" : "staat"} voor je klaar. Helemaal afgestemd op jouw doel, voorkeuren en agenda.`,
     subjectNext: (name: string) => `Je nieuwe schema staat klaar, ${name}`,
     subjectFirst: (name: string) => `Je persoonlijke schema staat klaar, ${name}!`,
     button: "Bekijk mijn schema",
     tipsTitle: "Zo haal je er het meeste uit:",
-    tips: [
+    tips: (next: string | null) => [
       "Lees eerst de introductie en de kernafspraken.",
       "Doe je boodschappen met de boodschappenlijst (handig: download het schema als PDF).",
-      "Weeg jezelf 1x per week, op dezelfde dag en hetzelfde tijdstip, en vul je weegmoment in. Wijkt je voortgang af, dan sturen we je schema meteen bij.",
-      "Na 4 weken vul je een korte check-in in. Daarmee maken we je volgende schema, afgestemd op je voortgang. We sturen je een herinnering.",
+      "Weeg jezelf 1x per week, bij voorkeur op zaterdag of zondag 's ochtends, en vul je weegmoment in. Wijkt je voortgang af, dan sturen we je schema meteen bij, op tijd voor je boodschappen.",
+      `${next ? `Je volgende periode start op ${next}.` : "Elke periode start op maandag."} Vanaf de donderdag ervoor vul je een korte check-in in. Doe je dat uiterlijk zaterdag, dan staat je nieuwe schema met boodschappenlijst op tijd klaar. We sturen je een herinnering.`,
     ],
     personal: (loginHref: string) =>
       `Deze link is persoonlijk; deel hem niet met anderen. Is de link verlopen? Via ${loginHref} vraag je eenvoudig een nieuwe aan.`,
@@ -123,17 +132,20 @@ const plansReadyCopy = defineCopy({
     what: (types: PlanTypes) =>
       types.length === 2 ? "your nutrition plan and workout plan" : types[0] === "voeding" ? "your nutrition plan" : "your workout plan",
     introNext: (what: string) => `A new period is ready for you! We've refreshed ${what}, tailored to your progress.`,
+    introUpcoming: (what: string, start: string, shopping: boolean) =>
+      `Your new plan is ready! We've refreshed ${what}, based on your check-in. It starts on ${start}; until then, simply keep following your current plan.${shopping ? " That way, you can already do your shopping with the new shopping list." : ""}`,
+    subjectUpcoming: (name: string, start: string) => `Your plan for ${start} is ready, ${name}`,
     introFirst: (what: string, both: boolean) =>
       `Good news: ${what} ${both ? "are" : "is"} ready for you. Fully tailored to your goal, preferences and schedule.`,
     subjectNext: (name: string) => `Your new plan is ready, ${name}`,
     subjectFirst: (name: string) => `Your personal plan is ready, ${name}!`,
     button: "View my plan",
     tipsTitle: "How to get the most out of it:",
-    tips: [
+    tips: (next: string | null) => [
       "Start by reading the introduction and the key principles.",
       "Do your shopping with the shopping list (handy tip: download the plan as a PDF).",
-      "Weigh yourself once a week, on the same day and at the same time, and fill in your weekly weigh-in. If your progress is off track, we'll adjust your plan straight away.",
-      "After 4 weeks, you'll fill in a short check-in. We use it to create your next plan, tailored to your progress. We'll send you a reminder.",
+      "Weigh yourself once a week, ideally on Saturday or Sunday morning, and fill in your weekly weigh-in. If your progress is off track, we'll adjust your plan straight away, in time for your shopping.",
+      `${next ? `Your next period starts on ${next}.` : "Every period starts on a Monday."} From the Thursday before, you can fill in a short check-in. Do it by Saturday, and your new plan with shopping list will be ready in time. We'll send you a reminder.`,
     ],
     personal: (loginHref: string) =>
       `This link is personal, so please don't share it with anyone. Has the link expired? You can easily request a new one at ${loginHref}.`,
@@ -150,6 +162,8 @@ export function plansReadyEmail(
     types: ("voeding" | "training")[];
     link: string;
     seq: number;
+    /** Begin van de periode; ligt het in de toekomst, dan noemen we de startdatum. */
+    startsAt?: Date;
     locale?: Locale;
   },
   l: Locale = input.locale ?? "nl",
@@ -157,8 +171,16 @@ export function plansReadyEmail(
   const c = plansReadyCopy[l];
   const g = common[l];
   const what = c.what(input.types);
-  const intro = input.seq > 1 ? c.introNext(what) : c.introFirst(what, input.types.length === 2);
-  const subject = input.seq > 1 ? c.subjectNext(input.name) : c.subjectFirst(input.name);
+  const start = input.startsAt ?? new Date();
+  const upcoming = input.seq > 1 && start.getTime() > Date.now() + 60 * 60 * 1000;
+  const startLabel = weekdayDate(start, l);
+  const intro = upcoming
+    ? c.introUpcoming(what, startLabel, input.types.includes("voeding"))
+    : input.seq > 1
+      ? c.introNext(what)
+      : c.introFirst(what, input.types.length === 2);
+  const subject = upcoming ? c.subjectUpcoming(input.name, startLabel) : input.seq > 1 ? c.subjectNext(input.name) : c.subjectFirst(input.name);
+  const tips = c.tips(weekdayDate(nextPeriodStart(start), l));
   const loginHref = localeUrl(site.url, l, "/inloggen");
   const html = layout(
     subject,
@@ -167,7 +189,7 @@ export function plansReadyEmail(
 ${button(input.link, c.button)}
 <p><strong>${c.tipsTitle}</strong></p>
 <ul style="padding-left:20px;">
-${c.tips.map((tip) => `<li>${tip}</li>`).join("\n")}
+${tips.map((tip) => `<li>${tip}</li>`).join("\n")}
 </ul>
 <p>${c.personal(loginHref)}</p>
 <p>${c.goodLuck}</p>
@@ -184,12 +206,18 @@ const checkinCopy = defineCopy({
       reminder === 0
         ? `Tijd voor je check-in, ${name}`
         : reminder === 1
-          ? "Herinnering: je nieuwe schema wacht op je check-in"
-          : "Je nieuwe schema staat nog voor je klaar",
-    intro: (reminder: number, due: string, seq: number) =>
+          ? "Vandaag je check-in, dan ben je klaar voor maandag"
+          : reminder === 2
+            ? "Je nieuwe periode is begonnen: vul je check-in in"
+            : "Je nieuwe schema staat nog voor je klaar",
+    intro: (reminder: number, start: string, advised: string, seq: number) =>
       reminder === 0
-        ? `Je huidige periode loopt bijna af (${due}). Vul je check-in in: het kost je 2 minuten. Daarna maken we direct je schema voor periode ${seq}, afgestemd op hoe het ging.`
-        : `We hebben je check-in nog niet ontvangen. Je schema voor periode ${seq} maken we pas als je hem hebt ingevuld, zodat het echt bij je voortgang past. Het kost je 2 minuten.`,
+        ? `Je nieuwe periode start op ${start}. Vul je check-in in (2 minuten), het liefst uiterlijk ${advised}: dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. We maken het bewust pas na je check-in, zodat het past bij hoe het nu gaat.`
+        : reminder === 1
+          ? `Je nieuwe periode start op ${start}. Vul vandaag je check-in in, dan staat je nieuwe schema binnen een paar minuten klaar en kun je dit weekend je boodschappen doen.`
+          : reminder === 2
+            ? `Je nieuwe periode is begonnen, maar we hebben je check-in nog niet ontvangen. Vul hem in, dan maken we direct je schema voor periode ${seq}. Tot die tijd volg je gewoon je huidige schema.`
+            : `We hebben je check-in nog niet ontvangen. Je schema voor periode ${seq} maken we pas als je hem hebt ingevuld, zodat het echt bij je voortgang past. Het kost je 2 minuten.`,
     button: "Check-in invullen",
     askTitle: "Wat we je vragen:",
     asks: [
@@ -197,7 +225,7 @@ const checkinCopy = defineCopy({
       "Hoe goed je het schema kon volgen, en hoe je honger, energie en slaap waren.",
       "Wat je lekker vond, wat je anders wilt en of je nieuwe klachten hebt.",
     ],
-    after: "Binnen een paar minuten na je check-in staat je nieuwe schema klaar en krijg je een e-mail.",
+    after: "Binnen een paar minuten na je check-in staat je nieuwe schema klaar en krijg je een e-mail. Het start op de maandag van je nieuwe periode; tot die tijd volg je je huidige schema.",
     textLink: (link: string) => `Check-in invullen: ${link}`,
   },
   en: {
@@ -205,12 +233,18 @@ const checkinCopy = defineCopy({
       reminder === 0
         ? `Time for your check-in, ${name}`
         : reminder === 1
-          ? "Reminder: your new plan is waiting for your check-in"
-          : "Your new plan is still waiting for you",
-    intro: (reminder: number, due: string, seq: number) =>
+          ? "Do your check-in today and you're ready for Monday"
+          : reminder === 2
+            ? "Your new period has started: fill in your check-in"
+            : "Your new plan is still waiting for you",
+    intro: (reminder: number, start: string, advised: string, seq: number) =>
       reminder === 0
-        ? `Your current period is almost over (${due}). Fill in your check-in: it only takes 2 minutes. We'll then create your plan for period ${seq} straight away, based on how it went.`
-        : `We haven't received your check-in yet. We'll only create your plan for period ${seq} once you've filled it in, so that it truly matches your progress. It only takes 2 minutes.`,
+        ? `Your new period starts on ${start}. Fill in your check-in (2 minutes), ideally by ${advised}: then your plan for period ${seq} with shopping list will be ready in time for your weekend shopping. We deliberately only create it after your check-in, so it matches how things are going now.`
+        : reminder === 1
+          ? `Your new period starts on ${start}. Fill in your check-in today, and your new plan will be ready within a few minutes, so you can do your shopping this weekend.`
+          : reminder === 2
+            ? `Your new period has started, but we haven't received your check-in yet. Fill it in and we'll create your plan for period ${seq} straight away. Until then, simply keep following your current plan.`
+            : `We haven't received your check-in yet. We'll only create your plan for period ${seq} once you've filled it in, so that it truly matches your progress. It only takes 2 minutes.`,
     button: "Fill in your check-in",
     askTitle: "What we'll ask you:",
     asks: [
@@ -218,14 +252,16 @@ const checkinCopy = defineCopy({
       "How well you were able to follow the plan, and how your hunger, energy and sleep were.",
       "What you enjoyed, what you'd like to change and whether you have any new aches or injuries.",
     ],
-    after: "Within a few minutes of your check-in, your new plan will be ready and we'll send you an email.",
+    after: "Within a few minutes of your check-in, your new plan will be ready and we'll send you an email. It starts on the Monday of your new period; until then, keep following your current plan.",
     textLink: (link: string) => `Fill in your check-in: ${link}`,
   },
 });
 
 /**
- * Uitnodiging (reminder 0) en herinneringen voor de verplichte check-in. Het
- * volgende schema maken we pas als de check-in is ingevuld.
+ * Uitnodiging en herinneringen voor de verplichte check-in. `reminder`: 0 =
+ * uitnodiging (donderdag), 1 = vandaag invullen (zaterdag), 2 = de nieuwe
+ * periode is begonnen (maandag), 3 = laatste herinnering. Het volgende schema
+ * maken we pas als de check-in is ingevuld.
  */
 export function checkinEmail(
   input: {
@@ -234,7 +270,10 @@ export function checkinEmail(
     link: string;
     /** De periode waarvoor de check-in het schema maakt. */
     seq: number;
+    /** Start van de nieuwe periode (maandag). */
     dueAt: Date;
+    /** Uiterlijk deze dag invullen, voor de boodschappen in het weekend. */
+    advisedBy: Date;
     reminder: number;
     locale?: Locale;
   },
@@ -242,9 +281,8 @@ export function checkinEmail(
 ): Mail {
   const c = checkinCopy[l];
   const g = common[l];
-  const due = new Intl.DateTimeFormat(intlLocale(l), { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(input.dueAt);
   const subject = c.subject(input.reminder, input.name);
-  const intro = c.intro(input.reminder, due, input.seq);
+  const intro = c.intro(input.reminder, weekdayDate(input.dueAt, l), weekdayDate(input.advisedBy, l), input.seq);
   const html = layout(
     subject,
     `<p>${g.hi(escapeHtml(input.name))}</p>
@@ -268,7 +306,7 @@ const weeklyReminderCopy = defineCopy({
     intro:
       "Tijd voor je wekelijkse weegmoment. Vul je gewicht en een paar korte vragen in (1 minuut). Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen.",
     button: "Weegmoment invullen",
-    tip: "Tip: weeg je op een vaste dag, 's ochtends voor het ontbijt. Geen zin in deze herinneringen? Zet ze uit in Mijn schema's, onder Check-in.",
+    tip: "Tip: weeg je in het weekend, 's ochtends voor het ontbijt. Dan kun je een eventuele aanpassing meenemen in je boodschappen voor de week erna. Geen zin in deze herinneringen? Zet ze uit in Mijn schema's, onder Check-in.",
     textLink: (link: string) => `Weegmoment invullen: ${link}`,
   },
   en: {
@@ -276,7 +314,7 @@ const weeklyReminderCopy = defineCopy({
     intro:
       "It's time for your weekly weigh-in. Enter your weight and answer a few short questions (1 minute). If your progress is off track, we'll adjust your plan straight away: eating a little more or less, or training harder or lighter.",
     button: "Fill in your weigh-in",
-    tip: "Tip: weigh yourself on a fixed day, in the morning before breakfast. Don't want these reminders? You can turn them off in My plans, under Check-in.",
+    tip: "Tip: weigh yourself at the weekend, in the morning before breakfast. That way you can take any adjustment into account in your shopping for the week ahead. Don't want these reminders? You can turn them off in My plans, under Check-in.",
     textLink: (link: string) => `Fill in your weigh-in: ${link}`,
   },
 });

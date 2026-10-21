@@ -91,7 +91,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     periode: {
       q: "Hoe lang duurt een periode, en krijg ik elke week een nieuw schema?",
-      a: "Een periode duurt 4 weken. Je krijgt per periode één voedingsschema en/of trainingsschema. Het voedingsschema is een weekmenu van 7 dagen dat je 4 weken volgt, met een boodschappenlijst per week. Het trainingsschema bouwt in 4 weken op, met per week een duidelijke stap. Elke week vul je een weegmoment in; wijkt je voortgang af, dan sturen we het lopende schema meteen bij. Na 4 weken volgt de check-in en maken we je nieuwe schema.",
+      a: "Een periode duurt 4 weken en start op maandag. Je krijgt per periode één voedingsschema en/of trainingsschema. Het voedingsschema is een weekmenu van maandag tot en met zondag dat je 4 weken volgt, met een boodschappenlijst per week. Het trainingsschema bouwt in 4 weken op, met per week een duidelijke stap. Elke week, het liefst in het weekend, vul je een weegmoment in; wijkt je voortgang af, dan sturen we het lopende schema meteen bij, op tijd voor je boodschappen. Vanaf de donderdag voor een nieuwe periode vul je de check-in in. Doe je dat uiterlijk zaterdag, dan staat je nieuwe schema met boodschappenlijst klaar voordat de nieuwe week begint. Je eerste periode start direct na je bestelling en loopt tot de maandag die het dichtst bij 4 weken later ligt.",
     },
     weegmoment: {
       q: "Wat gebeurt er met mijn wekelijkse weegmoment?",
@@ -107,7 +107,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     "check-in": {
       q: "Is de check-in verplicht?",
-      a: "Ja, en dat is juist de kracht ervan. Je nieuwe schema maken we pas als je de check-in hebt ingevuld, zodat het echt past bij je voortgang in plaats van een standaard vervolg. De check-in opent een paar dagen voor het einde van je periode; je krijgt dan een e-mail en zo nodig een herinnering. Invullen kost ongeveer 2 minuten. Direct daarna maken we je nieuwe schema.",
+      a: "Ja, en dat is juist de kracht ervan. Je nieuwe schema maken we pas als je de check-in hebt ingevuld, zodat het echt past bij je voortgang in plaats van een standaard vervolg. De check-in opent op de donderdag voor je nieuwe periode (die altijd op maandag start); je krijgt dan een e-mail en zo nodig een herinnering. Invullen kost ongeveer 2 minuten. Direct daarna maken we je nieuwe schema. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst op tijd klaar voor je boodschappen in het weekend. Eerder maken we het bewust niet, zodat het aansluit op hoe het nu met je gaat.",
     },
     afblijven: {
       q: "Wat betekent 'afblijven'?",
@@ -157,7 +157,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     periode: {
       q: "How long is a period, and do I get a new plan every week?",
-      a: "A period lasts 4 weeks. Each period you receive one nutrition plan and/or workout plan. The nutrition plan is a 7-day weekly meal plan that you follow for 4 weeks, with a shopping list for each week. The workout plan builds up over 4 weeks, with a clear step forward each week. Every week you log your weekly weigh-in; if your progress is off track, we adjust your current plan straight away. After 4 weeks you complete the check-in and we create your new plan.",
+      a: "A period lasts 4 weeks and starts on a Monday. Each period you receive one nutrition plan and/or workout plan. The nutrition plan is a Monday-to-Sunday meal plan that you follow for 4 weeks, with a shopping list for each week. The workout plan builds up over 4 weeks, with a clear step forward each week. Every week, ideally at the weekend, you log your weekly weigh-in; if your progress is off track, we adjust your current plan straight away, in time for your shopping. From the Thursday before a new period, you can complete the check-in. Do it by Saturday, and your new plan with shopping list will be ready before the new week begins. Your first period starts straight after your order and runs until the Monday closest to 4 weeks later.",
     },
     weegmoment: {
       q: "What happens with my weekly weigh-in?",
@@ -173,7 +173,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     "check-in": {
       q: "Is the check-in required?",
-      a: "Yes, and that's exactly what makes it work. We only create your new plan once you've completed the check-in, so it truly matches your progress instead of being a standard follow-up. The check-in opens a few days before the end of your period; you'll get an email and, if needed, a reminder. It takes about 2 minutes to complete, and we create your new plan right after.",
+      a: "Yes, and that's exactly what makes it work. We only create your new plan once you've completed the check-in, so it truly matches your progress instead of being a standard follow-up. The check-in opens on the Thursday before your new period (which always starts on a Monday); you'll get an email and, if needed, a reminder. It takes about 2 minutes to complete, and we create your new plan right after. Fill it in by Saturday, and your plan with shopping list will be ready in time for your weekend shopping. We deliberately don't create it any earlier, so it matches how you're doing right now.",
     },
     afblijven: {
       q: "What does 'afblijven' (keeping it off) mean?",

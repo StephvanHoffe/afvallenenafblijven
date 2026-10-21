@@ -20,12 +20,14 @@ import {
 } from "@/lib/repo";
 import { decideWeeklyAdjustment, weeklyKcal, weeklyWindow, type WeeklyAdjustment, type WeeklyData, type WeeklyWindow } from "@/lib/weekly";
 import { toLocale, type Locale } from "@/i18n/config";
+import { periodStarts, periodsAt } from "@/lib/schedule";
 
-/** De lopende periode van een bestelling: nummer, begin en de schema's. */
+/** De lopende periode van een bestelling (de laatste die al begonnen is): nummer, begin en de schema's. */
 function currentPeriod(plans: Plan[]) {
-  const seq = plans.reduce((m, p) => Math.max(m, p.seq), 0);
+  const current = periodsAt(periodStarts(plans, (p) => p.seq, (p) => p.starts_at)).current;
+  const seq = current?.seq ?? 0;
   const own = plans.filter((p) => p.seq === seq);
-  const start = own.reduce<Date | null>((min, p) => (!min || p.created_at < min ? p.created_at : min), null);
+  const start = current?.start ?? null;
   const content = <T extends PlanContent["type"]>(type: T) =>
     (own.find((p) => p.type === type && p.status === "ready")?.content ?? null) as Extract<PlanContent, { type: T }> | null;
   return { seq, start, nutrition: content("voeding"), training: content("training") };

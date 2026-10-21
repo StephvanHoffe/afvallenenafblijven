@@ -1,15 +1,16 @@
-import { site } from "@/config/site";
 import { isSubscription, type DurationId } from "@/config/pricing";
 import type { Intake } from "@/lib/intake";
 import { formatNumber } from "@/lib/format";
 import { defineCopy, type Locale } from "@/i18n/config";
 import { checkinLabel, intakeLabels } from "@/i18n/options";
+import { checkinAdvisedBy, checkinOpensAt, nextPeriodStart } from "@/lib/schedule";
 
 /**
- * De check-in is verplicht voor elk vervolgschema. Elke periode duurt
- * site.planIntervalDays dagen; een paar dagen voor het einde opent de
- * check-in. Pas als de klant hem invult, maken we het schema voor de volgende
- * periode, afgestemd op de antwoorden.
+ * De check-in is verplicht voor elk vervolgschema. Elke periode start op een
+ * maandag; de check-in opent op de donderdag ervoor (zie src/lib/schedule.ts).
+ * Pas als de klant hem invult, maken we het schema voor de volgende periode,
+ * afgestemd op de antwoorden. Dat schema start op de maandag (of meteen, als
+ * de check-in te laat is).
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -49,6 +50,9 @@ export interface CheckinWindow {
   seq: number;
   status: CheckinStatus;
   opensAt: Date;
+  /** Uiterlijk deze dag invullen, dan staat het nieuwe schema op tijd klaar voor de boodschappen. */
+  advisedBy: Date;
+  /** Start van de nieuwe periode (een maandag). */
   dueAt: Date;
 }
 
@@ -63,7 +67,7 @@ export function checkinWindow(input: {
   cancelAt: Date | null;
   /** Hoogste periode met schema's, 0 als er nog geen zijn. */
   lastSeq: number;
-  /** Moment waarop die periode begon (de schema's werden aangemaakt). */
+  /** Moment waarop die periode begon (of begint, als het schema al klaarstaat). */
   lastPeriodStart: Date | null;
   submittedForNext: boolean;
   now: number;
@@ -71,8 +75,8 @@ export function checkinWindow(input: {
   if (!isSubscription(input.duration) || input.status !== "active" || !input.lastPeriodStart || input.lastSeq < 1) {
     return null;
   }
-  const dueAt = new Date(new Date(input.lastPeriodStart).getTime() + site.planIntervalDays * DAY);
-  const opensAt = new Date(dueAt.getTime() - site.checkin.opensDaysBefore * DAY);
+  const dueAt = nextPeriodStart(new Date(input.lastPeriodStart));
+  const opensAt = checkinOpensAt(dueAt);
   // Eindigt het abonnement rond het einde van deze periode, dan volgt er geen nieuwe meer.
   if (input.cancelAt && new Date(input.cancelAt).getTime() <= dueAt.getTime() + 3 * DAY) return null;
   const status: CheckinStatus = input.submittedForNext
@@ -82,7 +86,7 @@ export function checkinWindow(input: {
       : input.now < dueAt.getTime()
         ? "open"
         : "overdue";
-  return { seq: input.lastSeq + 1, status, opensAt, dueAt };
+  return { seq: input.lastSeq + 1, status, opensAt, advisedBy: checkinAdvisedBy(dueAt), dueAt };
 }
 
 const goodAdherence = (value?: string) =>

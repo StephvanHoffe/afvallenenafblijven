@@ -3,7 +3,7 @@ import type { PlanType } from "@/config/pricing";
 import { defineCopy, type Locale } from "@/i18n/config";
 import type { DashboardOrder } from "@/lib/account-types";
 import type { CheckinWindow } from "@/lib/checkin";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDayDate } from "@/lib/format";
 
 /** Gedeelde stukjes voor de tabbladen van Mijn schema's. */
 
@@ -18,10 +18,15 @@ const copy = defineCopy({
     completed: "Afgerond",
     noneTitle: "Geen nieuw schema gepland",
     noneText: "Je abonnement loopt af of is niet actief.",
-    upcomingTitle: (date: string) => `Na je check-in (vanaf ${date})`,
-    upcomingText: (seq: number) => `Je schema voor periode ${seq} maken we zodra je je check-in hebt ingevuld.`,
+    upcomingTitle: (start: string) => `Start ${start}`,
+    upcomingText: (seq: number, opens: string, advised: string) =>
+      `Je check-in voor periode ${seq} opent op ${opens}. Vul hem uiterlijk ${advised} in, dan staat je nieuwe schema met boodschappenlijst op tijd klaar.`,
     openTitle: "Wacht op je check-in",
     openText: (seq: number) => `Vul je check-in in, dan maken we direct je schema voor periode ${seq}.`,
+    openSoonText: (seq: number, advised: string) =>
+      `Vul je check-in uiterlijk ${advised} in, dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar.`,
+    readyTitle: (start: string) => `Klaar, start ${start}`,
+    readyText: "Je nieuwe schema staat al klaar. Tot de start volg je je huidige schema.",
     busyTitle: "Wordt nu gemaakt",
     busyText: "Je check-in is binnen. Binnen een paar minuten staat je nieuwe schema klaar.",
   },
@@ -35,10 +40,15 @@ const copy = defineCopy({
     completed: "Completed",
     noneTitle: "No new plan scheduled",
     noneText: "Your subscription is ending or isn't active.",
-    upcomingTitle: (date: string) => `After your check-in (from ${date})`,
-    upcomingText: (seq: number) => `We'll create your plan for period ${seq} as soon as you've completed your check-in.`,
+    upcomingTitle: (start: string) => `Starts ${start}`,
+    upcomingText: (seq: number, opens: string, advised: string) =>
+      `Your check-in for period ${seq} opens on ${opens}. Fill it in by ${advised}, and your new plan with shopping list will be ready in time.`,
     openTitle: "Waiting for your check-in",
     openText: (seq: number) => `Complete your check-in and we'll create your plan for period ${seq} straight away.`,
+    openSoonText: (seq: number, advised: string) =>
+      `Fill in your check-in by ${advised}, and your plan for period ${seq} with shopping list will be ready in time.`,
+    readyTitle: (start: string) => `Ready, starts ${start}`,
+    readyText: "Your new plan is already ready. Until it starts, keep following your current plan.",
     busyTitle: "Being created now",
     busyText: "Your check-in is in. Your new plan will be ready within a few minutes.",
   },
@@ -89,13 +99,23 @@ export function Pill({ tone, children }: { tone: "ok" | "warn" | "muted"; childr
 }
 
 /** Wat er bij het volgende schema staat, afhankelijk van de check-in. */
-export function nextPlanText(checkin: CheckinWindow | null, l: Locale = "nl"): { title: string; text: string } {
+export function nextPlanText(
+  checkin: CheckinWindow | null,
+  l: Locale = "nl",
+  /** Start van een volgende periode die al klaarstaat. */
+  readyStart: Date | null = null,
+): { title: string; text: string } {
   const c = copy[l];
+  if (readyStart) return { title: c.readyTitle(formatDate(readyStart, l)), text: c.readyText };
   if (!checkin) return { title: c.noneTitle, text: c.noneText };
   switch (checkin.status) {
     case "upcoming":
-      return { title: c.upcomingTitle(formatDate(checkin.opensAt, l)), text: c.upcomingText(checkin.seq) };
+      return {
+        title: c.upcomingTitle(formatDate(checkin.dueAt, l)),
+        text: c.upcomingText(checkin.seq, formatDayDate(checkin.opensAt, l), formatDayDate(checkin.advisedBy, l)),
+      };
     case "open":
+      return { title: c.upcomingTitle(formatDate(checkin.dueAt, l)), text: c.openSoonText(checkin.seq, formatDayDate(checkin.advisedBy, l)) };
     case "overdue":
       return { title: c.openTitle, text: c.openText(checkin.seq) };
     default:

@@ -20,6 +20,7 @@ import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { describeCheckin, describeIntake, stripeDashboardUrl } from "@/lib/admin/describe";
 import type { CheckinWindow } from "@/lib/checkin";
 import { euro, formatDate } from "@/lib/format";
+import { startsLater } from "@/lib/schedule";
 
 export const metadata: Metadata = { title: "Klant" };
 
@@ -38,7 +39,7 @@ function checkinLabel(c: CheckinWindow): string {
     case "upcoming":
       return `Check-in periode ${c.seq} opent ${formatDate(c.opensAt)}`;
     case "open":
-      return `Check-in periode ${c.seq} staat open (periode eindigt ${formatDate(c.dueAt)})`;
+      return `Check-in periode ${c.seq} staat open (nieuwe periode start ${formatDate(c.dueAt)}, advies: invullen uiterlijk ${formatDate(c.advisedBy)})`;
     case "overdue":
       return `Check-in periode ${c.seq} verlopen sinds ${formatDate(c.dueAt)}`;
     default:
@@ -185,6 +186,9 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                         <Link href={`/beheer/schemas/${p.id}`} className="font-semibold hover:underline">
                           {p.type === "voeding" ? "Voeding" : "Training"} · periode {p.seq}
                         </Link>
+                        {startsLater(p.startsAt) && (
+                          <span className="block text-xs font-semibold text-brand-700">Start {formatDate(p.startsAt)}</span>
+                        )}
                         {p.error && <span className="block max-w-xs truncate text-xs text-accent-600">{p.error}</span>}
                       </td>
                       <td className={table.td}>

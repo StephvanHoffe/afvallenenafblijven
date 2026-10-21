@@ -135,11 +135,14 @@ function Nl() {
           Levering vindt plaats via je persoonlijke omgeving &quot;Mijn schema&apos;s&quot; en een e-mail met een link.
         </li>
         <li>
-          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Elk vervolgschema
-          maken we op basis van een check-in, waarin je je voortgang doorgeeft. De check-in opent een paar dagen voor het
-          einde van een periode; je ontvangt dan een uitnodiging per e-mail en zo nodig herinneringen. Het nieuwe schema
-          maken we zodra je de check-in hebt ingevuld. Zolang je de check-in niet hebt ingevuld, maken we geen nieuw schema;
-          het abonnement en de maandelijkse betaling lopen dan gewoon door en je houdt toegang tot je laatste schema.
+          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Elke periode start op
+          een maandag en duurt 4 weken; de eerste periode start direct na je bestelling en loopt tot de maandag die het
+          dichtst bij 4 weken later ligt (25 tot 31 dagen). Elk vervolgschema maken we op basis van een check-in, waarin je
+          je voortgang doorgeeft. De check-in opent op de donderdag voor de nieuwe periode; je ontvangt dan een uitnodiging
+          per e-mail en zo nodig herinneringen. Het nieuwe schema maken we zodra je de check-in hebt ingevuld; het is dan
+          direct zichtbaar en start op de maandag van de nieuwe periode, of meteen als die al is begonnen. Zolang je de
+          check-in niet hebt ingevuld, maken we geen nieuw schema; het abonnement en de maandelijkse betaling lopen dan
+          gewoon door en je houdt toegang tot je laatste schema.
         </li>
         <li>
           Een schema is leefstijladvies en geen medisch advies, geen diagnose en geen behandeling. Zie ook artikel 12 en
@@ -487,12 +490,14 @@ function En() {
           takes place via your personal environment &quot;My plans&quot; and an email with a link.
         </li>
         <li>
-          With a subscription, you receive a new plan every 4 weeks for as long as the subscription runs. We create each
-          follow-up plan on the basis of a check-in, in which you tell us about your progress. The check-in opens a few
-          days before the end of a period; you will then receive an invitation by email and, if necessary, reminders. We
-          create the new plan as soon as you have completed the check-in. As long as you have not completed the check-in,
-          we do not create a new plan; the subscription and the monthly payment simply continue and you keep access to
-          your latest plan.
+          With a subscription, you receive a new plan every 4 weeks for as long as the subscription runs. Each period
+          starts on a Monday and lasts 4 weeks; the first period starts straight after your order and runs until the
+          Monday closest to 4 weeks later (25 to 31 days). We create each follow-up plan on the basis of a check-in, in
+          which you tell us about your progress. The check-in opens on the Thursday before the new period; you will then
+          receive an invitation by email and, if necessary, reminders. We create the new plan as soon as you have
+          completed the check-in; it is then visible straight away and starts on the Monday of the new period, or
+          immediately if that period has already begun. As long as you have not completed the check-in, we do not create
+          a new plan; the subscription and the monthly payment simply continue and you keep access to your latest plan.
         </li>
         <li>
           A plan is lifestyle advice and not medical advice, a diagnosis or a treatment. See also article 12 and our{" "}

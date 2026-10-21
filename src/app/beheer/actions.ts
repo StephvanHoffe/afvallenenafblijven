@@ -82,6 +82,7 @@ export async function resendPlanEmail(formData: FormData): Promise<void> {
       types: period.map((p) => p.type),
       link: await loginUrl(customer.id, undefined, l),
       seq: plan.seq,
+      startsAt: period[0].starts_at,
       locale: l,
     }),
   );

@@ -35,7 +35,7 @@ const copy = defineCopy({
       },
       {
         title: "4. Elke week bijsturen, elke 4 weken een nieuw schema",
-        text: "Elke week vul je in 1 minuut je gewicht in en hoe het ging. Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen. Heb je een abonnement? Aan het einde van elke periode van 4 weken vul je een korte check-in in: je gewicht, hoe goed het lukte, je honger, energie en slaap, en hoe de trainingen voelden. Op basis daarvan maken we direct je nieuwe schema: met bijgestelde calorieën, nieuwe gerechten en een volgende stap in je training. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
+        text: "Elke week, het liefst in het weekend, vul je in 1 minuut je gewicht in en hoe het ging. Wijkt je voortgang af, dan sturen we je schema meteen bij: iets meer of minder eten, of zwaarder of lichter trainen, op tijd voor je boodschappen. Heb je een abonnement? Elke periode duurt 4 weken en start op maandag. Vanaf de donderdag ervoor vul je een korte check-in in: je gewicht, hoe goed het lukte, je honger, energie en slaap, en hoe de trainingen voelden. Op basis daarvan maken we direct je nieuwe schema: met bijgestelde calorieën, nieuwe gerechten en een volgende stap in je training. Vul je hem uiterlijk zaterdag in, dan staat het met boodschappenlijst klaar voordat de nieuwe week begint. Heb je je doel bereikt? Dan stappen we over op een plan om op gewicht te blijven.",
         alt: "Sporter traint met hulp van een begeleider",
       },
     ],
@@ -67,7 +67,7 @@ const copy = defineCopy({
       },
       {
         title: "4. Weekly fine-tuning, a new plan every 4 weeks",
-        text: "Every week, you take 1 minute to log your weight and how things went. If your progress is off track, we adjust your plan straight away: eating a little more or less, or training harder or lighter. Got a subscription? At the end of every 4-week period you complete a short check-in: your weight, how well it went, your hunger, energy and sleep, and how the workouts felt. Based on that, we create your new plan right away, with adjusted calories, new dishes and the next step in your training. Reached your goal? Then we move you onto a plan to maintain your weight.",
+        text: "Every week, ideally at the weekend, you take 1 minute to log your weight and how things went. If your progress is off track, we adjust your plan straight away: eating a little more or less, or training harder or lighter, in time for your shopping. Got a subscription? Each period lasts 4 weeks and starts on a Monday. From the Thursday before, you complete a short check-in: your weight, how well it went, your hunger, energy and sleep, and how the workouts felt. Based on that, we create your new plan right away, with adjusted calories, new dishes and the next step in your training. Fill it in by Saturday, and it will be ready with its shopping list before the new week begins. Reached your goal? Then we move you onto a plan to maintain your weight.",
         alt: "Athlete training with the help of a coach",
       },
     ],

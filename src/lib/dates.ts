@@ -12,3 +12,37 @@ export function addMonthsClamped(date: Date, months: number): Date {
   d.setUTCDate(Math.min(day, lastDay));
   return d;
 }
+
+const amsterdamParts = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Europe/Amsterdam",
+  hourCycle: "h23",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+});
+
+/** Verschil tussen Nederlandse tijd en UTC op een moment, in milliseconden. */
+export function amsterdamOffsetMs(utcMs: number): number {
+  const parts = amsterdamParts.formatToParts(new Date(utcMs));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - (utcMs - (utcMs % 1000));
+}
+
+/**
+ * Middernacht (Nederlandse tijd) van de kalenderdag van `date`, plus `days`
+ * kalenderdagen. Rekent in kalenderdagen, zodat zomer- en wintertijd geen
+ * uur verschuiving geven.
+ */
+export function amsterdamMidnight(date: Date, days = 0): Date {
+  const local = new Date(date.getTime() + amsterdamOffsetMs(date.getTime()));
+  const midnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + days);
+  return new Date(midnight - amsterdamOffsetMs(midnight));
+}
+
+/** Dag van de week in Nederland: 0 = zondag, 1 = maandag … 6 = zaterdag. */
+export function amsterdamWeekday(date: Date): number {
+  return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).getUTCDay();
+}

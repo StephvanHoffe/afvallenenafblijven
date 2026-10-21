@@ -69,6 +69,8 @@ export interface Plan {
   attempts: number;
   generated_at: Date | null;
   emailed_at: Date | null;
+  /** Begin van de periode; kan in de toekomst liggen als het schema al klaarstaat. */
+  starts_at: Date;
   created_at: Date;
 }
 
@@ -211,13 +213,20 @@ export async function updateOrderBySubscription(
 
 // ---------- Schema's ----------
 
-export async function createPlans(orderId: string, customerId: string, types: PlanType[], seq: number): Promise<string[]> {
+/** Maakt de schema's van een periode aan; `startsAt` is het begin van de periode (standaard nu). */
+export async function createPlans(
+  orderId: string,
+  customerId: string,
+  types: PlanType[],
+  seq: number,
+  startsAt: Date = new Date(),
+): Promise<string[]> {
   const sql = await db();
   const ids: string[] = [];
   for (const type of types) {
     const [row] = await sql<{ id: string }[]>`
-      insert into plans (order_id, customer_id, type, seq)
-      values (${orderId}, ${customerId}, ${type}, ${seq})
+      insert into plans (order_id, customer_id, type, seq, starts_at)
+      values (${orderId}, ${customerId}, ${type}, ${seq}, ${startsAt})
       on conflict (order_id, type, seq) do nothing
       returning id`;
     if (row) ids.push(row.id);
@@ -269,7 +278,7 @@ export async function plansForOrder(orderId: string): Promise<Plan[]> {
 export async function plansForCustomer(customerId: string): Promise<Plan[]> {
   const sql = await db();
   return sql<Plan[]>`
-    select id, order_id, customer_id, type, seq, status, null as content, error, attempts, generated_at, emailed_at, created_at
+    select id, order_id, customer_id, type, seq, status, null as content, error, attempts, generated_at, emailed_at, starts_at, created_at
     from plans where customer_id = ${customerId} order by created_at desc, type`;
 }
 
@@ -324,7 +333,7 @@ export async function markPlansEmailed(planIds: string[]): Promise<string[]> {
 
 /**
  * Lopende abonnementen met hun laatste periode, voor de check-in: wanneer
- * begon de laatste periode en is de check-in voor de volgende al ingevuld?
+ * begint de laatste periode en is de check-in voor de volgende al ingevuld?
  */
 export async function subscriptionCheckinOrders(): Promise<
   (Order & { last_seq: number; last_start: Date; next_checkin: boolean })[]
@@ -335,7 +344,7 @@ export async function subscriptionCheckinOrders(): Promise<
       exists (select 1 from checkins ci where ci.order_id = o.id and ci.for_seq = p.last_seq + 1) as next_checkin
     from orders o
     join lateral (
-      select seq as last_seq, min(created_at) as last_start from plans
+      select seq as last_seq, min(starts_at) as last_start from plans
       where order_id = o.id group by seq order by seq desc limit 1
     ) p on true
     where o.duration <> 'eenmalig' and o.status = 'active'`;
@@ -471,11 +480,11 @@ export async function weeklyReminderOrders(): Promise<
     from orders o
     join customers c on c.id = o.customer_id and c.weekly_reminders
     join lateral (
-      select seq as last_seq, min(created_at) as last_start from plans
-      where order_id = o.id group by seq order by seq desc limit 1
+      select seq as last_seq, min(starts_at) as last_start from plans
+      where order_id = o.id and starts_at <= now() group by seq order by seq desc limit 1
     ) p on true
     where o.status in ('active', 'completed')
-      and p.last_start > now() - interval '28 days'
+      and p.last_start > now() - interval '32 days'
       and (o.weekly_reminded_at is null or o.weekly_reminded_at < now() - interval '5 days')`;
 }
 

@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "@/i18n/Link";
-import { ArrowRight, Download, Loader2, TriangleAlert } from "lucide-react";
+import { ArrowRight, CalendarCheck, Download, Loader2, ShoppingCart, TriangleAlert } from "lucide-react";
 import { planMeta } from "@/components/account/shared";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import type { DashboardPlan } from "@/lib/account-types";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDayDate } from "@/lib/format";
+import { periodStarts, periodsAt } from "@/lib/schedule";
 
 const copy = defineCopy({
   nl: {
@@ -17,6 +18,12 @@ const copy = defineCopy({
     open: "Open",
     failedAria: "Mislukt",
     busyAria: "Bezig",
+    upcomingReady: "Je schema voor de nieuwe periode staat klaar",
+    upcomingBusy: "Je schema voor de nieuwe periode wordt gemaakt",
+    upcomingText: (start: string, shopping: boolean) =>
+      `Het start op ${start}. Tot die tijd volg je gewoon je huidige schema.${shopping ? " Bekijk alvast de nieuwe boodschappenlijst, dan kun je op tijd je boodschappen doen." : ""}`,
+    view: (title: string) => `Bekijk ${title.toLowerCase()}`,
+    shopping: "Boodschappenlijst (PDF)",
   },
   en: {
     none: "You don't have any plans yet.",
@@ -28,6 +35,12 @@ const copy = defineCopy({
     open: "Open",
     failedAria: "Failed",
     busyAria: "In progress",
+    upcomingReady: "Your plan for the new period is ready",
+    upcomingBusy: "Your plan for the new period is being created",
+    upcomingText: (start: string, shopping: boolean) =>
+      `It starts on ${start}. Until then, simply keep following your current plan.${shopping ? " Have a look at the new shopping list now, so you can do your shopping in time." : ""}`,
+    view: (title: string) => `View ${title.toLowerCase()}`,
+    shopping: "Shopping list (PDF)",
   },
 });
 
@@ -83,11 +96,63 @@ export function PlanCards({ plans, l, compact = false }: { plans: DashboardPlan[
   );
 }
 
-export function currentPeriod(plans: DashboardPlan[]) {
-  const latestSeq = plans.reduce((m, p) => Math.max(m, p.seq), 0);
+export interface UpcomingPeriod {
+  seq: number;
+  startsAt: Date;
+  plans: DashboardPlan[];
+}
+
+/**
+ * De lopende periode (de laatste die al begonnen is), een eventuele volgende
+ * die al klaarstaat maar pas op maandag begint, en de eerdere perioden.
+ */
+export function currentPeriod(plans: DashboardPlan[], now: Date) {
+  const { current, upcoming } = periodsAt(
+    periodStarts(plans, (p) => p.seq, (p) => new Date(p.startsAt)),
+    now.getTime(),
+  );
+  const latestSeq = current?.seq ?? 0;
   return {
     latestSeq,
     current: plans.filter((p) => p.seq === latestSeq),
-    earlier: plans.filter((p) => p.seq !== latestSeq),
+    upcoming: upcoming ? ({ seq: upcoming.seq, startsAt: upcoming.start, plans: plans.filter((p) => p.seq === upcoming.seq) } as UpcomingPeriod) : null,
+    earlier: plans.filter((p) => p.seq < latestSeq),
   };
+}
+
+/** Het schema voor de nieuwe periode staat al klaar: met startdatum en de boodschappenlijst. */
+export function UpcomingPlans({ upcoming, l }: { upcoming: UpcomingPeriod; l: Locale }) {
+  const c = copy[l];
+  const meta = planMeta(l);
+  // Voeding eerst: daar hoort de boodschappenlijst bij.
+  const ready = upcoming.plans.filter((p) => p.status === "ready").sort((a, b) => (a.type === "voeding" ? -1 : b.type === "voeding" ? 1 : 0));
+  const nutrition = ready.find((p) => p.type === "voeding");
+  const allReady = ready.length === upcoming.plans.length;
+  return (
+    <section className="rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-5 sm:p-6">
+      <div className="flex gap-3">
+        <CalendarCheck className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
+        <div className="min-w-0">
+          <h2 className="text-lg font-extrabold">{allReady ? c.upcomingReady : c.upcomingBusy}</h2>
+          <p className="mt-1 text-[0.9375rem]">{c.upcomingText(formatDayDate(upcoming.startsAt, l), upcoming.plans.some((p) => p.type === "voeding"))}</p>
+          {allReady ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {ready.map((p, i) => (
+                <Link key={p.id} href={p.href} className={`${i === 0 ? "btn-primary" : "btn-secondary"} !px-4 !py-2.5 text-sm`}>
+                  {c.view(meta[p.type].title)} <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              ))}
+              {nutrition && (
+                <a href={localePath(l, `${nutrition.pdfHref}?deel=boodschappen`)} className="btn-secondary !px-4 !py-2.5 text-sm">
+                  <ShoppingCart className="size-4" aria-hidden /> {c.shopping}
+                </a>
+              )}
+            </div>
+          ) : (
+            <Loader2 className="mt-3 size-5 animate-spin text-brand-600" aria-label={c.busyAria} />
+          )}
+        </div>
+      </div>
+    </section>
+  );
 }

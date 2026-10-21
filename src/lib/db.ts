@@ -144,6 +144,13 @@ alter table customers add column if not exists locale text not null default 'nl'
 -- Via welke campagne (utm) en landingspagina de klant binnenkwam.
 alter table intakes add column if not exists campaign jsonb;
 
+-- Start van de periode van een schema: een nieuw schema kan al klaarstaan
+-- voordat de periode (op maandag) begint.
+alter table plans add column if not exists starts_at timestamptz;
+update plans set starts_at = created_at where starts_at is null;
+alter table plans alter column starts_at set default now();
+alter table plans alter column starts_at set not null;
+
 -- Aanvragen onder de tevredenheidsgarantie (eerste betaling terug), één per klant.
 create table if not exists guarantee_requests (
   id uuid primary key default gen_random_uuid(),

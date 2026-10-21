@@ -102,6 +102,7 @@ for (let i = 0; i < 48; i++) {
         attempts: failed ? 5 : 1,
         error: failed ? "Antwoord afgekapt (max_tokens bereikt)" : null,
         createdAt: created,
+        startsAt: created,
         generatedAt: newest || failed ? null : new Date(created.getTime() + 4 * 60 * 1000),
         emailedAt: newest || failed ? null : new Date(created.getTime() + 5 * 60 * 1000),
       });

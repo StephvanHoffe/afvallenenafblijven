@@ -6,20 +6,23 @@ import { WeeklyHistory, WeeklySection } from "@/components/account/tabs/WeeklySe
 import { defineCopy, type Locale } from "@/i18n/config";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { describeCheckin } from "@/lib/checkin";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDayDate } from "@/lib/format";
 
 const copy = defineCopy({
   nl: {
     title: "Check-in",
     none: "Je hebt op dit moment geen lopend abonnement met een check-in. Met een abonnement vul je aan het einde van elke periode een korte check-in in, en maken we daarop je nieuwe schema.",
     titleFor: (seq: number) => `Check-in voor periode ${seq}`,
-    opensBefore: "Je check-in opent op",
-    opensAfter: ", een paar dagen voor het einde van je huidige periode. Je krijgt dan een e-mail.",
+    opensDated: (opens: string, advised: string, start: string) =>
+      `Je check-in opent op ${opens}. Vul hem uiterlijk ${advised} in, dan staat je nieuwe schema met boodschappenlijst op tijd klaar voor ${start}, en kun je in het weekend je boodschappen doen. Je krijgt een e-mail zodra hij opent.`,
+    timing:
+      "Waarom niet eerder? We maken je nieuwe schema bewust pas vlak voor de nieuwe periode, zodat het aansluit op hoe het nu met je gaat.",
     why: "Je nieuwe schema maken we pas na je check-in. Zo past het precies bij je voortgang: meer of minder eten, zwaarder of lichter trainen, of overstappen op op gewicht blijven als je je doel hebt bereikt.",
     preview: "Bekijk hoe de check-in eruitziet",
     submitted: "Je check-in is ontvangen. Je nieuwe schema wordt gemaakt.",
-    overdue: "Je huidige periode is voorbij. Vul je check-in in, dan maken we direct je nieuwe schema.",
-    open: (date: string) => `Je huidige periode loopt tot ${date}. Vul je check-in in, dan maken we direct je nieuwe schema.`,
+    overdue: "Je nieuwe periode is begonnen. Vul je check-in in, dan maken we direct je nieuwe schema; tot die tijd volg je je huidige schema.",
+    open: (advised: string, start: string) =>
+      `Je nieuwe periode start op ${start}. Vul je check-in uiterlijk ${advised} in, dan staat je nieuwe schema met boodschappenlijst op tijd klaar voor je boodschappen. Het nieuwe schema start op ${start}; tot die tijd volg je je huidige schema.`,
     duration: "Het kost je ongeveer 2 minuten.",
     history: "Je eerdere check-ins",
     forPeriod: (seq: number) => `Voor periode ${seq}`,
@@ -28,13 +31,16 @@ const copy = defineCopy({
     title: "Check-in",
     none: "You don't currently have an active subscription with a check-in. With a subscription, you complete a short check-in at the end of each period, and we use it to create your new plan.",
     titleFor: (seq: number) => `Check-in for period ${seq}`,
-    opensBefore: "Your check-in opens on",
-    opensAfter: ", a few days before the end of your current period. We'll send you an email then.",
+    opensDated: (opens: string, advised: string, start: string) =>
+      `Your check-in opens on ${opens}. Fill it in by ${advised}, and your new plan with shopping list will be ready in time for ${start}, so you can do your shopping at the weekend. We'll email you as soon as it opens.`,
+    timing:
+      "Why not earlier? We deliberately create your new plan just before the new period, so it matches how you're doing right now.",
     why: "We only create your new plan after your check-in. That way it matches your progress exactly: eating more or less, training harder or lighter, or switching to maintaining your weight once you've reached your goal.",
     preview: "See what the check-in looks like",
     submitted: "We've received your check-in. Your new plan is being created.",
-    overdue: "Your current period has ended. Complete your check-in and we'll create your new plan straight away.",
-    open: (date: string) => `Your current period runs until ${date}. Complete your check-in and we'll create your new plan straight away.`,
+    overdue: "Your new period has started. Complete your check-in and we'll create your new plan straight away; until then, keep following your current plan.",
+    open: (advised: string, start: string) =>
+      `Your new period starts on ${start}. Fill in your check-in by ${advised}, and your new plan with shopping list will be ready in time for your shopping. The new plan starts on ${start}; until then, keep following your current plan.`,
     duration: "It takes about 2 minutes.",
     history: "Your previous check-ins",
     forPeriod: (seq: number) => `For period ${seq}`,
@@ -66,11 +72,9 @@ export function CheckinTab({ view, base, demo, notice, l }: { view: AccountView;
             {withCheckin.length > 1 && <p className="mt-1 text-sm font-semibold text-muted">{productFor(o.product, l).name}</p>}
             {c.status === "upcoming" ? (
               <div className="mt-3 space-y-2 text-[0.9375rem] text-muted">
-                <p>
-                  {t.opensBefore} <strong className="text-ink">{formatDate(c.opensAt, l)}</strong>
-                  {t.opensAfter}
-                </p>
+                <p>{t.opensDated(formatDayDate(c.opensAt, l), formatDayDate(c.advisedBy, l), formatDayDate(c.dueAt, l))}</p>
                 <p>{t.why}</p>
+                <p>{t.timing}</p>
                 {demo && (
                   <details className="pt-2">
                     <summary className="cursor-pointer font-bold text-brand-700">{t.preview}</summary>
@@ -85,7 +89,7 @@ export function CheckinTab({ view, base, demo, notice, l }: { view: AccountView;
             ) : (
               <>
                 <p className="mt-2 mb-6 text-muted">
-                  {c.status === "overdue" ? t.overdue : t.open(formatDate(c.dueAt, l))} {t.duration}
+                  {c.status === "overdue" ? t.overdue : t.open(formatDayDate(c.advisedBy, l), formatDayDate(c.dueAt, l))} {t.duration}
                 </p>
                 <CheckinForm orderId={o.id} seq={c.seq} product={o.product} lastWeightKg={o.lastWeightKg} demo={demo} suggestion={suggestion} />
               </>

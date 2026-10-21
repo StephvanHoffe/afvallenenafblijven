@@ -2,7 +2,7 @@ import Link from "@/i18n/Link";
 import { Download } from "lucide-react";
 import { PlanStatusRefresher } from "@/components/account/PlanStatusRefresher";
 import { planMeta } from "@/components/account/shared";
-import { PlanCards, currentPeriod } from "@/components/account/tabs/PlanCards";
+import { PlanCards, UpcomingPlans, currentPeriod } from "@/components/account/tabs/PlanCards";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import type { AccountView } from "@/lib/account-types";
 import { formatDate } from "@/lib/format";
@@ -33,14 +33,15 @@ const copy = defineCopy({
 export function SchemasTab({ view, demo, l }: { view: AccountView; demo: boolean; l: Locale }) {
   const c = copy[l];
   const meta = planMeta(l);
-  const { latestSeq, current, earlier } = currentPeriod(view.plans);
-  const busy = current.some((p) => p.status !== "ready" && !p.failed);
+  const { latestSeq, current, upcoming, earlier } = currentPeriod(view.plans, view.now);
+  const busy = [...current, ...(upcoming?.plans ?? [])].some((p) => p.status !== "ready" && !p.failed);
   const allPdfHref = (seq: number) => localePath(l, demo ? "/voorbeeld/pdf/alles" : `/account/pdf?periode=${seq}`);
   const periods = [...new Set(earlier.map((p) => p.seq))].sort((a, b) => b - a);
 
   return (
     <div className="space-y-10">
       {busy && !demo && <PlanStatusRefresher />}
+      {upcoming && <UpcomingPlans upcoming={upcoming} l={l} />}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>

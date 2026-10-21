@@ -30,3 +30,15 @@ export function formatDate(date: Date | string, l: Locale = "nl"): string {
 export function formatNumber(n: number, digits = 0, l: Locale = "nl"): string {
   return n.toLocaleString(intlLocale(l), { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
+
+const dayDateFormatters = new Map<Locale, Intl.DateTimeFormat>();
+
+/** 2027-04-26 -> "maandag 26 april" (Engels: "Monday 26 April"). */
+export function formatDayDate(date: Date | string, l: Locale = "nl"): string {
+  let f = dayDateFormatters.get(l);
+  if (!f) {
+    f = new Intl.DateTimeFormat(intlLocale(l), { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" });
+    dayDateFormatters.set(l, f);
+  }
+  return f.format(typeof date === "string" ? new Date(date) : date);
+}

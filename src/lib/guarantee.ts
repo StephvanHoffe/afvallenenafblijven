@@ -1,4 +1,5 @@
 import { site } from "@/config/site";
+import { amsterdamMidnight } from "@/lib/dates";
 
 /**
  * Tevredenheidsgarantie (zie art. 10 van de algemene voorwaarden): binnen
@@ -6,32 +7,12 @@ import { site } from "@/config/site";
  * betaling volledig terugvragen. Dat kan via Mijn schema's of per e-mail.
  */
 
-const amsterdamParts = new Intl.DateTimeFormat("en-US", {
-  timeZone: "Europe/Amsterdam",
-  hourCycle: "h23",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-/** Verschil tussen Nederlandse tijd en UTC op een moment, in milliseconden. */
-function amsterdamOffsetMs(utcMs: number): number {
-  const parts = amsterdamParts.formatToParts(new Date(utcMs));
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
-  return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - (utcMs - (utcMs % 1000));
-}
-
 /**
  * Laatste moment om de garantie aan te vragen: het einde van de dag (Nederlandse
  * tijd) die `days` dagen na de aankoop valt. Zo klopt "tot en met <datum>".
  */
 export function guaranteeDeadline(orderedAt: Date, days: number = site.guarantee.days): Date {
-  const local = new Date(orderedAt.getTime() + amsterdamOffsetMs(orderedAt.getTime()));
-  const nextMidnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + days + 1);
-  return new Date(nextMidnight - amsterdamOffsetMs(nextMidnight) - 1);
+  return new Date(amsterdamMidnight(orderedAt, days + 1).getTime() - 1);
 }
 
 /** De bestelling waar de garantie op slaat: de eerste aankoop van de klant. */

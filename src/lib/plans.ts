@@ -33,6 +33,7 @@ import {
   type Plan,
 } from "@/lib/repo";
 import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
+import { newPeriodStartsAt } from "@/lib/schedule";
 import { processWeeklyLog } from "@/lib/weekly-server";
 import { defineCopy, toLocale, type Locale } from "@/i18n/config";
 import { nextActivityLevel, summarizeActivity, type ActivitySummary } from "@/lib/health/insights";
@@ -119,12 +120,12 @@ export async function processPlan(planId: string): Promise<void> {
       })),
     };
     // Gekoppelde gezondheidsapps: hoeveel de klant in de vorige periode echt bewoog en trainde.
-    const measured = plan.seq > 1 ? await measuredActivity(customer.id, previous?.created_at ?? order.created_at, intake, order) : null;
+    const measured = plan.seq > 1 ? await measuredActivity(customer.id, previous?.starts_at ?? order.created_at, intake, order) : null;
     const prevNutrition = previous?.content?.type === "voeding" ? previous.content : null;
     const usedActivity = nextActivityLevel(prevNutrition?.activity ?? intake.activity, measured?.measuredActivity ?? null);
     if (measured && measured.daysWithSteps + measured.workouts > 0) {
       progress.health = {
-        days: Math.round((Date.now() - new Date(previous?.created_at ?? order.created_at).getTime()) / DAY),
+        days: Math.round((Date.now() - new Date(previous?.starts_at ?? order.created_at).getTime()) / DAY),
         avgSteps: measured.avgSteps,
         workouts: measured.workouts,
         plannedWorkouts: measured.plannedWorkouts,
@@ -229,6 +230,7 @@ async function notifyIfOrderPeriodReady(orderId: string, seq: number): Promise<v
       types: plans.map((p) => p.type),
       link: await loginUrl(customer.id, undefined, l),
       seq,
+      startsAt: plans.reduce((min, p) => (p.starts_at < min ? p.starts_at : min), plans[0].starts_at),
       locale: l,
     }),
   );
@@ -243,10 +245,16 @@ export async function processOrderPlans(orderId: string): Promise<void> {
 
 /**
  * Start de volgende periode van een abonnement: maakt de schema's aan en
- * zet ze in de wachtrij. Geeft de periode terug (of null als die al bestond).
+ * zet ze in de wachtrij. Het schema is direct zichtbaar en begint op
+ * `startsAt` (de maandag van de nieuwe periode, of nu). Geeft de periode
+ * terug (of null als die al bestond).
  */
-export async function startNextPeriod(order: Pick<Order, "id" | "customer_id" | "product">, seq: number): Promise<number | null> {
-  const ids = await createPlans(order.id, order.customer_id, products[order.product].includes, seq);
+export async function startNextPeriod(
+  order: Pick<Order, "id" | "customer_id" | "product">,
+  seq: number,
+  startsAt: Date = new Date(),
+): Promise<number | null> {
+  const ids = await createPlans(order.id, order.customer_id, products[order.product].includes, seq, startsAt);
   return ids.length > 0 ? seq : null;
 }
 
@@ -278,7 +286,7 @@ export async function runScheduledWork(
     });
     if (!window || window.status === "upcoming") continue;
     if (window.status === "submitted") {
-      if (await startNextPeriod(order, window.seq)) scheduled++;
+      if (await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt, started))) scheduled++;
       continue;
     }
     const sent = order.checkin_reminded_seq === window.seq ? order.checkin_reminders : 0;
@@ -295,7 +303,16 @@ export async function runScheduledWork(
           link: await loginUrl(customer.id, "check-in", l),
           seq: window.seq,
           dueAt: window.dueAt,
-          reminder: sent,
+          advisedBy: window.advisedBy,
+          // De tekst volgt de datum: uitnodiging, "vandaag invullen" (za), "je periode is begonnen" (ma), daarna een laatste herinnering.
+          reminder:
+            started < window.advisedBy.getTime()
+              ? 0
+              : started < window.dueAt.getTime()
+                ? 1
+                : started < window.dueAt.getTime() + 7 * DAY
+                  ? 2
+                  : 3,
           locale: l,
         }),
       );

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { currentCustomer, endSession } from "@/lib/auth";
 import { checkinOptions, checkinWindow, type CheckinData } from "@/lib/checkin";
 import { processOrderPlans, startNextPeriod } from "@/lib/plans";
+import { newPeriodStartsAt } from "@/lib/schedule";
 import {
   addCheckin,
   createGuaranteeRequest,
@@ -144,7 +145,7 @@ export async function submitCheckin(_prev: FormState, formData: FormData): Promi
   const lastSeq = plans.reduce((m, p) => Math.max(m, p.seq), 0);
   const lastStart = plans
     .filter((p) => p.seq === lastSeq)
-    .reduce<Date | null>((min, p) => (!min || p.created_at < min ? p.created_at : min), null);
+    .reduce<Date | null>((min, p) => (!min || p.starts_at < min ? p.starts_at : min), null);
   const window = checkinWindow({
     duration: order.duration,
     status: order.status,
@@ -194,7 +195,8 @@ export async function submitCheckin(_prev: FormState, formData: FormData): Promi
   await setCustomerLocale(customer.id, l);
   // Dubbel verstuurd? Dan bestaat de check-in al; het schema starten is veilig om te herhalen.
   await addCheckin(customer.id, order.id, window.seq, parsed.data as CheckinData);
-  await startNextPeriod(order, window.seq);
+  // Het nieuwe schema staat zo klaar en start op de maandag van de nieuwe periode (of meteen, als die al begonnen is).
+  await startNextPeriod(order, window.seq, newPeriodStartsAt(window.dueAt));
   after(() => processOrderPlans(order.id));
   redirect(localePath(l, "/account?checkin=ontvangen"));
 }

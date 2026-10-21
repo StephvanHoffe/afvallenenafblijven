@@ -1,6 +1,7 @@
 import type { DurationId } from "@/config/pricing";
 import { calorieAdjustment, MAX_CALORIE_OFFSET, type CheckinData } from "@/lib/checkin";
 import { defineCopy, type Locale } from "@/i18n/config";
+import { checkinOpensAt, nextPeriodStart, shiftDays } from "@/lib/schedule";
 
 /**
  * Het wekelijkse weegmoment. Tussen twee check-ins kan de klant elke week
@@ -8,8 +9,10 @@ import { defineCopy, type Locale } from "@/i18n/config";
  * sturen we het lopende schema meteen bij: iets meer of minder calorieën, of
  * zwaarder of lichter trainen. Een nieuw schema volgt pas na de check-in.
  *
- * Een periode duurt 28 dagen. Er zijn drie weegmomenten: rond dag 7, 14 en
- * 21. Vanaf dag 25 neemt de check-in het over.
+ * Een periode duurt 4 weken en start op maandag. Er zijn drie weegmomenten,
+ * rond de maandagen in de periode. Elk weegmoment opent op de zaterdag ervoor,
+ * zodat een bijsturing op tijd is voor de boodschappen van de week erna. Het
+ * laatste sluit als de check-in opent (donderdag).
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -63,10 +66,17 @@ export interface WeeklyWindow {
   closesAt: Date;
 }
 
+/**
+ * Weegmoment `week` (1-3) rond de maandag 3, 2 of 1 week voor het einde van
+ * de periode. Null als die maandag te dicht op de start ligt (een korte eerste periode).
+ */
 function momentBounds(start: number, week: number) {
-  const opens = start + (7 * week - 2) * DAY;
-  // Het laatste weegmoment sluit als de check-in opent (dag 25).
-  const closes = start + Math.min(7 * week + 5, 25) * DAY;
+  const end = nextPeriodStart(new Date(start));
+  const monday = shiftDays(end, -7 * (WEEKLY_MOMENTS + 1 - week));
+  if (monday.getTime() < start + 5 * DAY) return null;
+  const opens = shiftDays(monday, -2).getTime();
+  // Een week later dicht, en het laatste weegmoment zodra de check-in opent.
+  const closes = Math.min(shiftDays(monday, 5).getTime(), checkinOpensAt(end).getTime());
   return { opens, closes };
 }
 
@@ -88,7 +98,9 @@ export function weeklyWindow(input: {
   if (!active) return null;
   const start = new Date(input.lastPeriodStart).getTime();
   for (let week = 1; week <= WEEKLY_MOMENTS; week++) {
-    const { opens, closes } = momentBounds(start, week);
+    const bounds = momentBounds(start, week);
+    if (!bounds) continue;
+    const { opens, closes } = bounds;
     if (input.now >= closes) continue;
     const status = input.now < opens ? "upcoming" : input.loggedWeeks.includes(week) ? "done" : "open";
     if (status === "done") {

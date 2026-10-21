@@ -6,12 +6,12 @@ import { HealthOverviewCard } from "@/components/account/health/HealthOverviewCa
 import { GoalMeter, StatTile } from "@/components/account/charts/Indicators";
 import { TimeChart } from "@/components/account/charts/TimeChart";
 import { Section, nextPlanText } from "@/components/account/shared";
-import { PlanCards, currentPeriod } from "@/components/account/tabs/PlanCards";
+import { PlanCards, UpcomingPlans, currentPeriod } from "@/components/account/tabs/PlanCards";
 import { weeklyOrder } from "@/components/account/tabs/WeeklySection";
 import { site } from "@/config/site";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import type { AccountNotice, AccountView } from "@/lib/account-types";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatDayDate, formatNumber } from "@/lib/format";
 import { buildProgress, type Progress } from "@/lib/progress";
 import type { TrainingDirection } from "@/lib/weekly";
 
@@ -25,9 +25,13 @@ const copy = defineCopy({
     checkinDoneTitle: "Dank je, je check-in is binnen!",
     checkinDoneText:
       "We maken nu je nieuwe schema, afgestemd op je antwoorden. Dat duurt een paar minuten; deze pagina ververst vanzelf en je krijgt een e-mail zodra het klaar is.",
+    checkinDoneUpcoming: (start: string) =>
+      `We maken nu je nieuwe schema, afgestemd op je antwoorden. Het staat over een paar minuten klaar en start op ${start}; tot die tijd volg je je huidige schema. Zo kun je alvast je boodschappen doen.`,
     overdueTitle: "Je nieuwe schema wacht op je check-in",
     openTitle: "Tijd voor je check-in!",
     openText: (seq: number) => `Vul hem in (2 minuten), dan maken we direct je schema voor periode ${seq}, afgestemd op hoe het ging.`,
+    openTextDated: (seq: number, advised: string, start: string) =>
+      `Vul hem uiterlijk ${advised} in (2 minuten), dan staat je schema voor periode ${seq} met boodschappenlijst op tijd klaar voor ${start}.`,
     openCta: "Check-in invullen",
     weeklyTitle: (week: number) => `Weegmoment week ${week}: hoe gaat het?`,
     weeklyText: "Vul je gewicht in (1 minuut). Wijkt je voortgang af, dan sturen we je schema meteen bij.",
@@ -71,9 +75,13 @@ const copy = defineCopy({
     checkinDoneTitle: "Thank you, your check-in is in!",
     checkinDoneText:
       "We're now creating your new plan, tailored to your answers. This takes a few minutes; this page refreshes automatically and you'll get an email as soon as it's ready.",
+    checkinDoneUpcoming: (start: string) =>
+      `We're now creating your new plan, tailored to your answers. It will be ready in a few minutes and starts on ${start}; until then, keep following your current plan. That way, you can already do your shopping.`,
     overdueTitle: "Your new plan is waiting for your check-in",
     openTitle: "Time for your check-in!",
     openText: (seq: number) => `Fill it in (2 minutes) and we'll create your plan for period ${seq} straight away, tailored to how things went.`,
+    openTextDated: (seq: number, advised: string, start: string) =>
+      `Fill it in by ${advised} (2 minutes), and your plan for period ${seq} with shopping list will be ready in time for ${start}.`,
     openCta: "Complete check-in",
     weeklyTitle: (week: number) => `Weekly weigh-in, week ${week}: how's it going?`,
     weeklyText: "Enter your weight (1 minute). If your progress is off track, we'll adjust your plan straight away.",
@@ -146,9 +154,9 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
   const activeSubs = view.orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due"));
   const mainSub = activeSubs[0] ?? null;
   const openCheckin = activeSubs.find((o) => o.checkin?.status === "open" || o.checkin?.status === "overdue")?.checkin ?? null;
-  const { latestSeq, current } = currentPeriod(view.plans);
-  const busy = current.some((p) => p.status !== "ready" && !p.failed);
-  const next = nextPlanText(mainSub?.checkin ?? null, l);
+  const { latestSeq, current, upcoming } = currentPeriod(view.plans, view.now);
+  const busy = [...current, ...(upcoming?.plans ?? [])].some((p) => p.status !== "ready" && !p.failed);
+  const next = nextPlanText(mainSub?.checkin ?? null, l, upcoming?.startsAt ?? null);
   const allPdfHref = localePath(l, demo ? "/voorbeeld/pdf/alles" : `/account/pdf?periode=${latestSeq}`);
   const weekly = weeklyOrder(view)?.weekly ?? null;
   const lastChange = [...view.weekly]
@@ -162,9 +170,11 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
       {notice === "checkin" && (
         <div role="status" className="rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-6">
           <h2 className="text-lg font-bold">{c.checkinDoneTitle}</h2>
-          <p className="mt-1 text-[0.9375rem]">{c.checkinDoneText}</p>
+          <p className="mt-1 text-[0.9375rem]">{upcoming ? c.checkinDoneUpcoming(formatDayDate(upcoming.startsAt, l)) : c.checkinDoneText}</p>
         </div>
       )}
+
+      {upcoming && <UpcomingPlans upcoming={upcoming} l={l} />}
 
       {openCheckin && notice !== "checkin" && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-5 sm:p-6">
@@ -172,7 +182,11 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
             <Sparkles className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
             <div>
               <h2 className="text-lg font-extrabold">{openCheckin.status === "overdue" ? c.overdueTitle : c.openTitle}</h2>
-              <p className="mt-1 text-[0.9375rem]">{c.openText(openCheckin.seq)}</p>
+              <p className="mt-1 text-[0.9375rem]">
+                {openCheckin.status === "open"
+                  ? c.openTextDated(openCheckin.seq, formatDayDate(openCheckin.advisedBy, l), formatDayDate(openCheckin.dueAt, l))
+                  : c.openText(openCheckin.seq)}
+              </p>
             </div>
           </div>
           <Link href={accountHref(base, "check-in")} className="btn-primary !py-2.5 text-sm">
@@ -181,7 +195,7 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
         </div>
       )}
 
-      {!openCheckin && weekly?.status === "open" && (
+      {!openCheckin && !upcoming && weekly?.status === "open" && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border-2 border-brand-200 bg-brand-50 p-5 sm:p-6">
           <div className="flex gap-3">
             <Scale className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
@@ -218,7 +232,7 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
         <StatTile
           label={c.nextPlan}
           value={mainSub ? next.title.replace(/ \((vanaf|from) .*\)$/, "") : "–"}
-          sub={mainSub?.checkin ? c.periodSub(mainSub.checkin.seq) : undefined}
+          sub={upcoming ? c.periodSub(upcoming.seq) : mainSub?.checkin ? c.periodSub(mainSub.checkin.seq) : undefined}
         />
       </div>
 

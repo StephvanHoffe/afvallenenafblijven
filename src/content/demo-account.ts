@@ -5,12 +5,16 @@ import type { WeeklyLog } from "@/lib/weekly";
 import type { Intake } from "@/lib/intake";
 import { monthlyPrice } from "@/config/pricing";
 import { guaranteeDeadline } from "@/lib/guarantee";
+import { checkinWindow } from "@/lib/checkin";
+import { weeklyWindow } from "@/lib/weekly";
 import { sampleTargets, sampleTargetsFollowUp } from "@/content/sample-plans";
 
 /**
  * Voorbeelddata voor de demo van Mijn schema's (/voorbeeld/mijn-schemas).
- * Een fictieve klant met de bundel, die nu in periode 4 zit en haar check-in
- * voor periode 5 kan invullen. Vaste datums, zodat de pagina's statisch zijn.
+ * Een fictieve klant met de bundel, die nu in periode 4 zit; haar check-in
+ * voor periode 5 opent donderdag. Vaste datums, zodat de pagina's statisch
+ * zijn. De perioden volgen het gewone ritme: start op maandag, check-in vanaf
+ * de donderdag ervoor (zie src/lib/schedule.ts).
  */
 export const demoCustomerName = "Sanne";
 
@@ -46,21 +50,33 @@ export const demoIntake: Intake = {
 };
 
 const at = (iso: string) => new Date(`${iso}T09:14:00+01:00`);
-const PERIODS = ["2027-01-06", "2027-02-03", "2027-03-03", "2027-03-31"];
+/** In de demo is het dinsdag 20 april 2027. */
+const DEMO_NOW = new Date("2027-04-20T10:00:00+02:00");
+/**
+ * Per periode: wanneer de schema's zijn gemaakt (na de check-in, op de
+ * aankoopdag voor de eerste) en wanneer de periode begon (maandag).
+ */
+const PERIODS = [
+  { made: "2027-01-06", start: new Date("2027-01-06T09:14:00+01:00") },
+  { made: "2027-01-30", start: new Date("2027-02-01T00:00:00+01:00") },
+  { made: "2027-02-27", start: new Date("2027-03-01T00:00:00+01:00") },
+  { made: "2027-03-26", start: new Date("2027-03-29T00:00:00+02:00") },
+];
 
 /** Datum waarop de schema's van de huidige periode (4) zijn gemaakt. */
-export const demoPlanDate = at(PERIODS[3]);
+export const demoPlanDate = at(PERIODS[3].made);
 export const DEMO_SEQ = 4;
 
-const plans: DashboardPlan[] = PERIODS.flatMap((day, i) => {
+const plans: DashboardPlan[] = PERIODS.flatMap((period, i) => {
   const seq = i + 1;
   const current = seq === DEMO_SEQ;
   return (["voeding", "training"] as const).map((type) => ({
     id: `demo-${type}-${seq}`,
     type,
     seq,
+    startsAt: period.start,
     status: "ready" as const,
-    generatedAt: at(day),
+    generatedAt: at(period.made),
     failed: false,
     href: type === "voeding" ? "/voorbeeld/mijn-schemas/voedingsschema" : "/voorbeeld/mijn-schemas/trainingsschema",
     pdfHref: current ? `/voorbeeld/pdf/${type === "voeding" ? "voedingsschema" : "trainingsschema"}` : "/voorbeeld/pdf/alles",
@@ -72,7 +88,7 @@ export const demoWeekly: WeeklyLog[] = [
   {
     seq: 4,
     week: 1,
-    date: at("2027-04-07"),
+    date: at("2027-04-03"),
     status: "ready",
     data: { weightKg: 72, energy: "Goed", hunger: "Soms", nutritionAdherence: "Meestal (70-90%)", trainingAdherence: "De meeste", difficulty: "Precies goed" },
     adjustment: { kcal: 0, calories: 1540, message: "Je ligt op koers. Je schema blijft zoals het is; ga zo door!" },
@@ -80,7 +96,7 @@ export const demoWeekly: WeeklyLog[] = [
   {
     seq: 4,
     week: 2,
-    date: at("2027-04-14"),
+    date: at("2027-04-11"),
     status: "ready",
     data: {
       weightKg: 72.1,
@@ -121,6 +137,7 @@ export const demoWeekly: WeeklyLog[] = [
 ];
 
 export const demoAccountView: AccountView = {
+  now: DEMO_NOW,
   name: demoCustomerName,
   orders: [
     {
@@ -133,20 +150,24 @@ export const demoAccountView: AccountView = {
       createdAt: new Date("2027-01-06T09:12:00+01:00"),
       manageable: true,
       commitmentEndsAt: new Date("2027-07-06T09:12:00+02:00"),
-      // In de demo is het 20 april 2027: weegmoment 3 staat open, de check-in voor periode 5 komt eraan.
-      checkin: {
-        seq: 5,
-        status: "upcoming",
-        opensAt: new Date("2027-04-25T09:14:00+02:00"),
-        dueAt: new Date("2027-04-28T09:14:00+02:00"),
-      },
-      weekly: {
-        seq: 4,
-        week: 3,
-        status: "open",
-        opensAt: new Date("2027-04-19T09:14:00+02:00"),
-        closesAt: new Date("2027-04-25T09:14:00+02:00"),
-      },
+      // In de demo is het dinsdag 20 april 2027: weegmoment 3 staat open, de check-in voor periode 5 opent donderdag.
+      checkin: checkinWindow({
+        duration: "6m",
+        status: "active",
+        cancelAt: null,
+        lastSeq: DEMO_SEQ,
+        lastPeriodStart: PERIODS[3].start,
+        submittedForNext: false,
+        now: DEMO_NOW.getTime(),
+      }),
+      weekly: weeklyWindow({
+        duration: "6m",
+        status: "active",
+        lastSeq: DEMO_SEQ,
+        lastPeriodStart: PERIODS[3].start,
+        loggedWeeks: [1, 2],
+        now: DEMO_NOW.getTime(),
+      }),
       lastWeightKg: 72.1,
     },
   ],
@@ -156,7 +177,7 @@ export const demoAccountView: AccountView = {
   checkins: [
     {
       seq: 2,
-      date: at("2027-02-03"),
+      date: at("2027-01-30"),
       data: {
         weightKg: 75.6,
         waistCm: 92,
@@ -172,7 +193,7 @@ export const demoAccountView: AccountView = {
     },
     {
       seq: 3,
-      date: at("2027-03-03"),
+      date: at("2027-02-27"),
       data: {
         weightKg: 74,
         waistCm: 89.5,
@@ -187,7 +208,7 @@ export const demoAccountView: AccountView = {
     },
     {
       seq: 4,
-      date: at("2027-03-31"),
+      date: at("2027-03-26"),
       data: {
         weightKg: 72.3,
         waistCm: 87,
@@ -217,10 +238,10 @@ export const demoAccountView: AccountView = {
     handledAt: null,
   },
   targets: [
-    { seq: 1, date: at(PERIODS[0]), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
-    { seq: 2, date: at(PERIODS[1]), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },
-    { seq: 3, date: at(PERIODS[2]), calories: 1550, proteinG: 120, carbsG: 155, fatG: 50 },
-    { seq: 4, date: at(PERIODS[3]), calories: sampleTargetsFollowUp.calories, proteinG: 120, carbsG: sampleTargetsFollowUp.carbsG, fatG: 50 },
+    { seq: 1, date: at(PERIODS[0].made), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
+    { seq: 2, date: at(PERIODS[1].made), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },
+    { seq: 3, date: at(PERIODS[2].made), calories: 1550, proteinG: 120, carbsG: 155, fatG: 50 },
+    { seq: 4, date: at(PERIODS[3].made), calories: sampleTargetsFollowUp.calories, proteinG: 120, carbsG: sampleTargetsFollowUp.carbsG, fatG: 50 },
   ],
 };
 
