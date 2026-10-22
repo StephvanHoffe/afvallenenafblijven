@@ -9,7 +9,13 @@ export interface PromoView {
   label: string;
   /** Laatste dag, bijv. "maandag 30 november". */
   endsLabel: string;
+  /** Einde van de actie (ISO), voor de aftelklok. */
+  endsAt: string;
   percentOff: Record<DurationId, number>;
+  /** Op hoeveel maandbetalingen de korting geldt (een los schema is één betaling). */
+  months: number;
+  /** Eigen uiterlijk van de landingspagina's en de startknop, zolang de actie loopt. */
+  theme: "blackfriday" | null;
 }
 
 /**
@@ -22,5 +28,13 @@ export async function currentPromotion(l: Locale): Promise<PromoView | null> {
   cacheLife("minutes");
   const p = activePromotion(new Date());
   if (!p) return null;
-  return { id: p.id, label: l === "en" ? p.labelEn : p.label, endsLabel: promotionEndLabel(p, l), percentOff: { ...p.percentOff } };
+  return {
+    id: p.id,
+    label: l === "en" ? p.labelEn : p.label,
+    endsLabel: promotionEndLabel(p, l),
+    endsAt: p.endsAt,
+    percentOff: { ...p.percentOff },
+    months: p.months,
+    theme: p.theme,
+  };
 }

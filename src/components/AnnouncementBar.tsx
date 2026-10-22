@@ -15,14 +15,14 @@ export async function AnnouncementBar() {
             <Gift className="size-4 shrink-0 text-lime-glow" aria-hidden />
             {l === "en" ? (
               <span>
-                <strong className="text-lime-glow">{promo.label}:</strong> {promotionSummary(promo.percentOff, l)}, until {promo.endsLabel}.{" "}
+                <strong className="text-lime-glow">{promo.label}:</strong> {promotionSummary(promo.percentOff, promo.months, l)}, until {promo.endsLabel}.{" "}
                 <Link href="/start" className="font-bold underline underline-offset-2">
                   Start now
                 </Link>
               </span>
             ) : (
               <span>
-                <strong className="text-lime-glow">{promo.label}:</strong> {promotionSummary(promo.percentOff, l)}, t/m {promo.endsLabel}.{" "}
+                <strong className="text-lime-glow">{promo.label}:</strong> {promotionSummary(promo.percentOff, promo.months, l)}, t/m {promo.endsLabel}.{" "}
                 <Link href="/start" className="font-bold underline underline-offset-2">
                   Start nu
                 </Link>

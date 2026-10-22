@@ -25,7 +25,7 @@ import { FixSection, FutureSection, PainSection } from "@/components/conversion"
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { StickyCta } from "@/components/StickyCta";
+import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, bfGlow, promoPercent } from "@/components/campaign/BlackFriday";
 import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
 import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
 import { promotionSummary, site } from "@/config/site";
@@ -120,26 +120,37 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
   const price = fromPrice(variant);
+  // Zolang een Black Friday-actie loopt, krijgt de pagina het Black Friday-thema.
+  const bf = promo?.theme === "blackfriday" ? promo : null;
+  const bfc = bfCopy[l];
 
   return (
     <>
       {/* HERO */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 -z-10 h-[40rem] bg-gradient-to-b from-brand-50 to-cream" />
+      <section className={`relative overflow-hidden ${bf ? "text-white" : ""}`} style={bf ? bfGlow : undefined}>
+        {!bf && <div className="absolute inset-x-0 top-0 -z-10 h-[40rem] bg-gradient-to-b from-brand-50 to-cream" />}
         <div className="container-page grid items-center gap-10 pt-8 pb-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:pt-14 lg:pb-20">
           <div className="min-w-0">
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
-              <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-              {promo
-                ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, l), promo.endsLabel)
-                : c.badge}
-            </p>
-            <h1 className="heading-xl">
+            {bf ? (
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-lime-glow/40 bg-black px-3.5 py-1.5 text-sm font-bold tracking-wide text-lime-glow uppercase">
+                <span className="size-2 shrink-0 animate-pulse rounded-full bg-accent-400 motion-reduce:animate-none" aria-hidden />
+                {bfc.badge(bf.endsLabel)}
+              </p>
+            ) : (
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
+                <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                {promo
+                  ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel)
+                  : c.badge}
+              </p>
+            )}
+            <h1 className={`heading-xl ${bf ? "text-white" : ""}`}>
               {v.title[0]}
-              <span className="text-brand-600">{v.title[1]}</span>
+              <span className={bf ? "text-lime-glow" : "text-brand-600"}>{v.title[1]}</span>
               {v.title[2]}
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{v.intro}</p>
+            <p className={`mt-5 max-w-xl text-lg leading-relaxed ${bf ? "text-white/75" : "text-muted"}`}>{v.intro}</p>
+            {bf && <BlackFridayOffer promo={bf} l={l} href={mainHref} fromPrice={price} />}
 
             <div className="mt-7 max-w-xl rounded-[var(--radius-card)] border border-line bg-white p-4 shadow-[var(--shadow-lift)] sm:p-5">
               <p className="text-lg font-extrabold">{c.pickTitle}</p>
@@ -169,17 +180,27 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
               </div>
             </div>
 
-            <p className="mt-5 text-[0.9375rem] font-semibold text-ink/80">
-              <span className="text-brand-700">{c.priceFrom(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> · {c.priceNote}
-            </p>
+            {!bf && (
+              <p className="mt-5 text-[0.9375rem] font-semibold text-ink/80">
+                <span className="text-brand-700">{c.priceFrom(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> · {c.priceNote}
+              </p>
+            )}
             <div className="mt-5">
-              <TrustRow />
+              <TrustRow light={Boolean(bf)} />
             </div>
-            <p className="mt-3 text-xs text-muted">{resultDisclaimer[l].short}</p>
+            <p className={`mt-3 text-xs ${bf ? "text-white/55" : "text-muted"}`}>{resultDisclaimer[l].short}</p>
           </div>
 
           <div className="relative mx-auto w-full max-w-xl">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)] sm:aspect-square">
+            {bf && (
+              <div className="absolute -top-5 -left-2 z-10 grid size-24 -rotate-12 place-items-center rounded-full bg-lime-glow text-center text-brand-950 shadow-[0_12px_32px_-8px_rgb(200_241_105/0.7)] ring-4 ring-black sm:-left-6 sm:size-32">
+                <span>
+                  <span className="block text-2xl leading-none font-black sm:text-4xl">−{promoPercent(bf)}%</span>
+                  <span className="block text-[0.6875rem] font-extrabold tracking-wide uppercase sm:text-xs">{bfc.sticker}</span>
+                </span>
+              </div>
+            )}
+            <div className={`relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)] sm:aspect-square ${bf ? "ring-1 ring-white/10" : ""}`}>
               <Image
                 src={settings.image.src}
                 alt={v.heroAlt}
@@ -238,6 +259,8 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
           </div>
         </div>
       </section>
+
+      {bf && <BlackFridayMarquee promo={bf} l={l} />}
 
       {/* HERKEN JE DIT? Eerst het probleem, dan wat het kost, dan de uitweg. */}
       <PainSection topic={variant} l={l} href={mainHref} cta="pijn" />
@@ -461,7 +484,11 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
 
       {/* PRIJZEN */}
       <section id="prijzen" className="container-page scroll-mt-20 py-16">
-        <SectionHeading eyebrow={c.pricingEyebrow} title={c.pricingTitle} intro={c.pricingIntro} />
+        {bf ? (
+          <SectionHeading eyebrow={bfc.pricingEyebrow} title={bfc.pricingTitle(promoPercent(bf), bf.months)} intro={bfc.pricingIntro} />
+        ) : (
+          <SectionHeading eyebrow={c.pricingEyebrow} title={c.pricingTitle} intro={c.pricingIntro} />
+        )}
         <PricingTable promo={promo} only={settings.pricing.only} highlight={settings.pricing.highlight} />
         <div className="mt-12 space-y-6">
           <Guarantee />
@@ -481,13 +508,16 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
         <FaqList items={faqInOrder(l, settings.faq)} />
       </section>
 
-      <CtaBanner
-        title={v.finalTitle}
-        text={v.finalText + (site.guarantee.enabled ? c.finalRisk(site.guarantee.days) : "")}
-        href={mainHref}
-        label={v.ctaLabel}
-      />
-      <StickyCta href={mainHref} label={v.ctaLabel} />
+      {bf ? (
+        <BlackFridayFinal promo={bf} l={l} href={mainHref} />
+      ) : (
+        <CtaBanner
+          title={v.finalTitle}
+          text={v.finalText + (site.guarantee.enabled ? c.finalRisk(site.guarantee.days) : "")}
+          href={mainHref}
+          label={v.ctaLabel}
+        />
+      )}
     </>
   );
 }

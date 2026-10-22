@@ -4,7 +4,6 @@ import { ArrowRight, Check } from "lucide-react";
 import { FixSection, FutureSection, PainSection } from "@/components/conversion";
 import { CtaBanner, FaqJsonLd, FaqList, Guarantee, PageHero, SectionHeading, TrustRow } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { StickyCta } from "@/components/StickyCta";
 import type { FaqItem } from "@/content/faq";
 import type { ProductId } from "@/config/pricing";
 import { defineCopy } from "@/i18n/config";
@@ -179,7 +178,6 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
       </section>
 
       <CtaBanner href={startHref} title={c.finalTitle[content.product]} label={c.start[content.product]} />
-      <StickyCta href={startHref} label={c.start[content.product]} />
     </>
   );
 }

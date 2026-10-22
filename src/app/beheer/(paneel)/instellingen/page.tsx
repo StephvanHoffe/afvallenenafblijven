@@ -209,6 +209,12 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
           </Panel>
 
           <Panel title="Acties en garantie">
+            {process.env.PROMOTION_OVERRIDE && (
+              <p className="border-b border-line bg-accent-50 px-5 py-3 text-sm font-semibold text-accent-600">
+                PROMOTION_OVERRIDE staat aan ({process.env.PROMOTION_OVERRIDE}): die actie geldt nu, ook bij het afrekenen. Alleen voor testen; haal hem
+                weg in productie.
+              </p>
+            )}
             <dl className="divide-y divide-line text-sm">
               {site.promotions.map((p) => {
                 const start = Date.parse(p.startsAt);
@@ -228,7 +234,10 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
                         .filter((d) => p.percentOff[d] > 0)
                         .map((d) => `${d === "eenmalig" ? "los" : d === "1m" ? "per maand" : durations[d].label} ${p.percentOff[d]}%`)
                         .join(" · ")}
-                      <span className="block text-xs font-normal text-muted">op de eerste betaling</span>
+                      <span className="block text-xs font-normal text-muted">
+                        {p.months > 1 ? `op de eerste ${p.months} maanden (los schema: de betaling)` : "op de eerste betaling"}
+                        {p.theme === "blackfriday" ? " · Black Friday-thema op de landingspagina's" : ""}
+                      </span>
                     </dd>
                   </div>
                 );

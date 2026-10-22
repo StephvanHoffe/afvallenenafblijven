@@ -13,7 +13,6 @@ import {
   TrustRow,
 } from "@/components/marketing";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { StickyCta } from "@/components/StickyCta";
 import { FutureSection, PainSection } from "@/components/conversion";
 import { faqInOrder } from "@/content/faq";
 import { currentPromotion } from "@/lib/promotion";
@@ -502,7 +501,6 @@ export default async function HomePage() {
       </section>
 
       <CtaBanner />
-      <StickyCta />
     </>
   );
 }

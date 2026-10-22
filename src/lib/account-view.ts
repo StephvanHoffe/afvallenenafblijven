@@ -1,6 +1,7 @@
 import type { HealthView } from "@/lib/health/view";
 import type { AccountView, DashboardOrder, DashboardPlan, GuaranteeView, PaymentView } from "@/lib/account-types";
-import { durations, isSubscription } from "@/config/pricing";
+import { applyPercentOff, durations, isSubscription } from "@/config/pricing";
+import { promotionMonths, promotionPercent, site } from "@/config/site";
 import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
 import { weeklyWindow } from "@/lib/weekly";
@@ -123,8 +124,9 @@ export function toAccountView(input: {
 
 /**
  * De volgende maandelijkse afschrijving van een lopend abonnement. Stripe
- * schrijft elke maand af op de dag van de aankoop; met een kortingscode kan
- * het bedrag afwijken, dan tonen we alleen de datum.
+ * schrijft elke maand af op de dag van de aankoop. Valt die nog binnen een
+ * actie (bijv. de 2e maand met Black Friday), dan geldt de actieprijs; met een
+ * kortingscode kan het bedrag afwijken, dan tonen we alleen de datum.
  */
 function nextPaymentFor(o: Order, now: number): DashboardOrder["nextPayment"] {
   if (!isSubscription(o.duration) || !o.stripe_subscription_id || o.status !== "active") return null;
@@ -132,7 +134,11 @@ function nextPaymentFor(o: Order, now: number): DashboardOrder["nextPayment"] {
   let next = addMonthsClamped(new Date(o.created_at), n);
   while (next.getTime() <= now) next = addMonthsClamped(new Date(o.created_at), ++n);
   if (o.cancel_at && next.getTime() >= o.cancel_at.getTime()) return null;
-  return { date: next, amountCents: o.discount_code || !o.monthly_cents ? null : o.monthly_cents };
+  if (o.discount_code || !o.monthly_cents) return { date: next, amountCents: null };
+  // De volgende afschrijving is betaling nummer n + 1.
+  const promo = o.promotion ? site.promotions.find((p) => p.id === o.promotion) : undefined;
+  const discounted = promo && n + 1 <= promotionMonths(promo, o.duration);
+  return { date: next, amountCents: discounted ? applyPercentOff(o.monthly_cents, promotionPercent(promo, o.duration)) : o.monthly_cents };
 }
 
 /** Betalingen met de bestelling erbij en, bij abonnementen, de hoeveelste maand het is. */

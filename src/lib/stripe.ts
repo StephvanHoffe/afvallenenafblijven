@@ -9,7 +9,7 @@ import {
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
-import { activePromotion, promotionPercent, site, type Promotion } from "@/config/site";
+import { activePromotion, promotionMonths, promotionPercent, site, type Promotion } from "@/config/site";
 import { addMonthsClamped } from "@/lib/dates";
 import { localeUrl, type Locale } from "@/i18n/config";
 import { saveStripeCoupon, type DiscountCodeRow } from "@/lib/discounts-server";
@@ -123,9 +123,13 @@ async function ensureTaxRate(): Promise<string> {
   return taxRateId;
 }
 
-/** De Stripe-coupon voor een actie en kortingspercentage (één per percentage, alleen op de eerste betaling). */
-async function ensurePromotionCoupon(promo: Promotion, percent: number): Promise<string> {
-  const id = `afb_actie_${promo.id}_${percent}`;
+/**
+ * De Stripe-coupon voor een actie: één per percentage en aantal maanden. Bij
+ * één maand geldt hij alleen op de eerste betaling, anders op de eerste
+ * `months` maandbetalingen.
+ */
+async function ensurePromotionCoupon(promo: Promotion, percent: number, months: number): Promise<string> {
+  const id = months > 1 ? `afb_actie_${promo.id}_${percent}_${months}m` : `afb_actie_${promo.id}_${percent}`;
   try {
     const coupon = await stripe().coupons.retrieve(id);
     return coupon.id;
@@ -133,9 +137,9 @@ async function ensurePromotionCoupon(promo: Promotion, percent: number): Promise
     if (!isMissing(err)) throw err;
     const coupon = await stripe().coupons.create({
       id,
-      name: `${promo.label} ${percent}%`,
+      name: months > 1 ? `${promo.label} ${percent}% (${months} mnd)` : `${promo.label} ${percent}%`,
       percent_off: percent,
-      duration: "once",
+      ...(months > 1 ? { duration: "repeating" as const, duration_in_months: months } : { duration: "once" as const }),
       metadata: { promotion: promo.id },
     });
     return coupon.id;
@@ -190,7 +194,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
   const discounts = input.discount
     ? [{ coupon: await ensureCodeCoupon(input.discount) }]
     : promo && promoPercent > 0
-      ? [{ coupon: await ensurePromotionCoupon(promo, promoPercent) }]
+      ? [{ coupon: await ensurePromotionCoupon(promo, promoPercent, promotionMonths(promo, input.duration)) }]
       : undefined;
   const l = input.locale ?? "nl";
   const months = durations[input.duration].months;

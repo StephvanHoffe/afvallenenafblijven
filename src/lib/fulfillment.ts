@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  applyPercentOff,
   durationFor,
   isDurationId,
   isProductId,
@@ -8,6 +9,7 @@ import {
   productFor,
   products,
 } from "@/config/pricing";
+import { promotionMonths, promotionPercent, site } from "@/config/site";
 import { scheduledDelivery } from "@/lib/settings";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { recordPayment } from "@/lib/payments";
@@ -37,6 +39,9 @@ const orderCopy = defineCopy({
     renewalAfter: (amount: string, label: string) => `${amount} per maand via SEPA-incasso; na ${label} maandelijks opzegbaar`,
     incasso: (amount: string) =>
       `We schrijven elke maand ${amount} af via SEPA-incasso, rond dezelfde datum als je eerste betaling. Deze e-mail geldt als vooraankondiging van die afschrijvingen. Op je bankafschrift staat de afschrijving van onze betaalpartner Stripe.`,
+    promoRenewal: (months: number, amount: string) => (months === 2 ? ` (je 2e maand: ${amount})` : ` (maand 2 t/m ${months}: ${amount} per maand)`),
+    promoIncasso: (label: string, months: number, amount: string) =>
+      months === 2 ? ` Door de ${label}-korting schrijven we je 2e maand ${amount} af.` : ` Door de ${label}-korting schrijven we maand 2 t/m ${months} ${amount} per maand af.`,
   },
   en: {
     oneOff: "Single plan (4 weeks)",
@@ -47,6 +52,11 @@ const orderCopy = defineCopy({
     renewalAfter: (amount: string, label: string) => `${amount} a month by SEPA Direct Debit; cancel monthly after ${label}`,
     incasso: (amount: string) =>
       `We'll collect ${amount} every month by SEPA Direct Debit, around the same date as your first payment. This email serves as advance notice of these collections. The payments will appear on your bank statement under our payment partner Stripe.`,
+    promoRenewal: (months: number, amount: string) => (months === 2 ? ` (your 2nd month: ${amount})` : ` (months 2 to ${months}: ${amount} a month)`),
+    promoIncasso: (label: string, months: number, amount: string) =>
+      months === 2
+        ? ` Thanks to the ${label} discount, we'll collect ${amount} for your 2nd month.`
+        : ` Thanks to the ${label} discount, we'll collect ${amount} a month for months 2 to ${months}.`,
   },
 });
 
@@ -67,7 +77,7 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
   const existing = await getOrderBySession(session.id);
   if (existing) return existing;
 
-  const { intake_id: intakeId, product, duration, discount_code: discountCode } = session.metadata ?? {};
+  const { intake_id: intakeId, product, duration, discount_code: discountCode, promotion: promotionId } = session.metadata ?? {};
   if (!intakeId || !isProductId(product) || !isDurationId(duration)) {
     throw new Error(`Checkout ${session.id} mist geldige metadata`);
   }
@@ -97,6 +107,7 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
     amountCents: session.amount_total ?? 0,
     monthlyCents: isSubscription(duration) ? monthlyPrice(product, duration) : 0,
     discountCode: discountCode ?? intake.discount_code ?? null,
+    promotion: promotionId ?? null,
   });
   if (!order) return getOrderBySession(session.id);
 
@@ -134,6 +145,11 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
   const c = orderCopy[l];
   const d = durationFor(duration, l);
   const monthly = euro(monthlyPrice(product, duration), l);
+  // Een actie met korting op meer dan één maand: dat hoort in de vooraankondiging van de incasso.
+  const promo = promotionId ? site.promotions.find((p) => p.id === promotionId) : undefined;
+  const promoMonths = promo && isSubscription(duration) ? promotionMonths(promo, duration) : 1;
+  const promoAmount = promo ? euro(applyPercentOff(monthlyPrice(product, duration), promotionPercent(promo, duration)), l) : "";
+  const promoLabel = promo ? (l === "en" ? promo.labelEn : promo.label) : "";
   await sendMail(
     orderConfirmationEmail({
       to: customer.email,
@@ -142,8 +158,13 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
       productName: productFor(product, l).name,
       durationLabel: !isSubscription(duration) ? c.oneOff : d.months === 1 ? c.monthly : c.minimum(d.label),
       amountPaid: euro(order.amount_cents, l),
-      renewal: !isSubscription(duration) ? c.noRenewal : d.months === 1 ? c.renewalMonthly(monthly) : c.renewalAfter(monthly, d.label),
-      incassoNote: isSubscription(duration) ? c.incasso(monthly) : undefined,
+      renewal: !isSubscription(duration)
+        ? c.noRenewal
+        : (d.months === 1 ? c.renewalMonthly(monthly) : c.renewalAfter(monthly, d.label)) +
+          (promoMonths > 1 ? c.promoRenewal(promoMonths, promoAmount) : ""),
+      incassoNote: isSubscription(duration)
+        ? c.incasso(monthly) + (promoMonths > 1 ? c.promoIncasso(promoLabel, promoMonths, promoAmount) : "")
+        : undefined,
       locale: l,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));

@@ -271,6 +271,8 @@ const copy = defineCopy({
       codeLine: (code: string) => `Kortingscode ${code}`,
       codeReplacesLaunch: "Je kortingscode vervangt de actiekorting.",
       codeRepeating: (n: number, amount: string) => `Met je kortingscode betaal je de eerste ${n} maanden ${amount} per maand.`,
+      promoRepeating: (label: string, n: number, amount: string) =>
+        n === 2 ? `Met de ${label}-korting betaal je ook je 2e maand ${amount}.` : `Met de ${label}-korting betaal je de eerste ${n} maanden ${amount} per maand.`,
       codeFailed: "We konden de code nu niet controleren. Probeer het opnieuw.",
     },
     calculating: {
@@ -455,6 +457,8 @@ const copy = defineCopy({
       codeLine: (code: string) => `Discount code ${code}`,
       codeReplacesLaunch: "Your discount code replaces the promotional discount.",
       codeRepeating: (n: number, amount: string) => `With your discount code, you pay ${amount} a month for the first ${n} months.`,
+      promoRepeating: (label: string, n: number, amount: string) =>
+        n === 2 ? `With the ${label} discount, you also pay ${amount} for your 2nd month.` : `With the ${label} discount, you pay ${amount} a month for the first ${n} months.`,
       codeFailed: "We couldn't check the code right now. Please try again.",
     },
     calculating: {
@@ -1416,6 +1420,8 @@ function CheckoutBox({
   const first = discount ? discountedAmount(total, discount.terms) : promoPercent > 0 ? applyPercentOff(total, promoPercent) : total;
   const later = discount && discount.terms.duration === "forever" ? discountedAmount(total, discount.terms) : total;
   const repeating = discount && subscription ? discountedPayments(discount.terms) : null;
+  // Een actie kan op meer dan één maand gelden (bijv. Black Friday: de eerste 2 maanden).
+  const promoMonths = !discount && promo && promoPercent > 0 && subscription ? promo.months : 1;
   const c = state.consents;
   const ready = c.healthData && c.terms && c.immediateDelivery;
   const [touched, setTouched] = useState(false);
@@ -1480,6 +1486,7 @@ function CheckoutBox({
         </div>
         <p className="text-sm text-muted">
           {repeating && repeating > 1 ? `${t.codeRepeating(repeating, euro(discountedAmount(total, discount!.terms), l))} ` : ""}
+          {promoMonths > 1 ? `${t.promoRepeating(promo!.label, promoMonths, euro(first, l))} ` : ""}
           {subscription
             ? d.months === 1
               ? t.monthly(euro(later, l))

@@ -1010,7 +1010,7 @@ export function buildOpportunities(i: OpportunityInput): { kansen: Kans[]; stren
   for (const promo of site.promotions.filter((p) => p.enabled)) {
     const start = Date.parse(promo.startsAt);
     const end = Date.parse(promo.endsAt);
-    const summary = promotionSummary({ ...promo.percentOff }, "nl");
+    const summary = promotionSummary({ ...promo.percentOff }, promo.months, "nl");
     if (start > nowMs && start - nowMs < 21 * DAY) {
       out.push({
         id: `actie-start-${promo.id}`,
@@ -1233,9 +1233,12 @@ export function opportunitySummary(i: OpportunityInput, kansen: Kans[]): string 
         `${products[p].shortName}: ${[...SUBSCRIPTION_DURATIONS, "eenmalig" as const]
           .map((d) => `${d === "eenmalig" ? "los" : d} € ${(monthlyPrice(p, d) / 100).toFixed(2)}`)
           .join(", ")}`,
-    ).join("; ")}. Acties (korting op de eerste betaling): ${site.promotions
+    ).join("; ")}. Acties: ${site.promotions
       .filter((p) => p.enabled)
-      .map((p) => `${p.label} ${p.startsAt.slice(0, 10)} t/m ${p.endsAt.slice(0, 10)} (${Object.entries(p.percentOff).map(([d, v]) => `${d} ${v}%`).join(", ")})`)
+      .map(
+        (p) =>
+          `${p.label} ${p.startsAt.slice(0, 10)} t/m ${p.endsAt.slice(0, 10)} (${Object.entries(p.percentOff).map(([d, v]) => `${d} ${v}%`).join(", ")}, op de eerste ${p.months > 1 ? `${p.months} maanden` : "betaling"})`,
+      )
       .join("; ") || "geen"}.`,
   );
   lines.push(`\n# Funnel (laatste ${f.filters.days} dagen)`);

@@ -217,6 +217,8 @@ create table if not exists payments (
 create index if not exists payments_paid_idx on payments(paid_at);
 -- De Stripe-factuur bij een betaling, voor het tabblad Betalingen (abonnementen: de factuur zelf; losse schema's: de factuur van de checkout).
 alter table payments add column if not exists invoice_id text;
+-- De actie waarmee een bestelling is gedaan (korting op de eerste maand(en)).
+alter table orders add column if not exists promotion text;
 update payments set invoice_id = id where invoice_id is null and kind = 'payment' and id like 'in\_%';
 create index if not exists payments_customer_idx on payments(customer_id, paid_at);
 

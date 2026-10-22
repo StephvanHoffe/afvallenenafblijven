@@ -1,9 +1,12 @@
+import { Suspense } from "react";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
+import { FloatingCta } from "@/components/FloatingCta";
 import { site } from "@/config/site";
 import { getLocale } from "@/i18n/server";
+import { currentPromotion } from "@/lib/promotion";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -16,6 +19,7 @@ const organizationJsonLd = {
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const l = await getLocale();
+  const promo = await currentPromotion(l);
   return (
     <>
       <a
@@ -30,6 +34,10 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         {children}
       </main>
       <Footer />
+      {/* De knop leest het adres van de pagina; daarvoor is een Suspense-grens nodig. */}
+      <Suspense fallback={null}>
+        <FloatingCta promo={promo} />
+      </Suspense>
       <CookieConsent />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
     </>

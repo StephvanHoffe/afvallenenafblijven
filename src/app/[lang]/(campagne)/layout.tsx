@@ -3,6 +3,7 @@ import { cacheLife } from "next/cache";
 import { ArrowRight } from "lucide-react";
 import { CampaignLinks } from "@/components/campaign/CampaignLinks";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
+import { FloatingCta } from "@/components/FloatingCta";
 import { CookieSettingsButton } from "@/components/cookies/CookieSettingsButton";
 import { LanguageSwitcher, LanguageSwitcherFallback } from "@/components/i18n/LanguageSwitcher";
 import { Logo } from "@/components/Logo";
@@ -11,6 +12,7 @@ import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import Link from "@/i18n/Link";
 import { getLocale } from "@/i18n/server";
+import { currentPromotion } from "@/lib/promotion";
 
 const copy = defineCopy({
   nl: {
@@ -81,7 +83,7 @@ export default async function CampaignLayout({ children }: { children: React.Rea
       <main id="inhoud" className="flex-1">
         {children}
       </main>
-      <footer className="no-print bg-brand-950 pb-24 text-sm text-white/65 sm:pb-0">
+      <footer className="no-print bg-brand-950 pb-24 text-sm text-white/65">
         <div className="container-page flex flex-col gap-4 py-8 md:flex-row md:items-center md:justify-between">
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {c.legal.map((x) => (
@@ -101,6 +103,9 @@ export default async function CampaignLayout({ children }: { children: React.Rea
           </p>
         </div>
       </footer>
+      <Suspense fallback={null}>
+        <FloatingCta promo={await currentPromotion(l)} spacer={false} />
+      </Suspense>
       <CookieConsent />
       <CampaignLinks />
     </>

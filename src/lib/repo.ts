@@ -62,6 +62,8 @@ export interface Order {
   checkin_reminders: number;
   weekly_reminded_at: Date | null;
   discount_code: string | null;
+  /** De actie waarmee besteld is (id uit site.promotions), of null. */
+  promotion: string | null;
   /** Opzegreden uit het opzegformulier (vaste keuze) en eventuele toelichting. */
   cancel_reason: string | null;
   cancel_comment: string | null;
@@ -223,12 +225,14 @@ export async function createOrder(input: {
   amountCents: number;
   monthlyCents: number;
   discountCode?: string | null;
+  promotion?: string | null;
 }): Promise<Order | null> {
   const sql = await db();
   const [row] = await sql<Order[]>`
-    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents, discount_code)
+    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents, discount_code, promotion)
     values (${input.customerId}, ${input.intakeId}, ${input.product}, ${input.duration}, ${input.stripeSessionId},
-            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents}, ${input.discountCode ?? null})
+            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents}, ${input.discountCode ?? null},
+            ${input.promotion ?? null})
     on conflict (stripe_session_id) do nothing
     returning *`;
   if (row) {

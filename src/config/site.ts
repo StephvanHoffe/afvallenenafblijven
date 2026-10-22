@@ -49,23 +49,27 @@ export const site = {
   },
 
   /**
-   * Acties: automatische korting op de eerste betaling, per looptijd (0 = geen
-   * korting voor die looptijd). Een actie wordt alleen getoond én toegepast
-   * tussen startsAt en endsAt; lopen er twee tegelijk, dan geldt de eerste in
-   * de lijst. Een kortingscode van een klant vervangt de actiekorting.
+   * Acties: automatische korting per looptijd (0 = geen korting voor die
+   * looptijd) op de eerste `months` maandbetalingen; een los schema is één
+   * betaling. Een actie wordt alleen getoond én toegepast tussen startsAt en
+   * endsAt; lopen er twee tegelijk, dan geldt de eerste in de lijst. Een
+   * kortingscode van een klant vervangt de actiekorting. `theme` geeft de
+   * landingspagina's en de startknop een eigen uiterlijk zolang de actie loopt.
    * De Stripe-coupons worden bij het eerste gebruik automatisch aangemaakt.
+   * Testen voor de startdatum: zet PROMOTION_OVERRIDE=<id> (nooit in productie).
    */
   promotions: [
     {
-      // Black Week tot en met Cyber Monday. Hoe langer je kiest, hoe meer korting:
-      // dat trekt klanten die echt willen doorzetten, niet alleen kortingsjagers.
+      // Black Week tot en met Cyber Monday: op elk pakket de eerste 2 maanden half geld.
       id: "blackfriday-2026",
       enabled: true,
       label: "Black Friday",
       labelEn: "Black Friday",
       startsAt: "2026-11-23T00:00:00+01:00",
       endsAt: "2026-11-30T23:59:59+01:00",
-      percentOff: { "1m": 25, "3m": 40, "6m": 50, "12m": 50, eenmalig: 25 },
+      percentOff: { "1m": 50, "3m": 50, "6m": 50, "12m": 50, eenmalig: 50 },
+      months: 2,
+      theme: "blackfriday",
     },
     {
       // Januari: de drukste maand voor afvallen (goede voornemens).
@@ -76,6 +80,8 @@ export const site = {
       startsAt: "2027-01-01T00:00:00+01:00",
       endsAt: "2027-01-31T23:59:59+01:00",
       percentOff: { "1m": 20, "3m": 20, "6m": 20, "12m": 20, eenmalig: 20 },
+      months: 1,
+      theme: null,
     },
   ],
 
@@ -134,15 +140,29 @@ export function hasSeparateLegalName() {
 
 export type Promotion = (typeof site.promotions)[number];
 
-/** De actie die op het gegeven moment loopt, of null. */
+/**
+ * De actie die op het gegeven moment loopt, of null. Met PROMOTION_OVERRIDE=<id>
+ * staat die actie nu al aan, ook in de checkout: alleen voor testen en
+ * voorbeeldomgevingen, nooit in productie.
+ */
 export function activePromotion(now: Date): Promotion | null {
+  const forced = process.env.PROMOTION_OVERRIDE;
+  if (forced) {
+    const p = site.promotions.find((x) => x.id === forced);
+    if (p) return p;
+  }
   const t = now.getTime();
   return site.promotions.find((p) => p.enabled && t >= Date.parse(p.startsAt) && t <= Date.parse(p.endsAt)) ?? null;
 }
 
-/** Korting (in procenten) op de eerste betaling voor deze looptijd. */
+/** Korting (in procenten) op de eerste betaling(en) voor deze looptijd. */
 export function promotionPercent(p: Pick<Promotion, "percentOff">, duration: DurationId): number {
   return p.percentOff[duration] ?? 0;
+}
+
+/** Op hoeveel betalingen de actiekorting geldt: een los schema is één betaling. */
+export function promotionMonths(p: Pick<Promotion, "months">, duration: DurationId): number {
+  return duration === "eenmalig" ? 1 : Math.max(1, p.months);
 }
 
 /** Laatste dag van de actie, bijv. "maandag 30 november". */
@@ -155,11 +175,19 @@ export function promotionEndLabel(p: Pick<Promotion, "endsAt">, l: Locale = "nl"
   }).format(new Date(p.endsAt));
 }
 
-/** "tot 50% korting op je eerste maand", of "20% korting op je eerste betaling" als alle looptijden gelijk zijn. */
-export function promotionSummary(percentOff: Record<DurationId, number>, l: Locale = "nl"): string {
+/**
+ * Korte omschrijving van de korting: "50% korting op je eerste 2 maanden",
+ * "20% korting op je eerste betaling", of "tot 50% korting op je eerste maand"
+ * als de looptijden verschillen.
+ */
+export function promotionSummary(percentOff: Record<DurationId, number>, months: number, l: Locale = "nl"): string {
   const values = Object.values(percentOff).filter((v) => v > 0);
   const max = Math.max(0, ...values);
   const same = values.length > 0 && values.every((v) => v === max);
-  if (l === "en") return same ? `${max}% off your first payment` : `up to ${max}% off your first month`;
-  return same ? `${max}% korting op je eerste betaling` : `tot ${max}% korting op je eerste maand`;
+  if (l === "en") {
+    const period = months > 1 ? `first ${months} months` : same ? "first payment" : "first month";
+    return same ? `${max}% off your ${period}` : `up to ${max}% off your ${period}`;
+  }
+  const period = months > 1 ? `eerste ${months} maanden` : same ? "eerste betaling" : "eerste maand";
+  return same ? `${max}% korting op je ${period}` : `tot ${max}% korting op je ${period}`;
 }
