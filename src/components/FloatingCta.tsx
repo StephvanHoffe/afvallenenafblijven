@@ -65,14 +65,16 @@ export function FloatingCta({
 
   useEffect(() => {
     const sync = () => setCookieOpen(readConsent() === null);
+    // Na een keuze is de banner weg, ook als de browser de cookie niet bewaart.
+    const chosen = () => setCookieOpen(false);
     const openSettings = () => setCookieOpen(true);
     sync();
-    window.addEventListener(CONSENT_EVENT, sync);
+    window.addEventListener(CONSENT_EVENT, chosen);
     window.addEventListener(OPEN_SETTINGS_EVENT, openSettings);
     // Kort na het laden inschuiven, zodat de knop opvalt zonder de pagina te laten verspringen.
     const timer = window.setTimeout(() => setShown(true), 700);
     return () => {
-      window.removeEventListener(CONSENT_EVENT, sync);
+      window.removeEventListener(CONSENT_EVENT, chosen);
       window.removeEventListener(OPEN_SETTINGS_EVENT, openSettings);
       window.clearTimeout(timer);
     };
