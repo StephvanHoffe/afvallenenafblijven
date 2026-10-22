@@ -50,7 +50,8 @@ const copy = defineCopy({
     bundleMonthly: (amount: string) => `Bespaar ${amount} p/m t.o.v. los`,
     launch: (label: string, oneOff: boolean, months: number, price: string, regular: string) =>
       `${label}: ${oneOff ? "nu" : months > 1 ? `eerste ${months} maanden` : "eerste maand"} ${price}${!oneOff && months > 1 ? " p/m" : ""} in plaats van ${regular}`,
-    promoTiers: (label: string, until: string) => `${label} t/m ${until}: hoe langer je kiest, hoe meer korting op je eerste maand`,
+    promoTiers: (label: string, until: string, months: number) =>
+      `${label} t/m ${until}: hoe langer je kiest, hoe meer korting op je eerste ${months > 1 ? `${months} maanden` : "maand"}`,
     promoAll: (label: string, summary: string, until: string) => `${label}: ${summary}, op elk pakket. Alleen t/m ${until}.`,
     promoTier: (months: number) => (months === 0 ? "los" : months === 1 ? "per maand" : `${months} maanden`),
     renewal: "Elke 4 weken een nieuw, bijgestuurd schema",
@@ -82,7 +83,8 @@ const copy = defineCopy({
     bundleMonthly: (amount: string) => `Save ${amount} a month vs. buying separately`,
     launch: (label: string, oneOff: boolean, months: number, price: string, regular: string) =>
       `${label}: ${oneOff ? "now" : months > 1 ? `first ${months} months` : "first month"} ${price}${!oneOff && months > 1 ? " a month" : ""} instead of ${regular}`,
-    promoTiers: (label: string, until: string) => `${label} until ${until}: the longer you choose, the bigger the discount on your first month`,
+    promoTiers: (label: string, until: string, months: number) =>
+      `${label} until ${until}: the longer you choose, the bigger the discount on your first ${months > 1 ? `${months} months` : "month"}`,
     promoAll: (label: string, summary: string, until: string) => `${label}: ${summary}, on every plan. Only until ${until}.`,
     promoTier: (months: number) => (months === 0 ? "one-off" : months === 1 ? "monthly" : `${months} months`),
     renewal: "A new, fine-tuned plan every 4 weeks",
@@ -241,7 +243,7 @@ function PromoTiers({ promo }: { promo: PromoView }) {
   }
   return (
     <div className={`mx-auto max-w-3xl rounded-2xl px-5 py-4 text-center text-white ${box}`}>
-      <p className="text-sm font-bold text-lime-glow">{c.promoTiers(promo.label, promo.endsLabel)}</p>
+      <p className="text-sm font-bold text-lime-glow">{c.promoTiers(promo.label, promo.endsLabel, promo.months)}</p>
       <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
         {order
           .filter((d) => (promo.percentOff[d] ?? 0) > 0)

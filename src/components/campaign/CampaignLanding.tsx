@@ -25,7 +25,7 @@ import { FixSection, FutureSection, PainSection } from "@/components/conversion"
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, promoPercent } from "@/components/campaign/BlackFriday";
+import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, promoHasTiers, promoPercent } from "@/components/campaign/BlackFriday";
 import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
 import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
 import { promotionSummary, site } from "@/config/site";
@@ -195,6 +195,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
             {bf && (
               <div className="absolute -top-5 -left-2 z-10 grid size-24 -rotate-12 place-items-center rounded-full bg-lime-glow text-center text-brand-950 shadow-[0_12px_32px_-8px_rgb(200_241_105/0.7)] ring-4 ring-black sm:-left-6 sm:size-32">
                 <span>
+                  {promoHasTiers(bf) && <span className="block text-[0.6875rem] font-extrabold tracking-wide uppercase sm:text-xs">{bfc.upTo}</span>}
                   <span className="block text-2xl leading-none font-black sm:text-4xl">−{promoPercent(bf)}%</span>
                   <span className="block text-[0.6875rem] font-extrabold tracking-wide uppercase sm:text-xs">{bfc.sticker}</span>
                 </span>
@@ -485,7 +486,11 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
       {/* PRIJZEN */}
       <section id="prijzen" className="container-page scroll-mt-20 py-16">
         {bf ? (
-          <SectionHeading eyebrow={bfc.pricingEyebrow} title={bfc.pricingTitle(promoPercent(bf), bf.months)} intro={bfc.pricingIntro} />
+          <SectionHeading
+            eyebrow={bfc.pricingEyebrow}
+            title={bfc.pricingTitle(promoPercent(bf), bf.months, promoHasTiers(bf))}
+            intro={bfc.pricingIntro(promoHasTiers(bf))}
+          />
         ) : (
           <SectionHeading eyebrow={c.pricingEyebrow} title={c.pricingTitle} intro={c.pricingIntro} />
         )}

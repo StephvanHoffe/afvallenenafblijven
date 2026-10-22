@@ -16,16 +16,18 @@ const copy = defineCopy({
     main: { voeding: "Ja, maak mijn voedingsschema!", training: "Ja, maak mijn trainingsschema!", bundel: "Ja, maak mijn plan!" } as Record<ProductId, string>,
     mainAny: "Ja, maak mijn plan!",
     sub: "2 min invullen · binnen 2 uur in je mailbox",
-    promoMain: (pct: number) => `Pak ${pct}% Black Friday-korting`,
-    promoMainOther: (pct: number, label: string) => `Pak ${pct}% ${label}-korting`,
+    promoMain: (pct: number, tiers: boolean) => `Pak ${tiers ? "tot " : ""}${pct}% Black Friday-korting`,
+    promoMainOther: (pct: number, label: string, tiers: boolean) => `Pak ${tiers ? "tot " : ""}${pct}% ${label}-korting`,
+    upTo: "tot",
     promoUntil: (until: string) => `Alleen t/m ${until}`,
   },
   en: {
     main: { voeding: "Yes, make my nutrition plan!", training: "Yes, make my training plan!", bundel: "Yes, make my plan!" } as Record<ProductId, string>,
     mainAny: "Yes, make my plan!",
     sub: "2 min to fill in · in your inbox within 2 hours",
-    promoMain: (pct: number) => `Get ${pct}% off for Black Friday`,
-    promoMainOther: (pct: number, label: string) => `Get ${pct}% off: ${label}`,
+    promoMain: (pct: number, tiers: boolean) => `Get ${tiers ? "up to " : ""}${pct}% off for Black Friday`,
+    promoMainOther: (pct: number, label: string, tiers: boolean) => `Get ${tiers ? "up to " : ""}${pct}% off: ${label}`,
+    upTo: "up to",
     promoUntil: (until: string) => `Only until ${until}`,
   },
 });
@@ -84,10 +86,13 @@ export function FloatingCta({
   const product = PRODUCT_PAGES[path] ?? null;
   const href = product ? `/start?plan=${product}` : "/start";
   const pct = promo ? Math.max(0, ...Object.values(promo.percentOff)) : 0;
+  // Een staffel (korting per looptijd): dan "tot 50%".
+  const tiers = promo ? new Set(Object.values(promo.percentOff).filter((v) => v > 0)).size > 1 : false;
   const bf = promo?.theme === "blackfriday";
   const visible = shown && !cookieOpen;
 
-  const main = promo && pct > 0 ? (bf ? c.promoMain(pct) : c.promoMainOther(pct, promo.label)) : product ? c.main[product] : c.mainAny;
+  const main =
+    promo && pct > 0 ? (bf ? c.promoMain(pct, tiers) : c.promoMainOther(pct, promo.label, tiers)) : product ? c.main[product] : c.mainAny;
 
   return (
     <>
@@ -120,7 +125,14 @@ export function FloatingCta({
               }`}
               aria-hidden
             >
-              {promo && pct > 0 ? `−${pct}%` : <Sparkles className="size-5" />}
+              {promo && pct > 0 ? (
+                <span className="text-center leading-none">
+                  {tiers && <span className="block text-[0.5625rem] font-extrabold uppercase">{c.upTo}</span>}
+                  −{pct}%
+                </span>
+              ) : (
+                <Sparkles className="size-5" />
+              )}
             </span>
             <span className="relative min-w-0 flex-1 leading-tight">
               <span className="block text-[0.9375rem] font-extrabold sm:text-base">{main}</span>

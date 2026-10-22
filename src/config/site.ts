@@ -60,15 +60,18 @@ export const site = {
    */
   promotions: [
     {
-      // Black Week tot en met Cyber Monday: op elk pakket de eerste 2 maanden half geld.
+      // Black Week tot en met Cyber Monday: korting op de eerste 3 maanden, oplopend
+      // met de looptijd. 12 maanden krijgt het maximum (50%); de rest staat in
+      // verhouding: 50% × √(looptijd / 12), afgerond op 5%. Zo levert een langere
+      // looptijd steeds meer op, zonder dat korte looptijden de helft krijgen.
       id: "blackfriday-2026",
       enabled: true,
       label: "Black Friday",
       labelEn: "Black Friday",
       startsAt: "2026-11-23T00:00:00+01:00",
       endsAt: "2026-11-30T23:59:59+01:00",
-      percentOff: { "1m": 50, "3m": 50, "6m": 50, "12m": 50, eenmalig: 50 },
-      months: 2,
+      percentOff: { "1m": 15, "3m": 25, "6m": 35, "12m": 50, eenmalig: 15 },
+      months: 3,
       theme: "blackfriday",
     },
     {
