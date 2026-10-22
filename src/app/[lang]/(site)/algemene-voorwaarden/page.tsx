@@ -75,7 +75,7 @@ function Nl() {
       <p>
         {c.legalName}
         <br />
-        {companyAddressLine()}, {c.country}
+        {companyAddressLine()}, {c.country} (geen bezoekadres)
         <br />
         E-mail: <a href={`mailto:${c.email}`}>{c.email}</a>
         <br />
@@ -450,7 +450,7 @@ function En() {
       <p>
         {c.legalName}
         <br />
-        {companyAddressLine()}, {country}
+        {companyAddressLine()}, {country} (not a visiting address)
         <br />
         Email: <a href={`mailto:${c.email}`}>{c.email}</a>
         <br />

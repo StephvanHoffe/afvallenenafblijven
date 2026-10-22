@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { LegalPage } from "@/components/LegalPage";
-import { companyAddressLine, hasSeparateLegalName, site } from "@/config/site";
+import { hasSeparateLegalName, site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -45,7 +45,7 @@ function Nl() {
       <h2>1. Wie is verantwoordelijk?</h2>
       <p>
         {c.legalName}
-        {hasSeparateLegalName() && ` (${site.name})`}, {companyAddressLine()}, KvK {c.kvk}, is verwerkingsverantwoordelijke in de zin van
+        {hasSeparateLegalName() && ` (${site.name})`}, KvK {c.kvk}, is verwerkingsverantwoordelijke in de zin van
         de Algemene verordening gegevensbescherming (AVG). Vragen over privacy? Mail naar{" "}
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>.
       </p>
@@ -386,7 +386,7 @@ function En() {
       <h2>1. Who is responsible?</h2>
       <p>
         {c.legalName}
-        {hasSeparateLegalName() && ` (${site.name})`}, {companyAddressLine()}, Chamber of Commerce (KvK) no. {c.kvk}, is the controller
+        {hasSeparateLegalName() && ` (${site.name})`}, Chamber of Commerce (KvK) no. {c.kvk}, is the controller
         within the meaning of the General Data Protection Regulation (GDPR). Questions about privacy? Email{" "}
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>.
       </p>

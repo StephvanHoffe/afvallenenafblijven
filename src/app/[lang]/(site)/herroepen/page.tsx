@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { WithdrawalForm } from "@/app/[lang]/(site)/herroepen/WithdrawalForm";
 import { TranslationNote } from "@/components/LegalPage";
-import { companyAddressLine, site } from "@/config/site";
+import { site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -78,7 +78,8 @@ function Nl() {
         Voor zover het herroepingsrecht van toepassing is, betalen we alle betalingen binnen 14 dagen terug via dezelfde
         betaalmethode. Liever per post of e-mail? Gebruik dan het{" "}
         <Link href="/algemene-voorwaarden#modelformulier">modelformulier voor herroeping</Link> en stuur het naar{" "}
-        {c.legalName}, {companyAddressLine()} of naar <a href={`mailto:${c.email}`}>{c.email}</a>.
+        <a href={`mailto:${c.email}`}>{c.email}</a> of per post naar het adres in{" "}
+        <Link href="/algemene-voorwaarden#artikel-2">artikel 2 van de algemene voorwaarden</Link>.
       </p>
     </>
   );
@@ -121,8 +122,9 @@ function En() {
       <p>
         Insofar as the right of withdrawal applies, we will refund all payments within 14 days using the same payment
         method. Prefer to use post or email? Then use the{" "}
-        <Link href="/algemene-voorwaarden#modelformulier">model withdrawal form</Link> and send it to {c.legalName},{" "}
-        {companyAddressLine()} or to <a href={`mailto:${c.email}`}>{c.email}</a>.
+        <Link href="/algemene-voorwaarden#modelformulier">model withdrawal form</Link> and send it to{" "}
+        <a href={`mailto:${c.email}`}>{c.email}</a> or by post to the address in{" "}
+        <Link href="/algemene-voorwaarden#artikel-2">article 2 of the terms and conditions</Link>.
       </p>
     </>
   );

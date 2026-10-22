@@ -4,7 +4,7 @@ import { cacheLife } from "next/cache";
 import { Logo } from "@/components/Logo";
 import { CookieSettingsButton } from "@/components/cookies/CookieSettingsButton";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
-import { companyAddressLine, site } from "@/config/site";
+import { site } from "@/config/site";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
@@ -142,7 +142,7 @@ export async function Footer() {
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-2 py-6 text-xs leading-relaxed text-white/55 md:flex-row md:items-center md:justify-between">
           <p>
-            © <CopyrightYear /> {c.legalName} · {companyAddressLine()} · {t.kvk} {c.kvk} · {t.vat} {c.vat} ·{" "}
+            © <CopyrightYear /> {c.legalName} · {t.kvk} {c.kvk} · {t.vat} {c.vat} ·{" "}
             <a href={`mailto:${c.email}`} className="underline hover:text-white">
               {c.email}
             </a>

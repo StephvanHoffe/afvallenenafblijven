@@ -177,7 +177,7 @@ De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro)
 
 ## Live zetten (checklist)
 
-1. **Bedrijfsgegevens** controleren in `src/config/site.ts`: naam, adres, KvK, btw en e-mailadressen (zijn ingevuld). Deze verschijnen in de footer, de voorwaarden en de e-mails.
+1. **Bedrijfsgegevens** controleren in `src/config/site.ts`: naam, adres, KvK, btw en e-mailadressen (zijn ingevuld). Naam, KvK en btw verschijnen in de footer en de e-mails. Het adres is een woonadres en staat alleen in de algemene voorwaarden (artikel 2 en het modelformulier voor herroeping); de contactpagina en de herroepingspagina verwijzen ernaar.
 2. **Hosting**: zet het project op [Vercel](https://vercel.com), op het **Pro**-abonnement (zie het stappenplan hierboven). De website draait in Frankfurt (`regions` in `vercel.json`). De geplande taak in `vercel.json` draait elke 5 minuten (schema's vrijgeven en mailen, mislukte schema's opnieuw proberen); de herinneringen en het opruimen gebeuren één keer per dag vanaf 08:00. Op het gratis Hobby-abonnement mag een geplande taak maar één keer per dag draaien en mislukt de deploy met deze instelling; Hobby is bovendien alleen voor niet-commercieel gebruik. Wil je toch Hobby gebruiken, zet dan in `vercel.json` een dagelijkse planning en laat een externe dienst (bijv. cron-job.org) elke 5 minuten `GET /api/cron` aanroepen met de header `Authorization: Bearer <CRON_SECRET>`. Zet de omgevingsvariabelen uit `.env.example`.
 3. **Database**: maak een PostgreSQL-database aan in een EU-regio (bijv. Neon of Supabase) en zet `DATABASE_URL`. De tabellen worden automatisch aangemaakt.
 4. **Stripe**

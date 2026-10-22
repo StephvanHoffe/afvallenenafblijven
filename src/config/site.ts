@@ -6,7 +6,9 @@ import { intlLocale, type Locale } from "@/i18n/config";
  *
  * De bedrijfsgegevens worden gebruikt in de footer, de juridische pagina's en
  * e-mails. Een webwinkel is wettelijk verplicht om naam, adres, KvK-nummer,
- * btw-nummer en een e-mailadres te tonen; houd ze dus actueel.
+ * btw-nummer en een e-mailadres te tonen; houd ze dus actueel. Het adres is
+ * een woonadres en staat daarom alleen in de algemene voorwaarden (artikel 2
+ * en het modelformulier); de contact- en herroepingspagina verwijzen ernaar.
  */
 export const site = {
   name: "Afvallen & Afblijven",

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "@/i18n/Link";
-import { Mail, MapPin, MessageCircle } from "lucide-react";
+import { Building2, Mail, MessageCircle } from "lucide-react";
 import { ContactForm } from "@/app/[lang]/(site)/contact/ContactForm";
 import { FaqJsonLd, FaqList, SectionHeading } from "@/components/marketing";
-import { companyAddressLine, site } from "@/config/site";
+import { site } from "@/config/site";
 import { faqFor } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
@@ -21,6 +21,8 @@ const copy = defineCopy({
     faqLink: "veelgestelde vragen",
     kvk: "KvK",
     vat: "Btw",
+    address: "Geen bezoekadres. Ons adres voor post staat in",
+    addressLink: "artikel 2 van de algemene voorwaarden",
     cancel: "Abonnement opzeggen? Dat kan direct online via",
     cancelLink: "abonnement opzeggen",
     faqEyebrow: "Veelgestelde vragen",
@@ -37,6 +39,8 @@ const copy = defineCopy({
     faqLink: "frequently asked questions",
     kvk: "Chamber of Commerce no.",
     vat: "VAT",
+    address: "No visiting address. Our postal address is in",
+    addressLink: "article 2 of the terms and conditions",
     cancel: "Want to cancel your subscription? You can do that online straight away via",
     cancelLink: "cancel subscription",
     faqEyebrow: "Frequently asked questions",
@@ -80,13 +84,17 @@ export default async function ContactPage() {
               </a>
             </li>
             <li className="flex gap-3">
-              <MapPin className="size-6 text-brand-600" aria-hidden />
+              <Building2 className="size-6 text-brand-600" aria-hidden />
               <span>
                 {c.legalName}
                 <br />
-                {companyAddressLine()}
-                <br />
                 {t.kvk} {c.kvk} · {t.vat} {c.vat}
+                <br />
+                {t.address}{" "}
+                <Link href="/algemene-voorwaarden#artikel-2" className="underline">
+                  {t.addressLink}
+                </Link>
+                .
               </span>
             </li>
             <li className="flex gap-3">

@@ -1,6 +1,6 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
-import { site, companyAddressLine } from "@/config/site";
+import { site } from "@/config/site";
 import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro } from "@/lib/format";
@@ -172,7 +172,7 @@ function layout(title: string, body: string, l: Locale = "nl"): string {
 <tr><td style="background:#123f29;padding:20px 28px;color:#ffffff;font-size:18px;font-weight:bold;">${escapeHtml(site.name)}</td></tr>
 <tr><td style="padding:28px;font-size:16px;line-height:1.6;">${body}</td></tr>
 <tr><td style="padding:16px 28px 24px;font-size:12px;line-height:1.5;color:#5b6b62;border-top:1px solid #ecebe4;">
-${escapeHtml(site.company.legalName)} · ${escapeHtml(companyAddressLine())} · ${c.kvk} ${escapeHtml(site.company.kvk)}<br>
+${escapeHtml(site.company.legalName)} · ${c.kvk} ${escapeHtml(site.company.kvk)}<br>
 ${c.questions} <a href="mailto:${site.company.email}" style="color:#1c7a45;">${site.company.email}</a>
 </td></tr></table></td></tr></table></body></html>`;
 }
