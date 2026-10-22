@@ -173,9 +173,18 @@ export function DurationToggle({
   );
 }
 
+/**
+ * Bij een actie met een staffel (korting per looptijd) opent de tabel op de
+ * looptijd met de meeste korting, zodat bezoekers het maximum meteen zien.
+ */
+function promoDuration(promo: PromoView | null | undefined): DurationId | undefined {
+  if (!promo || new Set(Object.values(promo.percentOff).filter((v) => v > 0)).size <= 1) return undefined;
+  return [...SUBSCRIPTION_DURATIONS].sort((a, b) => (promo.percentOff[b] ?? 0) - (promo.percentOff[a] ?? 0) || durations[b].months - durations[a].months)[0];
+}
+
 export function PricingTable({
   only,
-  initialDuration = "3m",
+  initialDuration,
   promo,
   onSelect,
   selectedProduct,
@@ -184,7 +193,8 @@ export function PricingTable({
 }: Props) {
   const l = useLocale();
   const c = copy[l];
-  const [duration, setDuration] = useState<DurationId>(initialDuration);
+  // Een gekozen of geadviseerde looptijd (vragenlijst) gaat voor; anders die met de meeste actiekorting.
+  const [duration, setDuration] = useState<DurationId>(initialDuration ?? promoDuration(promo) ?? "3m");
   // Met `only` in de opgegeven volgorde (het product van de pagina eerst), anders de vaste volgorde.
   const list = only ? only.filter((p) => ORDER.includes(p)) : ORDER;
   // Voor de vergelijking bij een los schema of 1 maand: het gekozen, anders het uitgelichte product.
