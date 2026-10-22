@@ -61,12 +61,14 @@ const copy = defineCopy({
   },
 });
 
-export async function openBillingPortal(): Promise<void> {
+export async function openBillingPortal(formData?: FormData): Promise<void> {
   const l = await requestLocale();
   const customer = await currentCustomer();
   if (!customer) redirect(localePath(l, "/inloggen"));
   if (!customer.stripe_customer_id) redirect(localePath(l, "/contact"));
-  const url = await billingPortalUrl(customer.stripe_customer_id, "/account/abonnement", l);
+  // Terug naar het tabblad waar de klant vandaan kwam (alleen deze twee).
+  const back = formData?.get("terug") === "/account/betalingen" ? "/account/betalingen" : "/account/abonnement";
+  const url = await billingPortalUrl(customer.stripe_customer_id, back, l);
   redirect(url);
 }
 

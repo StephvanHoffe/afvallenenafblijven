@@ -3,6 +3,7 @@ import { monthlyPrice, products, type DurationId, type ProductId } from "@/confi
 import { sampleNutritionPlan, sampleTargets, sampleTrainingPlan } from "@/content/sample-plans";
 import { demoIntake } from "@/content/demo-account";
 import { checkinWindow, type CheckinData } from "@/lib/checkin";
+import { addMonthsClamped } from "@/lib/dates";
 import type { OrderStatus } from "@/lib/repo";
 import type { Campaign } from "@/lib/campaign";
 import type {
@@ -11,6 +12,7 @@ import type {
   AdminData,
   AdminGuaranteeRow,
   AdminOrderRow,
+  AdminPaymentRow,
   AdminPlanRow,
   AdminWithdrawalRow,
 } from "@/lib/admin/data";
@@ -195,6 +197,43 @@ function demoCheckinData(seq: number): CheckinData {
   };
 }
 
+/** Betalingen bij de voorbeeldbestellingen: de eerste bij de aankoop, daarna elke maand een incasso (een paar dagen later). */
+function demoPayments(own: AdminOrderRow[]): AdminPaymentRow[] {
+  const rows: AdminPaymentRow[] = [];
+  for (const o of own) {
+    const first = `in_demo_${o.reference}_1`;
+    rows.push({
+      id: first,
+      date: o.createdAt,
+      kind: "payment",
+      amountCents: o.amountCents,
+      description: o.duration === "eenmalig" ? "eenmalig" : "subscription_create",
+      orderReference: o.reference,
+      invoiceId: first,
+    });
+    if (o.duration !== "eenmalig" && o.status !== "canceled") {
+      for (let n = 1; ; n++) {
+        const paid = addMonthsClamped(o.createdAt, n).getTime() + 3 * DAY;
+        if (paid > TODAY || (o.cancelAt && paid > o.cancelAt.getTime())) break;
+        const id = `in_demo_${o.reference}_${n + 1}`;
+        rows.push({ id, date: new Date(paid), kind: "payment", amountCents: o.monthlyCents, description: "subscription_cycle", orderReference: o.reference, invoiceId: id });
+      }
+    }
+    if (o.refundedCents > 0) {
+      rows.push({
+        id: `re_demo_${o.reference}`,
+        date: new Date(o.createdAt.getTime() + 5 * DAY),
+        kind: "refund",
+        amountCents: -o.refundedCents,
+        description: "garantie",
+        orderReference: o.reference,
+        invoiceId: null,
+      });
+    }
+  }
+  return rows.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
 function orderCheckin(o: AdminOrderRow) {
   const own = plans.filter((p) => p.orderId === o.id);
   const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);
@@ -275,6 +314,7 @@ export const demoAdminData: AdminData = {
     return {
       customer,
       orders: own.map((o) => ({ ...o, checkin: orderCheckin(o) })),
+      payments: demoPayments(own),
       plans: ownPlans,
       intake: {
         data: { ...demoIntake, product: own[0]?.product ?? "bundel" },

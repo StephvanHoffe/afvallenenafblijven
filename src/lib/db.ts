@@ -215,6 +215,10 @@ create table if not exists payments (
   paid_at timestamptz not null default now()
 );
 create index if not exists payments_paid_idx on payments(paid_at);
+-- De Stripe-factuur bij een betaling, voor het tabblad Betalingen (abonnementen: de factuur zelf; losse schema's: de factuur van de checkout).
+alter table payments add column if not exists invoice_id text;
+update payments set invoice_id = id where invoice_id is null and kind = 'payment' and id like 'in\_%';
+create index if not exists payments_customer_idx on payments(customer_id, paid_at);
 
 -- Kortingscodes (de bijbehorende Stripe-coupon wordt bij het eerste gebruik aangemaakt).
 create table if not exists discount_codes (

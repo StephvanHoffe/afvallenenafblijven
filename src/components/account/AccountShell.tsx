@@ -1,4 +1,4 @@
-import { ClipboardList, CreditCard, FileText, LayoutDashboard, LineChart, LogOut, UserRound } from "lucide-react";
+import { ClipboardList, CreditCard, FileText, LayoutDashboard, LineChart, LogOut, ReceiptText, UserRound } from "lucide-react";
 import { logout } from "@/app/[lang]/(site)/account/actions";
 import { AccountTabsNav } from "@/components/account/AccountTabsNav";
 import { DemoButton } from "@/components/account/DemoButton";
@@ -12,6 +12,7 @@ const TABS: { id: AccountTab; path: string; icon: typeof LayoutDashboard }[] = [
   { id: "check-in", path: "/check-in", icon: ClipboardList },
   { id: "gegevens", path: "/gegevens", icon: UserRound },
   { id: "abonnement", path: "/abonnement", icon: CreditCard },
+  { id: "betalingen", path: "/betalingen", icon: ReceiptText },
 ];
 
 const copy = defineCopy({
@@ -23,6 +24,7 @@ const copy = defineCopy({
       "check-in": "Check-in",
       gegevens: "Mijn gegevens",
       abonnement: "Abonnement",
+      betalingen: "Betalingen",
     } as Record<AccountTab, string>,
     eyebrow: "Mijn schema's",
     hello: (name: string) => `Hoi ${name}!`,
@@ -36,6 +38,7 @@ const copy = defineCopy({
       "check-in": "Check-in",
       gegevens: "My details",
       abonnement: "Subscription",
+      betalingen: "Payments",
     },
     eyebrow: "My plans",
     hello: (name: string) => `Hi ${name}!`,

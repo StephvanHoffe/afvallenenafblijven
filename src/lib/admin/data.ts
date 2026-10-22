@@ -89,9 +89,23 @@ export interface AdminPlanDetail extends AdminPlanRow {
 /** Filter in het schema-overzicht: een status, of nog niet bij de klant (gepland / wacht op goedkeuring). */
 export type AdminPlanFilter = PlanStatus | "gepland" | "goedkeuren";
 
+/** Een betaling of terugbetaling van een klant (uit de Stripe-webhooks en het beheer). */
+export interface AdminPaymentRow {
+  id: string;
+  date: Date;
+  kind: "payment" | "refund";
+  /** In centen; negatief bij een terugbetaling. */
+  amountCents: number;
+  /** Stripe-reden (subscription_create, subscription_cycle), "eenmalig" of de reden van de terugbetaling. */
+  description: string | null;
+  orderReference: string | null;
+  invoiceId: string | null;
+}
+
 export interface AdminCustomerDetail {
   customer: AdminCustomerRow;
   orders: AdminOrderRow[];
+  payments: AdminPaymentRow[];
   plans: AdminPlanRow[];
   intake: { data: Intake; consents: Record<string, unknown>; createdAt: Date } | null;
   checkins: { data: CheckinData; forSeq: number | null; createdAt: Date }[];
@@ -397,9 +411,23 @@ const dbAdminData: AdminData = {
       select data, consents, created_at from intakes where customer_id = ${id} order by created_at desc limit 1`;
     const checkins = await sql<{ data: CheckinData; order_id: string | null; for_seq: number | null; created_at: Date }[]>`
       select data, order_id, for_seq, created_at from checkins where customer_id = ${id} order by created_at desc`;
+    const payments = await sql<
+      { id: string; paid_at: Date; kind: "payment" | "refund"; amount_cents: number; description: string | null; invoice_id: string | null; order_id: string | null }[]
+    >`
+      select id, paid_at, kind, amount_cents, description, invoice_id, order_id
+      from payments where customer_id = ${id} order by paid_at desc, id`;
     const now = Date.now();
     return {
       customer: toCustomer(c),
+      payments: payments.map((p) => ({
+        id: p.id,
+        date: p.paid_at,
+        kind: p.kind,
+        amountCents: p.amount_cents,
+        description: p.description,
+        orderReference: p.order_id ? p.order_id.slice(0, 8).toUpperCase() : null,
+        invoiceId: p.invoice_id,
+      })),
       orders: orders.map((o) => {
         const own = plans.filter((p) => p.order_id === o.id);
         const lastSeq = own.reduce((m, p) => Math.max(m, p.seq), 0);

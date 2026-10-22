@@ -5,6 +5,7 @@ import {
   isSubscription,
   monthlyPrice,
   products,
+  vatPercent,
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
@@ -14,7 +15,7 @@ import { localeUrl, type Locale } from "@/i18n/config";
 import { saveStripeCoupon, type DiscountCodeRow } from "@/lib/discounts-server";
 
 /**
- * Stripe-koppeling. Producten, prijzen en de actiekortingen worden
+ * Stripe-koppeling. Producten, prijzen, het btw-tarief en de actiekortingen worden
  * automatisch (en idempotent) in Stripe aangemaakt op basis van
  * src/config/pricing.ts. Je hoeft in het Stripe-dashboard dus geen producten
  * te maken; alleen de betaalmethoden aanzetten (iDEAL | Wero, Bancontact,
@@ -95,6 +96,33 @@ export async function ensurePrice(product: ProductId, duration: DurationId): Pro
   return priceId;
 }
 
+let taxRateId: string | null = null;
+
+/**
+ * Het btw-tarief op de facturen. Inclusief, net als de prijzen: het bedrag
+ * blijft gelijk en de factuur toont hoeveel btw erin zit.
+ */
+async function ensureTaxRate(): Promise<string> {
+  if (taxRateId) return taxRateId;
+  const key = `btw_${vatPercent}_incl`;
+  const existing = await stripe().taxRates.list({ active: true, inclusive: true, limit: 100 });
+  taxRateId =
+    existing.data.find((t) => t.metadata?.afb === key)?.id ??
+    (
+      await stripe().taxRates.create({
+        display_name: "Btw",
+        description: `Btw ${vatPercent}% (inclusief)`,
+        percentage: vatPercent,
+        inclusive: true,
+        country: "NL",
+        jurisdiction: "NL",
+        tax_type: "vat",
+        metadata: { afb: key },
+      })
+    ).id;
+  return taxRateId;
+}
+
 /** De Stripe-coupon voor een actie en kortingspercentage (één per percentage, alleen op de eerste betaling). */
 async function ensurePromotionCoupon(promo: Promotion, percent: number): Promise<string> {
   const id = `afb_actie_${promo.id}_${percent}`;
@@ -169,7 +197,7 @@ export async function createCheckoutSession(input: CheckoutInput): Promise<strin
 
   const session = await stripe().checkout.sessions.create({
     mode: subscription ? "subscription" : "payment",
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price, quantity: 1, tax_rates: [await ensureTaxRate()] }],
     customer_email: input.email,
     locale: l,
     billing_address_collection: "auto",
@@ -270,6 +298,15 @@ export async function refundFirstPayment(
     await stripe().subscriptions.cancel(order.stripe_subscription_id);
   }
   return { refundedCents: refund.amount, refundId: refund.id };
+}
+
+/**
+ * Een verse downloadlink naar de factuur (pdf). Stripe-links verlopen na een
+ * tijd, dus we vragen hem pas op als de klant op de knop drukt.
+ */
+export async function invoicePdfUrl(invoiceId: string): Promise<string | null> {
+  const invoice = await stripe().invoices.retrieve(invoiceId);
+  return invoice.invoice_pdf ?? invoice.hosted_invoice_url ?? null;
 }
 
 export async function retrieveCheckoutSession(sessionId: string) {

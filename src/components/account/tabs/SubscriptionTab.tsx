@@ -1,6 +1,7 @@
 import Link from "@/i18n/Link";
 import { cancelSubscription, openBillingPortal, undoCancellation } from "@/app/[lang]/(site)/account/actions";
 import { GuaranteeForm } from "@/app/[lang]/(site)/account/GuaranteeForm";
+import { accountHref } from "@/components/account/AccountShell";
 import { DemoButton } from "@/components/account/DemoButton";
 import { Pill, orderStatus } from "@/components/account/shared";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -26,7 +27,9 @@ const copy = defineCopy({
     ordered: (date: string, ref: string) => `Besteld op ${date} · Bestelnummer ${ref}`,
     debit: "Maandelijks via automatische incasso",
     commitment: (date: string) => `, minimale looptijd tot ${date}`,
-    billing: "Betaalgegevens & facturen",
+    billing: "Betaalmethode wijzigen",
+    paymentsBefore: "Je betalingen en facturen vind je onder",
+    paymentsLink: "Betalingen",
     undo: "Opzegging intrekken",
     cancel: "Opzeggen",
     endsAtCommitment: (date: string) => `Je abonnement stopt aan het einde van de minimale looptijd (${date}).`,
@@ -72,7 +75,9 @@ const copy = defineCopy({
     ordered: (date: string, ref: string) => `Ordered on ${date} · Order number ${ref}`,
     debit: "Monthly by direct debit",
     commitment: (date: string) => `, minimum term until ${date}`,
-    billing: "Payment details & invoices",
+    billing: "Change payment method",
+    paymentsBefore: "You'll find your payments and invoices under",
+    paymentsLink: "Payments",
     undo: "Undo cancellation",
     cancel: "Cancel",
     endsAtCommitment: (date: string) => `Your subscription will end at the end of the minimum term (${date}).`,
@@ -105,7 +110,19 @@ const copy = defineCopy({
   },
 });
 
-export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; demo: boolean; notice: AccountNotice; l: Locale }) {
+export function SubscriptionTab({
+  view,
+  base,
+  demo,
+  notice,
+  l,
+}: {
+  view: AccountView;
+  base: string;
+  demo: boolean;
+  notice: AccountNotice;
+  l: Locale;
+}) {
   const c = copy[l];
   const activeSubs = view.orders.filter((o) => o.manageable && (o.status === "active" || o.status === "past_due"));
   const wantsCancel = notice === "opzeggen";
@@ -216,7 +233,11 @@ export function SubscriptionTab({ view, demo, notice, l }: { view: AccountView; 
           })}
         </ul>
         <p className="mt-3 text-sm text-muted">
-          {c.withdrawBefore}{" "}
+          {c.paymentsBefore}{" "}
+          <Link href={accountHref(base, "betalingen")} className="font-semibold underline">
+            {c.paymentsLink}
+          </Link>
+          . {c.withdrawBefore}{" "}
           <Link href="/herroepen" className="font-semibold underline">
             {c.withdrawLink}
           </Link>

@@ -169,6 +169,7 @@ export const demoAccountView: AccountView = {
         now: DEMO_NOW.getTime(),
       }),
       lastWeightKg: 72.1,
+      nextPayment: { date: new Date("2027-05-06T09:12:00+02:00"), amountCents: monthlyPrice("bundel", "6m") },
     },
   ],
   plans,
@@ -237,6 +238,25 @@ export const demoAccountView: AccountView = {
     requestedAt: null,
     handledAt: null,
   },
+  // De eerste maand via iDEAL op de dag van aankoop, daarna elke maand via SEPA-incasso (een paar werkdagen na de 6e).
+  payments: (
+    [
+      ["in_demo4", "2027-04-08T10:02:00+02:00", 4],
+      ["in_demo3", "2027-03-09T10:01:00+01:00", 3],
+      ["in_demo2", "2027-02-09T10:03:00+01:00", 2],
+      ["in_demo1", "2027-01-06T09:13:00+01:00", 1],
+    ] as const
+  ).map(([id, date, month]) => ({
+    id,
+    date: new Date(date),
+    kind: "payment" as const,
+    amountCents: monthlyPrice("bundel", "6m"),
+    orderReference: "3F2A9C1B",
+    product: "bundel" as const,
+    duration: "6m" as const,
+    month,
+    invoiceHref: `/account/factuur/${id}`,
+  })),
   targets: [
     { seq: 1, date: at(PERIODS[0].made), calories: sampleTargets.calories, proteinG: 120, carbsG: sampleTargets.carbsG, fatG: 50 },
     { seq: 2, date: at(PERIODS[1].made), calories: 1570, proteinG: 120, carbsG: 160, fatG: 50 },

@@ -13,6 +13,7 @@ import { currentCustomer } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { isHealthEnabled } from "@/lib/health/config";
 import { loadHealthView } from "@/lib/health/view-server";
+import { paymentsForCustomer } from "@/lib/payments";
 import { notifyReleased, releaseForCustomer } from "@/lib/plans";
 import {
   checkinsForCustomer,
@@ -77,7 +78,7 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   // Is het geplande moment van een klaar schema aangebroken, dan ziet de klant het nu meteen (de mail volgt).
   const released = await releaseForCustomer(customer.id);
   if (released.length > 0) after(() => notifyReleased(released));
-  const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest] = await Promise.all([
+  const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest, payments] = await Promise.all([
     ordersForCustomer(customer.id),
     plansForCustomer(customer.id),
     checkinsForCustomer(customer.id),
@@ -85,6 +86,7 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
     latestIntakeForCustomer(customer.id),
     nutritionTargetHistory(customer.id),
     guaranteeRequestForCustomer(customer.id),
+    tab === "betalingen" ? paymentsForCustomer(customer.id) : Promise.resolve([]),
   ]);
   // Ingeplande trainingen per week: uit de laatste check-in, anders de vragenlijst (alleen met een trainingsschema).
   const trains = orders.some((o) => products[o.product].includes.includes("training"));
@@ -101,10 +103,13 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
     intake,
     targets,
     guaranteeRequest,
+    payments,
   });
   const notice: AccountNotice =
     sp.garantie === "aangevraagd"
       ? "garantie"
+      : sp.factuur === "fout"
+      ? "factuur-fout"
       : sp.checkin === "ontvangen"
       ? "checkin"
       : sp.weegmoment === "opgeslagen"

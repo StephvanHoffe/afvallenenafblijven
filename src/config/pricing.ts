@@ -9,7 +9,7 @@ import type { Locale } from "@/i18n/config";
  * aangemaakt (zie src/lib/stripe.ts). Pas je hier een bedrag aan, dan wordt
  * er automatisch een nieuwe Stripe-prijs gebruikt voor nieuwe klanten.
  *
- * Alle bedragen zijn in eurocenten, inclusief 21% btw.
+ * Alle bedragen zijn in eurocenten, inclusief 21% btw (zie vatPercent).
  */
 
 export const PRODUCT_IDS = ["voeding", "training", "bundel"] as const;
@@ -18,6 +18,9 @@ export type ProductId = (typeof PRODUCT_IDS)[number];
 export const DURATION_IDS = ["1m", "3m", "6m", "12m", "eenmalig"] as const;
 export type DurationId = (typeof DURATION_IDS)[number];
 export type SubscriptionDurationId = Exclude<DurationId, "eenmalig">;
+
+/** Het btw-tarief dat in de prijzen zit; staat als "inclusief" op de Stripe-facturen. */
+export const vatPercent = 21;
 
 export type PlanType = "voeding" | "training";
 

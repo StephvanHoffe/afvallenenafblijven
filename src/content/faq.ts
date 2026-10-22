@@ -79,7 +79,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     betalen: {
       q: "Hoe kan ik betalen?",
-      a: "Een abonnement betaal je per maand via automatische incasso (SEPA). De eerste maand betaal je met iDEAL | Wero, Bancontact of je IBAN; daarmee geef je meteen toestemming voor de maandelijkse afschrijving. Een los schema betaal je eenmalig met iDEAL | Wero, Bancontact of creditcard. Alle betalingen lopen veilig via Stripe en je ontvangt automatisch een factuur per e-mail.",
+      a: "Een abonnement betaal je per maand via automatische incasso (SEPA). De eerste maand betaal je met iDEAL | Wero, Bancontact of je IBAN; daarmee geef je meteen toestemming voor de maandelijkse afschrijving. Een los schema betaal je eenmalig met iDEAL | Wero, Bancontact of creditcard. Alle betalingen lopen veilig via Stripe. Je krijgt een betaalbevestiging per e-mail en al je facturen (inclusief btw) vind je in Mijn schema's onder Betalingen.",
     },
     garantie: {
       q: "Wat als het schema me niet bevalt?",
@@ -145,7 +145,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     betalen: {
       q: "How can I pay?",
-      a: "A subscription is paid monthly by direct debit (SEPA). You pay the first month with iDEAL | Wero, Bancontact or your IBAN, which also authorises the monthly direct debit. A one-off plan is paid in a single payment with iDEAL | Wero, Bancontact or credit card. All payments are processed securely by Stripe, and you automatically receive an invoice by email.",
+      a: "A subscription is paid monthly by direct debit (SEPA). You pay the first month with iDEAL | Wero, Bancontact or your IBAN, which also authorises the monthly direct debit. A one-off plan is paid in a single payment with iDEAL | Wero, Bancontact or credit card. All payments are processed securely by Stripe. You'll receive a payment confirmation by email, and you'll find all your invoices (including VAT) in My plans under Payments.",
     },
     garantie: {
       q: "What if I'm not happy with my plan?",

@@ -60,7 +60,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const [detail, approval] = await Promise.all([adminData().customer(id), adminData().approvalRequired()]);
   if (!detail) notFound();
-  const { customer: c, orders, plans, intake, checkins, weekly } = detail;
+  const { customer: c, orders, payments, plans, intake, checkins, weekly } = detail;
   const [notes, journey, emails] = await Promise.all([customerNotes(c.id), customerJourney(c.id), customerEmails(c.email)]);
   const here = `/beheer/klanten/${c.id}`;
   const demo = isDemoMode();
@@ -229,6 +229,57 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                 </tbody>
               </table>
             </div>
+          </Panel>
+
+          <Panel title="Betalingen">
+            {payments.length === 0 ? (
+              <p className="px-5 py-4 text-sm text-muted">
+                Nog geen betalingen vastgelegd. Betalingen komen binnen via de Stripe-webhook (invoice.paid en de afgeronde checkout).
+              </p>
+            ) : (
+              <div className={table.wrap}>
+                <table className="w-full min-w-[34rem] text-left text-sm">
+                  <thead>
+                    <tr>
+                      <th className={table.th}>Datum</th>
+                      <th className={table.th}>Omschrijving</th>
+                      <th className={`${table.th} text-right`}>Bedrag</th>
+                      <th className={table.th}>
+                        <span className="sr-only">Factuur</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id}>
+                        <td className={`${table.td} whitespace-nowrap`}>{formatDate(p.date)}</td>
+                        <td className={table.td}>
+                          <span className="font-semibold">{paymentLabel(p.kind, p.description)}</span>
+                          {p.orderReference && <span className="block text-xs text-muted">#{p.orderReference}</span>}
+                        </td>
+                        <td className={`${table.td} ${table.num} text-right font-semibold ${p.kind === "refund" ? "text-accent-600" : ""}`}>
+                          {p.kind === "refund" ? `− ${euro(-p.amountCents)}` : euro(p.amountCents)}
+                        </td>
+                        <td className={`${table.td} text-right`}>
+                          {p.invoiceId &&
+                            (demo ? (
+                              <span className="text-xs text-muted">Factuur (demo)</span>
+                            ) : (
+                              <a href={invoiceHref(p.id)} target="_blank" rel="noopener" className="text-sm font-semibold text-brand-700 hover:underline">
+                                Factuur
+                              </a>
+                            ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="border-t border-line px-5 py-3 text-xs text-muted">
+              Totaal ontvangen: {euro(payments.reduce((sum, p) => sum + p.amountCents, 0))} (na terugbetalingen, inclusief btw). De klant ziet dezelfde
+              lijst met facturen in Mijn schema&apos;s onder Betalingen.
+            </p>
           </Panel>
 
           <Panel title="Schema's">
@@ -457,4 +508,23 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
       </div>
     </>
   );
+}
+
+/** Link naar de factuur (pdf) van een betaling; de route vraagt Stripe om een verse link. */
+function invoiceHref(paymentId: string): string {
+  return `/beheer/factuur/${encodeURIComponent(paymentId)}`;
+}
+
+function paymentLabel(kind: "payment" | "refund", description: string | null): string {
+  if (kind === "refund") return description ? `Terugbetaling (${description})` : "Terugbetaling";
+  switch (description) {
+    case "subscription_create":
+      return "Eerste betaling";
+    case "subscription_cycle":
+      return "Maandbedrag (incasso)";
+    case "eenmalig":
+      return "Los schema";
+    default:
+      return description ? `Betaling (${description})` : "Betaling";
+  }
 }

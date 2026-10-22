@@ -115,9 +115,16 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session): 
   // Een los schema is één betaling; abonnementen leggen we vast via de betaalde facturen (webhook invoice.paid).
   if (!isSubscription(duration) && (session.amount_total ?? 0) > 0) {
     const pi = typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? session.id);
-    await recordPayment({ id: pi, orderId: order.id, customerId: customer.id, amountCents: session.amount_total ?? 0, kind: "payment", description: "eenmalig" }).catch(
-      (err) => console.error("Betaling vastleggen mislukt", err),
-    );
+    const invoiceId = typeof session.invoice === "string" ? session.invoice : (session.invoice?.id ?? null);
+    await recordPayment({
+      id: pi,
+      orderId: order.id,
+      customerId: customer.id,
+      amountCents: session.amount_total ?? 0,
+      kind: "payment",
+      description: "eenmalig",
+      invoiceId,
+    }).catch((err) => console.error("Betaling vastleggen mislukt", err));
   }
 
   // Het schema wordt direct gemaakt en staat op een willekeurig moment binnen 2 uur voor de klant klaar.

@@ -1,5 +1,5 @@
 import type { HealthView } from "@/lib/health/view";
-import type { AccountView, DashboardOrder, DashboardPlan, GuaranteeView } from "@/lib/account-types";
+import type { AccountView, DashboardOrder, DashboardPlan, GuaranteeView, PaymentView } from "@/lib/account-types";
 import { durations, isSubscription } from "@/config/pricing";
 import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
@@ -7,6 +7,7 @@ import { weeklyWindow } from "@/lib/weekly";
 import { addMonthsClamped } from "@/lib/dates";
 import { guaranteeAvailable, guaranteeDeadline, guaranteeOrder } from "@/lib/guarantee";
 import { periodStarts, periodsAt } from "@/lib/schedule";
+import type { PaymentRow } from "@/lib/payments";
 import {
   MAX_PLAN_ATTEMPTS,
   type CheckinRow,
@@ -29,6 +30,7 @@ export function toAccountView(input: {
   targets: { seq: number; generated_at: Date | null; targets: NutritionTargets | null }[];
   health?: HealthView | null;
   guaranteeRequest?: GuaranteeRequestRow | null;
+  payments?: PaymentRow[];
 }): AccountView {
   const { orders, plans, checkins } = input;
   const now = Date.now();
@@ -73,6 +75,7 @@ export function toAccountView(input: {
         [...input.weekly].reverse().find((w) => w.order_id === o.id)?.data.weightKg ??
         checkins.find((c) => c.order_id === o.id && c.data.weightKg)?.data.weightKg ??
         null,
+      nextPayment: nextPaymentFor(o, now),
     };
   });
   // Tot een schema is vrijgegeven (op een willekeurig moment binnen 2 uur) ziet de klant "wordt gemaakt".
@@ -104,6 +107,7 @@ export function toAccountView(input: {
     weeklyReminders: input.weeklyReminders,
     health: input.health ?? null,
     guarantee: toGuaranteeView(orders, input.guaranteeRequest ?? null, now),
+    payments: toPaymentViews(input.payments ?? [], orders),
     targets: input.targets
       .filter((t) => t.targets)
       .map((t) => ({
@@ -115,6 +119,46 @@ export function toAccountView(input: {
         fatG: t.targets!.fatG,
       })),
   };
+}
+
+/**
+ * De volgende maandelijkse afschrijving van een lopend abonnement. Stripe
+ * schrijft elke maand af op de dag van de aankoop; met een kortingscode kan
+ * het bedrag afwijken, dan tonen we alleen de datum.
+ */
+function nextPaymentFor(o: Order, now: number): DashboardOrder["nextPayment"] {
+  if (!isSubscription(o.duration) || !o.stripe_subscription_id || o.status !== "active") return null;
+  let n = 1;
+  let next = addMonthsClamped(new Date(o.created_at), n);
+  while (next.getTime() <= now) next = addMonthsClamped(new Date(o.created_at), ++n);
+  if (o.cancel_at && next.getTime() >= o.cancel_at.getTime()) return null;
+  return { date: next, amountCents: o.discount_code || !o.monthly_cents ? null : o.monthly_cents };
+}
+
+/** Betalingen met de bestelling erbij en, bij abonnementen, de hoeveelste maand het is. */
+function toPaymentViews(rows: PaymentRow[], orders: Order[]): PaymentView[] {
+  const month = new Map<string, number>();
+  const perOrder = new Map<string, number>();
+  for (const p of [...rows].sort((a, b) => a.paid_at.getTime() - b.paid_at.getTime())) {
+    if (p.kind !== "payment" || !p.order_id) continue;
+    const n = (perOrder.get(p.order_id) ?? 0) + 1;
+    perOrder.set(p.order_id, n);
+    month.set(p.id, n);
+  }
+  return rows.map((p): PaymentView => {
+    const order = orders.find((o) => o.id === p.order_id) ?? null;
+    return {
+      id: p.id,
+      date: p.paid_at,
+      kind: p.kind,
+      amountCents: p.amount_cents,
+      orderReference: order ? order.id.slice(0, 8).toUpperCase() : null,
+      product: order?.product ?? null,
+      duration: order?.duration ?? null,
+      month: order && isSubscription(order.duration) && p.kind === "payment" ? (month.get(p.id) ?? null) : null,
+      invoiceHref: p.kind === "payment" && p.invoice_id ? `/account/factuur/${encodeURIComponent(p.id)}` : null,
+    };
+  });
 }
 
 function toGuaranteeView(orders: Order[], request: GuaranteeRequestRow | null, now: number): GuaranteeView | null {

@@ -2,6 +2,7 @@ import { AccountShell } from "@/components/account/AccountShell";
 import { CheckinTab } from "@/components/account/tabs/CheckinTab";
 import { DetailsTab } from "@/components/account/tabs/DetailsTab";
 import { OverviewTab } from "@/components/account/tabs/OverviewTab";
+import { PaymentsTab } from "@/components/account/tabs/PaymentsTab";
 import { ProgressTab } from "@/components/account/tabs/ProgressTab";
 import { SchemasTab } from "@/components/account/tabs/SchemasTab";
 import { SubscriptionTab } from "@/components/account/tabs/SubscriptionTab";
@@ -37,7 +38,8 @@ export async function AccountTabView({
       {tab === "voortgang" && <ProgressTab view={view} base={base} l={l} />}
       {tab === "check-in" && <CheckinTab view={view} base={base} demo={demo} notice={notice} l={l} />}
       {tab === "gegevens" && <DetailsTab view={view} base={base} l={l} demo={demo} connectionNotice={connectionNotice} />}
-      {tab === "abonnement" && <SubscriptionTab view={view} demo={demo} notice={notice} l={l} />}
+      {tab === "abonnement" && <SubscriptionTab view={view} base={base} demo={demo} notice={notice} l={l} />}
+      {tab === "betalingen" && <PaymentsTab view={view} demo={demo} notice={notice} l={l} />}
     </AccountShell>
   );
 }

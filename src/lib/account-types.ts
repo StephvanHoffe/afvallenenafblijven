@@ -22,6 +22,24 @@ export interface DashboardOrder {
   /** Het wekelijkse weegmoment van de lopende periode (null als er geen is). */
   weekly: WeeklyWindow | null;
   lastWeightKg: number | null;
+  /** De volgende maandelijkse afschrijving (null bij een los schema of als er geen meer komt). */
+  nextPayment: { date: Date; amountCents: number | null } | null;
+}
+
+/** Een betaling of terugbetaling op het tabblad Betalingen. */
+export interface PaymentView {
+  id: string;
+  date: Date;
+  kind: "payment" | "refund";
+  /** In centen; negatief bij een terugbetaling. */
+  amountCents: number;
+  orderReference: string | null;
+  product: ProductId | null;
+  duration: DurationId | null;
+  /** De hoeveelste maand van het abonnement (1 = de eerste); null bij een los schema of terugbetaling. */
+  month: number | null;
+  /** Link naar de factuur (pdf), of null als er geen factuur bij hoort. */
+  invoiceHref: string | null;
 }
 
 /** De tevredenheidsgarantie op de eerste aankoop, zoals Mijn schema's die toont. */
@@ -76,8 +94,10 @@ export interface AccountView {
   health: HealthView | null;
   /** Alleen binnen de garantietermijn, of als de klant de garantie heeft aangevraagd. */
   guarantee: GuaranteeView | null;
+  /** Betalingen en terugbetalingen, nieuwste eerst. */
+  payments: PaymentView[];
 }
 
-export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement";
+export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement" | "betalingen";
 
-export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | "garantie" | null;
+export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | "garantie" | "factuur-fout" | null;
