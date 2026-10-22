@@ -50,7 +50,7 @@ async function Codes({ searchParams }: Pick<PageProps<"/beheer/kortingscodes">, 
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
         title="Kortingscodes"
-        intro="Maak codes voor acties, influencers of bedrijven. Klanten vullen de code in bij het afrekenen, of je deelt een link waarin de code al staat. Een code vervangt de lanceringskorting."
+        intro="Maak codes voor acties, influencers of bedrijven. Klanten vullen de code in bij het afrekenen, of je deelt een link waarin de code al staat. Een code vervangt de actiekorting (bijv. Black Friday)."
       />
 
       <Panel

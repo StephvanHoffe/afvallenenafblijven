@@ -7,10 +7,9 @@ import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
 import type { FaqItem } from "@/content/faq";
 import type { ProductId } from "@/config/pricing";
-import { site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
-import { launchOfferActive } from "@/lib/launch";
+import { currentPromotion } from "@/lib/promotion";
 
 const copy = defineCopy<{
   start: Record<ProductId, string>;
@@ -83,7 +82,7 @@ export interface ProductLandingContent {
 }
 
 export async function ProductLanding({ content }: { content: ProductLandingContent }) {
-  const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
+  const promo = await currentPromotion(await getLocale());
   const l = await getLocale();
   const c = copy[l];
   const startHref = `/start?plan=${content.product}`;
@@ -166,7 +165,7 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
             title={c.pricingTitle}
             intro={content.pricingProducts.length > 1 ? c.pricingIntroBundle : c.pricingIntroSingle}
           />
-          <PricingTable only={content.pricingProducts} launch={launch} highlight="bundel" />
+          <PricingTable only={content.pricingProducts} promo={promo} highlight="bundel" />
           <div className="mt-12">
             <Guarantee />
           </div>

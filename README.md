@@ -11,7 +11,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - Prijstabel met looptijd-schakelaar (vanaf € 8,95 per maand), kortingslabels, "Meest gekozen"-bundel en een losse aankoop als alternatief.
 - Kiest de bezoeker een los schema of 1 maand, dan toont de prijstabel een eerlijke vergelijking (een maandabonnement is goedkoper dan een los schema; met 3 maanden betaal je minder en heb je de ~66 dagen die een nieuwe gewoonte volgens onderzoek nodig heeft, Lally e.a. 2010). In de vragenlijst staat bij de plankeuze een persoonlijk looptijdadvies op basis van de prognose (3 of 6 maanden), dat is voorgeselecteerd zolang de bezoeker zelf nog niets koos.
 - Vlak voor de prijzen: "Over 3 maanden kun je op twee plekken staan" (als je niets verandert, of als je vandaag begint).
-- Lanceringsactie (automatische korting op de eerste maand, alleen binnen de ingestelde data).
+- Acties (automatische korting op de eerste betaling, per looptijd, alleen binnen de ingestelde data): Black Friday van 23 t/m 30 november 2026 (tot 50%) en een goede voornemens-actie in januari 2027 (20%).
 - Tevredenheidsgarantie van 14 dagen op de eerste betaling (aan/uit te zetten), aan te vragen in Mijn schema's.
 - Bescheiden disclaimers dat je een schema en begeleiding koopt, geen gegarandeerd resultaat: in de footer, onder de prijzen, bij de prognose en het afrekenen, in de veelgestelde vragen en op de disclaimerpagina (teksten in `src/content/disclaimers.ts`).
 - Vaste startknop onderin op mobiel.
@@ -39,7 +39,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
   - `/lp`: afvallen met voeding én training (de klant kiest zelf het plan);
   - `/lp/voeding`: voedingsschema (de vragenlijst begint met het voedingsschema);
   - `/lp/training`: trainingsschema, thuis of in de sportschool.
-- Bovenaan kiest de bezoeker meteen een doel; de vragenlijst begint dan bij de tweede vraag (`/start?doel=afvallen`). Verder: wat je krijgt, herkenbare problemen met de oplossing, een echt voorbeeld uit een schema, de wekelijkse bijsturing met een voorbeeldgrafiek, een vergelijking, de prijzen, garantie, veelgestelde vragen en een vaste startknop op mobiel. De lanceringsactie verschijnt vanzelf zolang die loopt.
+- Bovenaan kiest de bezoeker meteen een doel; de vragenlijst begint dan bij de tweede vraag (`/start?doel=afvallen`). Verder: wat je krijgt, herkenbare problemen met de oplossing, een echt voorbeeld uit een schema, de wekelijkse bijsturing met een voorbeeldgrafiek, een vergelijking, de prijzen, garantie, veelgestelde vragen en een vaste startknop op mobiel. Een actie verschijnt vanzelf zolang die loopt.
 - De pagina's staan niet in zoekmachines (noindex) en niet in de sitemap; de gewone pagina's zijn voor SEO.
 - Zet utm-parameters in je advertentielinks, bijvoorbeeld `https://afvallenenafblijven.nl/lp/voeding?utm_source=meta&utm_medium=paid_social&utm_campaign=lancering-januari&utm_content=video-1`. De parameters gaan mee naar de vragenlijst en worden bij de bestelling opgeslagen (er wordt niets in de browser bewaard). In het beheer zie je per campagne hoeveel mensen de betaalstap startten, hoeveel er bestelden en wat dat opleverde; bij elke bestelling staat de bron.
 - Meting (na cookietoestemming): `view_promotion` bij het openen, `select_promotion` bij een klik op een startknop of doel, daarna de bestaande gebeurtenissen (`quiz_start` = Meta Lead, `begin_checkout`, `purchase`).
@@ -77,7 +77,7 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - **Schema's** met filters (ook "Nog niet bij klant" en "Goedkeuren"). Je bekijkt ze zoals de klant ze ziet, ook als PDF, met de allergieën erbij. Goedkeuren, meteen naar de klant sturen, opnieuw laten maken **met een aanwijzing** (bijv. "meer warme lunches"; die gaat mee naar Claude), de mail opnieuw sturen en een **beoordeling** (1-5 met toelichting) geven.
 - Mislukt een schema, dan wordt het automatisch opnieuw geprobeerd, steeds iets later (na 5, 10, 20 en 40 minuten). Na 5 pogingen krijg je een e-mail met een link naar het schema; los de oorzaak op (meestal de API-sleutel of het tegoed bij Anthropic) en klik op "Opnieuw maken".
 - **Feedback**: de antwoorden uit de check-ins (verdeling per vraag, met aandachtspunten in oranje), opmerkingen uit check-ins en weegmomenten, opzegredenen met toelichting, garantie-aanvragen en je eigen beoordelingen van schema's.
-- **Kortingscodes**: percentage of vast bedrag, voor de eerste betaling, de eerste maanden of altijd, beperkt tot producten of looptijden, met een maximum aantal keer en een geldigheidsperiode. Per code zie je hoe vaak hij is gebruikt, hoe vaak de betaalpagina ermee werd geopend en de eerste betalingen. Klanten vullen de code in bij het afrekenen, of je deelt een link (`/start?code=ZOMER10`, werkt ook achter een landingspagina). Een code vervangt de lanceringskorting. De Stripe-coupon wordt automatisch aangemaakt.
+- **Kortingscodes**: percentage of vast bedrag, voor de eerste betaling, de eerste maanden of altijd, beperkt tot producten of looptijden, met een maximum aantal keer en een geldigheidsperiode. Per code zie je hoe vaak hij is gebruikt, hoe vaak de betaalpagina ermee werd geopend en de eerste betalingen. Klanten vullen de code in bij het afrekenen, of je deelt een link (`/start?code=ZOMER10`, werkt ook achter een landingspagina). Een code vervangt de actiekorting. De Stripe-coupon wordt automatisch aangemaakt.
 - **E-mails**: van elke klantmail pas je het onderwerp, de tekst en de knop aan, in het Nederlands en het Engels, met invulvelden zoals `{naam}`. Met een voorbeeld, testmail en "terug naar standaard". Daarnaast een log van alle verstuurde e-mails (12 maanden), te filteren op status en soort.
 - **Herinnering bij niet-afgeronde betaling** (staat standaard uit, aanzetten in Instellingen): één mail na een in te stellen aantal uren, alleen met toestemming voor e-mail, tussen 08:00 en 21:00, en niet als de persoon intussen heeft besteld. De link opent de vragenlijst met de antwoorden al ingevuld.
 - **Herroepingen en garantie-aanvragen** afhandelen, met een knop die de eerste betaling via Stripe terugbetaalt, het abonnement direct beëindigt en de aanvraag afhandelt.
@@ -106,7 +106,7 @@ Belangrijke bestanden:
 
 | Bestand | Wat |
 | --- | --- |
-| `src/config/site.ts` | Bedrijfsgegevens, garantie, lanceringsactie |
+| `src/config/site.ts` | Bedrijfsgegevens, garantie, acties |
 | `src/config/pricing.ts` | Producten, looptijden en **alle prijzen** |
 | `src/lib/ai/prompts.ts` | Instructies voor Claude (kwaliteit van de schema's) |
 | `src/lib/ai/generate.ts` | Generatie en automatische kwaliteitscontrole |
@@ -193,7 +193,7 @@ De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro)
    - Zet het signing secret in `STRIPE_WEBHOOK_SECRET`.
    - Terugbetalen doe je bij voorkeur vanuit het beheer; dan staat het ook in de omzetcijfers. Betaal je terug in het Stripe-dashboard, dan zie je dat niet terug in het beheer.
    - Sla het **klantportaal** (Settings → Billing → Customer portal) één keer op. Zet daarin betaalmethode wijzigen en factuurhistorie aan. Zet **opzeggen in het portaal uit**: de website regelt opzeggen zelf, zodat de minimale looptijd klopt.
-   - Producten, prijzen en de lanceringscoupon worden automatisch aangemaakt bij de eerste bestelling.
+   - Producten, prijzen en de actiecoupons worden automatisch aangemaakt bij de eerste bestelling.
    - Btw: de prijzen zijn inclusief 21%. Verkoop je ook aan België, overweeg dan Stripe Tax (OSS-regeling).
 5. **E-mail**: zet de SMTP-gegevens van je e-mailaanbieder en stel SPF/DKIM in voor je domein, zodat mails niet in de spam belanden.
 6. **Claude**: maak een API-sleutel aan op platform.claude.com, zet `ANTHROPIC_API_KEY` en draai `npm run schema:test` om de kwaliteit te beoordelen.
@@ -209,7 +209,7 @@ De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro)
 ## Prijzen, actie en garantie aanpassen
 
 - **Prijzen**: `monthlyPrices` in `src/config/pricing.ts`, per maand, in centen en inclusief btw. Een gewijzigde prijs maakt automatisch een nieuwe Stripe-prijs aan voor nieuwe klanten; bestaande abonnees houden hun prijs.
-- **Lanceringsactie**: `launchOffer` in `src/config/site.ts`. Hier stel je het percentage, de start- en einddatum in, of zet je de actie uit.
+- **Acties**: `promotions` in `src/config/site.ts`. Per actie stel je de naam, de start- en einddatum en het kortingspercentage per looptijd in (0 = geen korting), of zet je de actie uit. De korting geldt op de eerste betaling en verschijnt vanzelf in de aankondigingsbalk, de prijstabellen, de landingspagina's en bij het afrekenen. Lopen er twee acties tegelijk, dan geldt de eerste in de lijst. Kondig een korting alleen aan ten opzichte van een prijs die je echt hebt gevraagd (ACM).
 - **Garantie**: `guarantee` in `src/config/site.ts` (standaard 14 dagen). Zet je deze uit, dan verdwijnt de garantie overal, ook uit de voorwaarden en Mijn schema's. De termijn loopt tot en met de 14e dag na de besteldag (Nederlandse tijd); de garantie geldt één keer per klant, voor de eerste bestelling.
 
 ## Reviews en social proof

@@ -16,7 +16,7 @@ import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
 import { FutureSection, PainSection } from "@/components/conversion";
 import { faqInOrder } from "@/content/faq";
-import { launchOfferActive } from "@/lib/launch";
+import { currentPromotion } from "@/lib/promotion";
 import { site } from "@/config/site";
 import { lowestMonthlyPrice, productFor, type ProductId } from "@/config/pricing";
 import { defineCopy } from "@/i18n/config";
@@ -225,8 +225,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
   const l = await getLocale();
+  const promo = await currentPromotion(l);
   const c = copy[l];
   // De twijfels die het afsluiten tegenhouden eerst.
   const faq = faqInOrder(l, ["opzeggen", "garantie", "abonnement", "persoonlijk", "niet-afvallen", "resultaat", "snel"]);
@@ -459,7 +459,7 @@ export default async function HomePage() {
             title={c.pricingTitle}
             intro={c.pricingIntro}
           />
-          <PricingTable launch={launch} />
+          <PricingTable promo={promo} />
           <div className="mt-12">
             <Guarantee />
           </div>

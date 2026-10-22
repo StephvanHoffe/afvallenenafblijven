@@ -28,7 +28,7 @@ import { PricingTable } from "@/components/pricing/PricingTable";
 import { StickyCta } from "@/components/StickyCta";
 import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
 import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
-import { launchOfferEndLabel, site } from "@/config/site";
+import { promotionSummary, site } from "@/config/site";
 import { demoAccountViewFor } from "@/content/demo-account";
 import { faqInOrder } from "@/content/faq";
 import { landingCopy, variantSettings, type LandingVariant } from "@/content/landing";
@@ -40,7 +40,7 @@ import { getLocale } from "@/i18n/server";
 import { euro, formatNumber } from "@/lib/format";
 import { isHealthEnabled } from "@/lib/health/config";
 import type { Intake } from "@/lib/intake";
-import { launchOfferActive } from "@/lib/launch";
+import { currentPromotion } from "@/lib/promotion";
 import { buildProgress } from "@/lib/progress";
 
 const goalIcons: Record<Intake["goal"], typeof Target> = {
@@ -109,7 +109,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   const v = landingCopy[l].variants[variant];
   const settings = variantSettings[variant];
   const labels = intakeLabels(l);
-  const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
+  const promo = await currentPromotion(l);
   const samples = samplePlansFor(l);
   const day = samples.sampleNutritionPlan.days[0];
   const targets = samples.sampleTargets;
@@ -130,8 +130,8 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
           <div className="min-w-0">
             <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
               <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-              {launch.active
-                ? c.launchBadge(l === "en" ? site.launchOffer.labelEn : site.launchOffer.label, launch.percentOff, launchOfferEndLabel(l))
+              {promo
+                ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, l), promo.endsLabel)
                 : c.badge}
             </p>
             <h1 className="heading-xl">
@@ -462,7 +462,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
       {/* PRIJZEN */}
       <section id="prijzen" className="container-page scroll-mt-20 py-16">
         <SectionHeading eyebrow={c.pricingEyebrow} title={c.pricingTitle} intro={c.pricingIntro} />
-        <PricingTable launch={launch} only={settings.pricing.only} highlight={settings.pricing.highlight} />
+        <PricingTable promo={promo} only={settings.pricing.only} highlight={settings.pricing.highlight} />
         <div className="mt-12 space-y-6">
           <Guarantee />
           <div className="mx-auto flex max-w-3xl gap-4 rounded-[var(--radius-card)] bg-sand p-6">

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Quiz, type QuizResume } from "@/components/quiz/Quiz";
 import { DEFAULT_DURATION, isDurationId, isProductId } from "@/config/pricing";
-import { site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -10,7 +9,7 @@ import { goalOptions, intakeSchema } from "@/lib/intake";
 import { isDatabaseConfigured } from "@/lib/db";
 import { normalizeCode } from "@/lib/discounts";
 import { resumableIntake } from "@/lib/repo";
-import { launchOfferActive } from "@/lib/launch";
+import { currentPromotion } from "@/lib/promotion";
 
 const copy = defineCopy({
   nl: {
@@ -44,7 +43,7 @@ async function QuizLoader({ searchParams }: Pick<PageProps<"/[lang]/start">, "se
   const plan = typeof sp.plan === "string" && isProductId(sp.plan) ? sp.plan : null;
   const duration = typeof sp.looptijd === "string" && isDurationId(sp.looptijd) ? sp.looptijd : DEFAULT_DURATION;
   const goal = typeof sp.doel === "string" && sp.doel in goalOptions ? (sp.doel as keyof typeof goalOptions) : null;
-  const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
+  const promo = await currentPromotion(await getLocale());
   const code = typeof sp.code === "string" ? normalizeCode(sp.code) || null : null;
   const resume = typeof sp.hervat === "string" ? await loadResume(sp.hervat) : null;
   return (
@@ -55,7 +54,7 @@ async function QuizLoader({ searchParams }: Pick<PageProps<"/[lang]/start">, "se
       initialGoal={goal}
       startAtPlan={sp.stap === "plan"}
       durationPreset={typeof sp.looptijd === "string" && isDurationId(sp.looptijd)}
-      launch={launch}
+      promo={promo}
       initialCode={code ?? resume?.code ?? null}
       resume={resume?.quiz ?? null}
     />

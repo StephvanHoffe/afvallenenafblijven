@@ -32,6 +32,7 @@ import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
 import { trackEvent } from "@/lib/consent";
 import { deviceType, track, visitId } from "@/lib/track";
+import type { PromoView } from "@/lib/promotion";
 import { discountedAmount, discountedPayments, type DiscountTerms } from "@/lib/discounts";
 import { campaignFromParams, type Campaign } from "@/lib/campaign";
 import { PricingTable } from "@/components/pricing/PricingTable";
@@ -240,7 +241,7 @@ const copy = defineCopy({
       perMonth: "per maand",
       minimum: (label: string) => `minimaal ${label}`,
       perMonthSuffix: " p/m",
-      launchDiscount: (percent: number) => `Lanceringskorting (${percent}%)`,
+      launchDiscount: (label: string, percent: number) => `${label} (${percent}%)`,
       dueNowFirstMonth: "Nu te betalen (eerste maand)",
       dueNow: "Nu te betalen",
       monthly: (amount: string) => `Daarna schrijven we elke maand ${amount} af via automatische incasso. Maandelijks opzegbaar.`,
@@ -268,7 +269,7 @@ const copy = defineCopy({
       codeChecking: "Controleren…",
       codeRemove: "Verwijderen",
       codeLine: (code: string) => `Kortingscode ${code}`,
-      codeReplacesLaunch: "Je kortingscode vervangt de lanceringskorting.",
+      codeReplacesLaunch: "Je kortingscode vervangt de actiekorting.",
       codeRepeating: (n: number, amount: string) => `Met je kortingscode betaal je de eerste ${n} maanden ${amount} per maand.`,
       codeFailed: "We konden de code nu niet controleren. Probeer het opnieuw.",
     },
@@ -424,7 +425,7 @@ const copy = defineCopy({
       perMonth: "per month",
       minimum: (label: string) => `minimum ${label}`,
       perMonthSuffix: " /month",
-      launchDiscount: (percent: number) => `Launch discount (${percent}%)`,
+      launchDiscount: (label: string, percent: number) => `${label} (${percent}%)`,
       dueNowFirstMonth: "Due now (first month)",
       dueNow: "Due now",
       monthly: (amount: string) => `After that, we'll collect ${amount} every month by direct debit. Cancel any month.`,
@@ -452,7 +453,7 @@ const copy = defineCopy({
       codeChecking: "Checking…",
       codeRemove: "Remove",
       codeLine: (code: string) => `Discount code ${code}`,
-      codeReplacesLaunch: "Your discount code replaces the launch discount.",
+      codeReplacesLaunch: "Your discount code replaces the promotional discount.",
       codeRepeating: (n: number, amount: string) => `With your discount code, you pay ${amount} a month for the first ${n} months.`,
       codeFailed: "We couldn't check the code right now. Please try again.",
     },
@@ -632,7 +633,7 @@ export function Quiz({
   initialDuration,
   initialGoal = null,
   startAtPlan,
-  launch,
+  promo,
   durationPreset = false,
   initialCode = null,
   resume = null,
@@ -644,7 +645,8 @@ export function Quiz({
   /** Doel dat al op een landingspagina is gekozen: dan begint de vragenlijst bij de tweede vraag. */
   initialGoal?: Intake["goal"] | null;
   startAtPlan: boolean;
-  launch: { active: boolean; percentOff: number };
+  /** De actie die nu loopt, of null. */
+  promo: PromoView | null;
   /** Kortingscode uit de link (?code=). */
   initialCode?: string | null;
   /** Verder met een eerder begonnen bestelling (?hervat=). */
@@ -1329,7 +1331,7 @@ export function Quiz({
             <PricingTable
               initialDuration={durationChosen ? s.duration : recommended}
               recommended={recommended}
-              launch={launch}
+              promo={promo}
               onSelect={choosePlan}
               selectedProduct={s.product ?? undefined}
             />
@@ -1337,7 +1339,7 @@ export function Quiz({
               <CheckoutBox
                 state={orderState}
                 setConsents={(c) => setS({ ...s, consents: { ...s.consents, ...c } })}
-                launch={launch}
+                promo={promo}
                 payload={payload}
                 formAction={formAction}
                 pending={pending}
@@ -1377,7 +1379,7 @@ export function Quiz({
 function CheckoutBox({
   state,
   setConsents,
-  launch,
+  promo,
   payload,
   formAction,
   pending,
@@ -1387,7 +1389,7 @@ function CheckoutBox({
 }: {
   state: QuizState;
   setConsents: (c: Partial<QuizState["consents"]>) => void;
-  launch: { active: boolean; percentOff: number };
+  promo: PromoView | null;
   payload: string;
   formAction: (fd: FormData) => void;
   pending: boolean;
@@ -1409,8 +1411,9 @@ function CheckoutBox({
   const d = durationFor(state.duration, l);
   const subscription = isSubscription(state.duration);
   const total = monthlyPrice(product, state.duration);
-  // Een kortingscode vervangt de lanceringskorting.
-  const first = discount ? discountedAmount(total, discount.terms) : launch.active ? applyPercentOff(total, launch.percentOff) : total;
+  // Een kortingscode vervangt de actiekorting.
+  const promoPercent = promo ? (promo.percentOff[state.duration] ?? 0) : 0;
+  const first = discount ? discountedAmount(total, discount.terms) : promoPercent > 0 ? applyPercentOff(total, promoPercent) : total;
   const later = discount && discount.terms.duration === "forever" ? discountedAmount(total, discount.terms) : total;
   const repeating = discount && subscription ? discountedPayments(discount.terms) : null;
   const c = state.consents;
@@ -1463,9 +1466,10 @@ function CheckoutBox({
             <dd className="whitespace-nowrap">− {euro(total - first, l)}</dd>
           </div>
         ) : (
-          launch.active && (
+          promo &&
+          promoPercent > 0 && (
             <div className="flex justify-between gap-4 text-brand-700">
-              <dt>{t.launchDiscount(launch.percentOff)}</dt>
+              <dt>{t.launchDiscount(promo.label, promoPercent)}</dt>
               <dd>− {euro(total - first, l)}</dd>
             </div>
           )
@@ -1482,7 +1486,7 @@ function CheckoutBox({
               : t.minimumTerm(euro(later, l), d.label)
             : t.oneOffPayment}{" "}
           {t.vat}
-          {discount && launch.active ? ` ${t.codeReplacesLaunch}` : ""}
+          {discount && promoPercent > 0 ? ` ${t.codeReplacesLaunch}` : ""}
         </p>
       </dl>
 

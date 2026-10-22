@@ -14,12 +14,11 @@ import {
   productFor,
   type ProductId,
 } from "@/config/pricing";
-import { site } from "@/config/site";
 import { defineCopy, type Locale } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 import { euro } from "@/lib/format";
-import { launchOfferActive } from "@/lib/launch";
+import { currentPromotion } from "@/lib/promotion";
 
 const comparison: { label: Record<Locale, string>; voeding: boolean; training: boolean }[] = [
   { label: { nl: "Persoonlijk calorie- en macrodoel", en: "Personal calorie and macro targets" }, voeding: true, training: false },
@@ -133,8 +132,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function PrijzenPage() {
-  const launch = { active: await launchOfferActive(), percentOff: site.launchOffer.percentOff };
   const l = await getLocale();
+  const promo = await currentPromotion(l);
   const c = copy[l];
   const ids: ProductId[] = ["voeding", "training", "bundel"];
   // De twijfels die het afsluiten tegenhouden eerst.
@@ -151,7 +150,7 @@ export default async function PrijzenPage() {
             title={c.title}
             intro={c.intro(maxSavingsPercent())}
           />
-          <PricingTable launch={launch} />
+          <PricingTable promo={promo} />
           <div className="mx-auto mt-14 max-w-5xl">
             <h2 className="heading-md text-center">{c.whyTitle}</h2>
             <ul className="mt-6 grid gap-4 md:grid-cols-3">

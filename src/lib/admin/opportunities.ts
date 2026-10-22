@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, durations, isDurationId, isProductId, monthlyPrice, products } from "@/config/pricing";
-import { site } from "@/config/site";
+import { promotionEndLabel, promotionSummary, site } from "@/config/site";
 import { isDemoMode } from "@/lib/admin/auth";
 import { analyticsReport, type AnalyticsReport } from "@/lib/admin/analytics-report";
 import { adminData, type AdminOverview } from "@/lib/admin/data";
@@ -1007,22 +1007,43 @@ export function buildOpportunities(i: OpportunityInput): { kansen: Kans[]; stren
       weight: 1,
     });
   }
-  const offerEnd = Date.parse(site.launchOffer.endsAt);
-  if (site.launchOffer.enabled && offerEnd > nowMs && offerEnd - nowMs < 14 * DAY) {
-    out.push({
-      id: "actie-eindigt",
-      area: "marketing",
-      impact: "middel",
-      title: `De ${site.launchOffer.label.toLowerCase()} eindigt binnenkort`,
-      finding: `Nog ${n(Math.ceil((offerEnd - nowMs) / DAY))} dagen. Daarna betalen nieuwe klanten de normale prijs; de conversie kan dalen.`,
-      actions: [
-        "Communiceer de einddatum (\"nog 3 dagen\") in advertenties en een mail aan mensen die de vragenlijst invulden.",
-        "Bedenk een vervolgactie, bijvoorbeeld een kortingscode voor partners.",
-      ],
-      basis: "Instellingen",
-      link: { href: "/beheer/instellingen", label: "Bekijk de actie" },
-      weight: 20,
-    });
+  for (const promo of site.promotions.filter((p) => p.enabled)) {
+    const start = Date.parse(promo.startsAt);
+    const end = Date.parse(promo.endsAt);
+    const summary = promotionSummary({ ...promo.percentOff }, "nl");
+    if (start > nowMs && start - nowMs < 21 * DAY) {
+      out.push({
+        id: `actie-start-${promo.id}`,
+        area: "marketing",
+        impact: start - nowMs < 7 * DAY ? "hoog" : "middel",
+        title: `${promo.label} begint over ${n(Math.ceil((start - nowMs) / DAY))} dagen`,
+        finding: `Van ${new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long" }).format(new Date(start))} t/m ${promotionEndLabel(promo)}: ${summary}. De korting staat dan vanzelf op de website en bij het afrekenen.`,
+        actions: [
+          "Zet advertenties klaar die op de startdag live gaan, met een link naar /lp of /start en utm-gegevens (bijv. utm_campaign=" + promo.id + ").",
+          "Plan een mail aan mensen die toestemming gaven voor e-mail, en posts op social media voor de start en de laatste dag.",
+          "Controleer of de normale prijs vóór de actie echt gebruikt is: noem geen \"van\"-prijs die je niet hebt gevraagd.",
+        ],
+        basis: "Acties in src/config/site.ts",
+        link: { href: "/beheer/instellingen", label: "Bekijk de acties" },
+        weight: 30,
+      });
+    }
+    if (start <= nowMs && end > nowMs && end - nowMs < 14 * DAY) {
+      out.push({
+        id: `actie-eindigt-${promo.id}`,
+        area: "marketing",
+        impact: "middel",
+        title: `${promo.label} eindigt over ${n(Math.ceil((end - nowMs) / DAY))} dagen`,
+        finding: `${summary}, t/m ${promotionEndLabel(promo)}. Daarna betalen nieuwe klanten de normale prijs.`,
+        actions: [
+          "Noem de einddatum in advertenties en social posts (\"nog 2 dagen\"), alleen zolang dat klopt.",
+          "Bekijk bij Bezoekers en Funnel welke kanalen tijdens de actie het best werkten, voor de volgende actie.",
+        ],
+        basis: "Acties in src/config/site.ts",
+        link: { href: "/beheer/instellingen", label: "Bekijk de acties" },
+        weight: 20,
+      });
+    }
   }
 
   // ---------- Beheer ----------
@@ -1212,7 +1233,10 @@ export function opportunitySummary(i: OpportunityInput, kansen: Kans[]): string 
         `${products[p].shortName}: ${[...SUBSCRIPTION_DURATIONS, "eenmalig" as const]
           .map((d) => `${d === "eenmalig" ? "los" : d} € ${(monthlyPrice(p, d) / 100).toFixed(2)}`)
           .join(", ")}`,
-    ).join("; ")}. Lanceringsactie: ${site.launchOffer.enabled ? `${site.launchOffer.percentOff}% op de eerste betaling, ${site.launchOffer.startsAt.slice(0, 10)} t/m ${site.launchOffer.endsAt.slice(0, 10)}` : "uit"}.`,
+    ).join("; ")}. Acties (korting op de eerste betaling): ${site.promotions
+      .filter((p) => p.enabled)
+      .map((p) => `${p.label} ${p.startsAt.slice(0, 10)} t/m ${p.endsAt.slice(0, 10)} (${Object.entries(p.percentOff).map(([d, v]) => `${d} ${v}%`).join(", ")})`)
+      .join("; ") || "geen"}.`,
   );
   lines.push(`\n# Funnel (laatste ${f.filters.days} dagen)`);
   lines.push(f.stages.map((s) => `${s.label}: ${s.count}`).join("; "));

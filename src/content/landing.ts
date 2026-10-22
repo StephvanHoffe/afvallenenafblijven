@@ -71,7 +71,7 @@ interface VariantCopy {
 
 interface SharedCopy {
   badge: string;
-  launchBadge: (label: string, pct: number, until: string) => string;
+  launchBadge: (label: string, discount: string, until: string) => string;
   pickTitle: string;
   pickNote: string;
   orStart: string;
@@ -125,7 +125,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
   nl: {
     shared: {
       badge: "In 2 minuten ingevuld · binnen 2 uur je plan",
-      launchBadge: (label, pct, until) => `${label}: ${pct}% korting op je eerste betaling, t/m ${until}`,
+      launchBadge: (label, discount, until) => `${label}: ${discount}, t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
       pickNote: "Kies je doel en beantwoord nog een paar vragen. Duurt ongeveer 2 minuten; je betaalt pas als je een plan kiest.",
       orStart: "Of start direct",
@@ -249,7 +249,7 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
   en: {
     shared: {
       badge: "2 minutes to fill in · your plan within 2 hours",
-      launchBadge: (label, pct, until) => `${label}: ${pct}% off your first payment, until ${until}`,
+      launchBadge: (label, discount, until) => `${label}: ${discount}, until ${until}`,
       pickTitle: "What would you like to work on?",
       pickNote: "Choose your goal and answer a few more questions. Takes about 2 minutes; you only pay once you choose a plan.",
       orStart: "Or start straight away",

@@ -5,7 +5,7 @@ import type { Locale } from "@/i18n/config";
  * Kortingscodes (gedeeld door de vragenlijst, de server en het beheer). Een
  * code geeft een percentage of een vast bedrag korting, op de eerste betaling
  * ("once"), op de eerste N maanden ("repeating") of zolang het abonnement
- * loopt ("forever"). Een geldige code vervangt de lanceringskorting.
+ * loopt ("forever"). Een geldige code vervangt de actiekorting.
  */
 
 export type DiscountDuration = "once" | "repeating" | "forever";

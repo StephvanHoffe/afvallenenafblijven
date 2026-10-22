@@ -8,13 +8,13 @@ import {
   type DurationId,
   type ProductId,
 } from "@/config/pricing";
-import { isLaunchOfferActive, site } from "@/config/site";
+import { activePromotion, promotionPercent, site, type Promotion } from "@/config/site";
 import { addMonthsClamped } from "@/lib/dates";
 import { localeUrl, type Locale } from "@/i18n/config";
 import { saveStripeCoupon, type DiscountCodeRow } from "@/lib/discounts-server";
 
 /**
- * Stripe-koppeling. Producten, prijzen en de lanceringskorting worden
+ * Stripe-koppeling. Producten, prijzen en de actiekortingen worden
  * automatisch (en idempotent) in Stripe aangemaakt op basis van
  * src/config/pricing.ts. Je hoeft in het Stripe-dashboard dus geen producten
  * te maken; alleen de betaalmethoden aanzetten (iDEAL | Wero, Bancontact,
@@ -95,18 +95,20 @@ export async function ensurePrice(product: ProductId, duration: DurationId): Pro
   return priceId;
 }
 
-async function ensureLaunchCoupon(): Promise<string> {
-  const o = site.launchOffer;
+/** De Stripe-coupon voor een actie en kortingspercentage (één per percentage, alleen op de eerste betaling). */
+async function ensurePromotionCoupon(promo: Promotion, percent: number): Promise<string> {
+  const id = `afb_actie_${promo.id}_${percent}`;
   try {
-    const coupon = await stripe().coupons.retrieve(o.couponId);
+    const coupon = await stripe().coupons.retrieve(id);
     return coupon.id;
   } catch (err) {
     if (!isMissing(err)) throw err;
     const coupon = await stripe().coupons.create({
-      id: o.couponId,
-      name: `${o.label} ${o.percentOff}%`,
-      percent_off: o.percentOff,
+      id,
+      name: `${promo.label} ${percent}%`,
+      percent_off: percent,
       duration: "once",
+      metadata: { promotion: promo.id },
     });
     return coupon.id;
   }
@@ -140,23 +142,27 @@ export interface CheckoutInput {
   email: string;
   name: string;
   locale?: Locale;
-  /** Een geldige kortingscode; vervangt de lanceringskorting. */
+  /** Een geldige kortingscode; vervangt de actiekorting. */
   discount?: DiscountCodeRow | null;
 }
 
 export async function createCheckoutSession(input: CheckoutInput): Promise<string> {
   const price = await ensurePrice(input.product, input.duration);
   const subscription = isSubscription(input.duration);
+  // Een kortingscode van de klant vervangt de actiekorting.
+  const promo = input.discount ? null : activePromotion(new Date());
+  const promoPercent = promo ? promotionPercent(promo, input.duration) : 0;
   const metadata = {
     intake_id: input.intakeId,
     product: input.product,
     duration: input.duration,
     ...(input.discount ? { discount_code: input.discount.code } : {}),
+    ...(promo && promoPercent > 0 ? { promotion: promo.id } : {}),
   };
   const discounts = input.discount
     ? [{ coupon: await ensureCodeCoupon(input.discount) }]
-    : isLaunchOfferActive(new Date())
-      ? [{ coupon: await ensureLaunchCoupon() }]
+    : promo && promoPercent > 0
+      ? [{ coupon: await ensurePromotionCoupon(promo, promoPercent) }]
       : undefined;
   const l = input.locale ?? "nl";
   const months = durations[input.duration].months;

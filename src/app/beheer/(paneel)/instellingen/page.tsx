@@ -7,12 +7,12 @@ import { saveCheckoutReminder, saveDelivery, sendTestEmail, setApprovalMode } fr
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
 import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, durations, monthlyPrice, products } from "@/config/pricing";
-import { launchOfferEndLabel, site } from "@/config/site";
+import { site } from "@/config/site";
+import { adminNow } from "@/lib/admin/clock";
 import { isAdminConfigured, isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { adminEmail } from "@/lib/email";
 import { db, isDatabaseConfigured } from "@/lib/db";
 import { euro } from "@/lib/format";
-import { launchOfferActive } from "@/lib/launch";
 import { adminData } from "@/lib/admin/data";
 import { EXPORTS, exportHref, type ExportKind } from "@/lib/admin/export";
 import Link from "@/i18n/Link";
@@ -47,7 +47,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const env = (k: string) => demo || Boolean(process.env[k]);
   const dbOk = demo || (await databaseReachable());
   const stripeMode = demo ? "test" : (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
-  const launch = await launchOfferActive();
+  const nowMs = adminNow();
   const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
   const [delivery, reminder] = await Promise.all([deliverySettings(), demo ? Promise.resolve({ enabled: true, delayHours: 3 }) : checkoutReminderSettings()]);
   const here = "/beheer/instellingen";
@@ -210,14 +210,29 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
 
           <Panel title="Acties en garantie">
             <dl className="divide-y divide-line text-sm">
-              <div className="flex justify-between gap-4 px-5 py-3">
-                <dt className="text-muted">{site.launchOffer.label}</dt>
-                <dd className="font-semibold">
-                  {site.launchOffer.enabled
-                    ? `${site.launchOffer.percentOff}% op eerste betaling, t/m ${launchOfferEndLabel()} (${launch ? "loopt nu" : "nu niet actief"})`
-                    : "Uit"}
-                </dd>
-              </div>
+              {site.promotions.map((p) => {
+                const start = Date.parse(p.startsAt);
+                const end = Date.parse(p.endsAt);
+                const status = !p.enabled ? "uit" : nowMs > end ? "afgelopen" : nowMs >= start ? "loopt nu" : "gepland";
+                const date = (iso: string) => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Amsterdam" }).format(new Date(iso));
+                return (
+                  <div key={p.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 px-5 py-3">
+                    <dt>
+                      <span className="text-muted">{p.label}</span>
+                      <span className="block text-xs text-muted">
+                        {date(p.startsAt)} t/m {date(p.endsAt)} · {status}
+                      </span>
+                    </dt>
+                    <dd className="text-right font-semibold">
+                      {(["12m", "6m", "3m", "1m", "eenmalig"] as const)
+                        .filter((d) => p.percentOff[d] > 0)
+                        .map((d) => `${d === "eenmalig" ? "los" : d === "1m" ? "per maand" : durations[d].label} ${p.percentOff[d]}%`)
+                        .join(" · ")}
+                      <span className="block text-xs font-normal text-muted">op de eerste betaling</span>
+                    </dd>
+                  </div>
+                );
+              })}
               <div className="flex justify-between gap-4 px-5 py-3">
                 <dt className="text-muted">Tevredenheidsgarantie</dt>
                 <dd className="font-semibold">{site.guarantee.enabled ? `${site.guarantee.days} dagen` : "Uit"}</dd>

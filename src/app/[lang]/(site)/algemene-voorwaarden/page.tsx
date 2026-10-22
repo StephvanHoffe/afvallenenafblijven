@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { LegalPage } from "@/components/LegalPage";
-import { companyAddressLine, site } from "@/config/site";
+import { companyAddressLine, hasSeparateLegalName, site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -44,7 +44,8 @@ function Nl() {
       <h2 id="artikel-1">Artikel 1 – Definities</h2>
       <ul>
         <li>
-          <strong>Wij / ondernemer:</strong> {c.legalName}, handelend onder de naam {site.name}.
+          <strong>Wij / ondernemer:</strong> {c.legalName}
+          {hasSeparateLegalName() && <>, handelend onder de naam {site.name}</>}.
         </li>
         <li>
           <strong>Jij / klant:</strong> de natuurlijke persoon die niet handelt in de uitoefening van beroep of bedrijf
@@ -221,7 +222,7 @@ function Nl() {
           de levering van nieuwe schema&apos;s opschorten tot de betaling binnen is.
         </li>
         <li>
-          Een actiekorting (zoals een lanceringsactie) geldt alleen voor de periode en voorwaarden die bij de actie staan
+          Een actiekorting (zoals een Black Friday-actie) geldt alleen voor de periode en voorwaarden die bij de actie staan
           vermeld, meestal alleen voor de eerste maand.
         </li>
         <li>
@@ -418,7 +419,8 @@ function En() {
       <h2 id="artikel-1">Article 1 – Definitions</h2>
       <ul>
         <li>
-          <strong>We / trader:</strong> {c.legalName}, trading under the name {site.name}.
+          <strong>We / trader:</strong> {c.legalName}
+          {hasSeparateLegalName() && <>, trading under the name {site.name}</>}.
         </li>
         <li>
           <strong>You / customer:</strong> the natural person who is not acting in the exercise of a profession or
@@ -597,7 +599,7 @@ function En() {
           we may suspend the delivery of new plans until the payment has been received.
         </li>
         <li>
-          A promotional discount (such as a launch offer) only applies for the period and under the conditions stated
+          A promotional discount (such as a Black Friday offer) only applies for the period and under the conditions stated
           with the promotion, usually only for the first month.
         </li>
         <li>

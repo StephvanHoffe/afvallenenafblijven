@@ -21,6 +21,7 @@ import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 import { euro, euroAmount } from "@/lib/format";
+import type { PromoView } from "@/lib/promotion";
 
 const copy = defineCopy({
   nl: {
@@ -46,8 +47,10 @@ const copy = defineCopy({
     savePercent: (n: number) => `${n}% voordeliger dan per maand`,
     bundleOneOff: (amount: string) => `${amount} goedkoper dan los`,
     bundleMonthly: (amount: string) => `Bespaar ${amount} p/m t.o.v. los`,
-    launch: (oneOff: boolean, price: string, regular: string) =>
-      `Lanceringsactie: ${oneOff ? "nu" : "eerste maand"} ${price} in plaats van ${regular}`,
+    launch: (label: string, oneOff: boolean, price: string, regular: string) =>
+      `${label}: ${oneOff ? "nu" : "eerste maand"} ${price} in plaats van ${regular}`,
+    promoTiers: (label: string, until: string) => `${label} t/m ${until}: hoe langer je kiest, hoe meer korting op je eerste maand`,
+    promoTier: (months: number) => (months === 0 ? "los" : months === 1 ? "per maand" : `${months} maanden`),
     renewal: "Elke 4 weken een nieuw, bijgestuurd schema",
     selected: "Gekozen ✓",
     vat: "Prijzen incl. btw",
@@ -75,8 +78,10 @@ const copy = defineCopy({
     savePercent: (n: number) => `${n}% cheaper than monthly`,
     bundleOneOff: (amount: string) => `${amount} cheaper than buying separately`,
     bundleMonthly: (amount: string) => `Save ${amount} a month vs. buying separately`,
-    launch: (oneOff: boolean, price: string, regular: string) =>
-      `Launch offer: ${oneOff ? "now" : "first month"} ${price} instead of ${regular}`,
+    launch: (label: string, oneOff: boolean, price: string, regular: string) =>
+      `${label}: ${oneOff ? "now" : "first month"} ${price} instead of ${regular}`,
+    promoTiers: (label: string, until: string) => `${label} until ${until}: the longer you choose, the bigger the discount on your first month`,
+    promoTier: (months: number) => (months === 0 ? "one-off" : months === 1 ? "monthly" : `${months} months`),
     renewal: "A new, fine-tuned plan every 4 weeks",
     selected: "Selected ✓",
     vat: "Prices incl. VAT",
@@ -87,7 +92,8 @@ interface Props {
   /** Toon alleen deze producten, in deze volgorde (standaard alle drie). */
   only?: ProductId[];
   initialDuration?: DurationId;
-  launch?: { active: boolean; percentOff: number };
+  /** De actie die nu loopt (korting op de eerste betaling per looptijd). */
+  promo?: PromoView | null;
   /** In de vragenlijst kiest de klant een plan in plaats van naar /start te gaan. */
   onSelect?: (product: ProductId, duration: DurationId) => void;
   selectedProduct?: ProductId;
@@ -165,7 +171,7 @@ export function DurationToggle({
 export function PricingTable({
   only,
   initialDuration = "3m",
-  launch,
+  promo,
   onSelect,
   selectedProduct,
   highlight = "bundel",
@@ -184,6 +190,7 @@ export function PricingTable({
   return (
     <div className="space-y-10">
       <DurationToggle value={duration} onChange={setDuration} product={focus} recommended={recommended} />
+      {promo && new Set(Object.values(promo.percentOff)).size > 1 && <PromoTiers promo={promo} />}
       {duration === "eenmalig" && (
         <Nudge
           text={c.nudgeOneOff(productFor(focus, l).shortName, euro(oneOffPrice, l), monthPrice < oneOffPrice ? euro(monthPrice, l) : null)}
@@ -205,13 +212,34 @@ export function PricingTable({
             product={id}
             duration={duration}
             featured={id === highlight && list.length > 1}
-            launch={launch}
+            promo={promo}
             onSelect={onSelect}
             selected={selectedProduct === id}
           />
         ))}
       </div>
       <p className="mx-auto max-w-2xl text-center text-xs leading-relaxed text-muted">{resultDisclaimer[l].long}</p>
+    </div>
+  );
+}
+
+/** De staffel van een actie met verschillende kortingen per looptijd. */
+function PromoTiers({ promo }: { promo: PromoView }) {
+  const l = useLocale();
+  const c = copy[l];
+  const order: DurationId[] = ["12m", "6m", "3m", "1m", "eenmalig"];
+  return (
+    <div className="mx-auto max-w-3xl rounded-2xl bg-brand-900 px-5 py-4 text-center text-white">
+      <p className="text-sm font-bold text-lime-glow">{c.promoTiers(promo.label, promo.endsLabel)}</p>
+      <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+        {order
+          .filter((d) => (promo.percentOff[d] ?? 0) > 0)
+          .map((d) => (
+            <li key={d}>
+              <span className="font-extrabold">−{promo.percentOff[d]}%</span> <span className="text-white/75">{c.promoTier(durations[d].months)}</span>
+            </li>
+          ))}
+      </ul>
     </div>
   );
 }
@@ -232,14 +260,14 @@ function PriceCard({
   product,
   duration,
   featured,
-  launch,
+  promo,
   onSelect,
   selected,
 }: {
   product: ProductId;
   duration: DurationId;
   featured: boolean;
-  launch?: Props["launch"];
+  promo?: Props["promo"];
   onSelect?: Props["onSelect"];
   selected?: boolean;
 }) {
@@ -251,7 +279,8 @@ function PriceCard({
   const total = commitmentTotal(product, duration);
   const save = savingsPercent(product, duration);
   const oneOff = d.months === 0;
-  const launchPrice = launch?.active ? applyPercentOff(perMonth, launch.percentOff) : null;
+  const promoPercent = promo ? (promo.percentOff[duration] ?? 0) : 0;
+  const launchPrice = promo && promoPercent > 0 ? applyPercentOff(perMonth, promoPercent) : null;
 
   const cta = c.choose[product];
   const href = `/start?plan=${product}&looptijd=${duration}`;
@@ -297,7 +326,7 @@ function PriceCard({
 
       {launchPrice !== null && (
         <p className={`mt-3 rounded-2xl px-3 py-2 text-sm font-semibold ${featured ? "bg-lime-glow/15 text-lime-glow" : "bg-accent-50 text-accent-600"}`}>
-          {c.launch(oneOff, euro(launchPrice, l), euro(perMonth, l))}
+          {c.launch(promo!.label, oneOff, euro(launchPrice, l), euro(perMonth, l))}
         </p>
       )}
 

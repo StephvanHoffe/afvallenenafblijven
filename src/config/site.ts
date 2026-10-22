@@ -1,3 +1,4 @@
+import type { DurationId } from "@/config/pricing";
 import { intlLocale, type Locale } from "@/i18n/config";
 
 /**
@@ -18,13 +19,13 @@ export const site = {
     "Persoonlijke voedingsschema's en trainingsschema's, afgestemd op jouw doel, lichaam en agenda. Binnen 2 uur in je mailbox. Maandelijks opzegbaar.",
 
   company: {
-    legalName: "[Bedrijfsnaam / handelsnaam]",
+    legalName: "Afvallen en Afblijven",
     address: "[Straat en huisnummer]",
     postalCode: "[Postcode]",
     city: "[Plaats]",
     country: "Nederland",
-    kvk: "[KvK-nummer]",
-    vat: "[Btw-identificatienummer]",
+    kvk: "89513908",
+    vat: "NL004738412B27",
     email: "info@afvallenenafblijven.nl",
     privacyEmail: "privacy@afvallenenafblijven.nl",
     phone: "",
@@ -47,18 +48,35 @@ export const site = {
   },
 
   /**
-   * Lanceringsactie: automatische korting op de eerste betaling.
-   * Wordt alleen getoond én toegepast tussen startsAt en endsAt.
+   * Acties: automatische korting op de eerste betaling, per looptijd (0 = geen
+   * korting voor die looptijd). Een actie wordt alleen getoond én toegepast
+   * tussen startsAt en endsAt; lopen er twee tegelijk, dan geldt de eerste in
+   * de lijst. Een kortingscode van een klant vervangt de actiekorting.
+   * De Stripe-coupons worden bij het eerste gebruik automatisch aangemaakt.
    */
-  launchOffer: {
-    enabled: true,
-    couponId: "LANCERING2027",
-    percentOff: 20,
-    startsAt: "2026-12-01T00:00:00+01:00",
-    endsAt: "2027-01-31T23:59:59+01:00",
-    label: "Lanceringsactie",
-    labelEn: "Launch offer",
-  },
+  promotions: [
+    {
+      // Black Week tot en met Cyber Monday. Hoe langer je kiest, hoe meer korting:
+      // dat trekt klanten die echt willen doorzetten, niet alleen kortingsjagers.
+      id: "blackfriday-2026",
+      enabled: true,
+      label: "Black Friday",
+      labelEn: "Black Friday",
+      startsAt: "2026-11-23T00:00:00+01:00",
+      endsAt: "2026-11-30T23:59:59+01:00",
+      percentOff: { "1m": 25, "3m": 40, "6m": 50, "12m": 50, eenmalig: 25 },
+    },
+    {
+      // Januari: de drukste maand voor afvallen (goede voornemens).
+      id: "nieuwjaar-2027",
+      enabled: true,
+      label: "Goede voornemens-actie",
+      labelEn: "New Year offer",
+      startsAt: "2027-01-01T00:00:00+01:00",
+      endsAt: "2027-01-31T23:59:59+01:00",
+      percentOff: { "1m": 20, "3m": 20, "6m": 20, "12m": 20, eenmalig: 20 },
+    },
+  ],
 
   /**
    * Lengte van een periode: abonnees krijgen elke 4 weken een nieuw schema, na
@@ -107,21 +125,40 @@ export function companyAddressLine() {
   return `${c.address}, ${c.postalCode} ${c.city}`;
 }
 
-export type LaunchOffer = typeof site.launchOffer;
-
-/** Is de lanceringsactie op het gegeven moment actief? */
-export function isLaunchOfferActive(now: Date): boolean {
-  const o = site.launchOffer;
-  if (!o.enabled) return false;
-  const t = now.getTime();
-  return t >= Date.parse(o.startsAt) && t <= Date.parse(o.endsAt);
+/** Of de juridische naam echt afwijkt van de merknaam ("en" en "&" tellen als gelijk). */
+export function hasSeparateLegalName() {
+  const norm = (s: string) => s.toLowerCase().replace(/&/g, "en").replace(/\s+/g, " ").trim();
+  return norm(site.company.legalName) !== norm(site.name);
 }
 
-export function launchOfferEndLabel(l: Locale = "nl"): string {
+export type Promotion = (typeof site.promotions)[number];
+
+/** De actie die op het gegeven moment loopt, of null. */
+export function activePromotion(now: Date): Promotion | null {
+  const t = now.getTime();
+  return site.promotions.find((p) => p.enabled && t >= Date.parse(p.startsAt) && t <= Date.parse(p.endsAt)) ?? null;
+}
+
+/** Korting (in procenten) op de eerste betaling voor deze looptijd. */
+export function promotionPercent(p: Pick<Promotion, "percentOff">, duration: DurationId): number {
+  return p.percentOff[duration] ?? 0;
+}
+
+/** Laatste dag van de actie, bijv. "maandag 30 november". */
+export function promotionEndLabel(p: Pick<Promotion, "endsAt">, l: Locale = "nl"): string {
   return new Intl.DateTimeFormat(intlLocale(l), {
+    weekday: "long",
     day: "numeric",
     month: "long",
-    year: "numeric",
     timeZone: "Europe/Amsterdam",
-  }).format(new Date(site.launchOffer.endsAt));
+  }).format(new Date(p.endsAt));
+}
+
+/** "tot 50% korting op je eerste maand", of "20% korting op je eerste betaling" als alle looptijden gelijk zijn. */
+export function promotionSummary(percentOff: Record<DurationId, number>, l: Locale = "nl"): string {
+  const values = Object.values(percentOff).filter((v) => v > 0);
+  const max = Math.max(0, ...values);
+  const same = values.length > 0 && values.every((v) => v === max);
+  if (l === "en") return same ? `${max}% off your first payment` : `up to ${max}% off your first month`;
+  return same ? `${max}% korting op je eerste betaling` : `tot ${max}% korting op je eerste maand`;
 }
