@@ -4,10 +4,9 @@ import { intlLocale, type Locale } from "@/i18n/config";
 /**
  * Centrale bedrijfs- en site-instellingen.
  *
- * LET OP: vul vóór livegang de echte bedrijfsgegevens in. Deze gegevens worden
- * gebruikt in de footer, de juridische pagina's en e-mails. Een webwinkel is
- * wettelijk verplicht om naam, adres, KvK-nummer, btw-nummer en een
- * e-mailadres te tonen.
+ * De bedrijfsgegevens worden gebruikt in de footer, de juridische pagina's en
+ * e-mails. Een webwinkel is wettelijk verplicht om naam, adres, KvK-nummer,
+ * btw-nummer en een e-mailadres te tonen; houd ze dus actueel.
  */
 export const site = {
   name: "Afvallen & Afblijven",
@@ -20,9 +19,9 @@ export const site = {
 
   company: {
     legalName: "Afvallen en Afblijven",
-    address: "[Straat en huisnummer]",
-    postalCode: "[Postcode]",
-    city: "[Plaats]",
+    address: "De Savornin Lohmanlaan 7",
+    postalCode: "3741 TW",
+    city: "Baarn",
     country: "Nederland",
     kvk: "89513908",
     vat: "NL004738412B27",
