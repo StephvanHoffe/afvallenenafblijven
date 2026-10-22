@@ -25,7 +25,7 @@ import { FixSection, FutureSection, PainSection } from "@/components/conversion"
 import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, bfGlow, promoPercent } from "@/components/campaign/BlackFriday";
+import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, promoPercent } from "@/components/campaign/BlackFriday";
 import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
 import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
 import { promotionSummary, site } from "@/config/site";
@@ -127,8 +127,8 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   return (
     <>
       {/* HERO */}
-      <section className={`relative overflow-hidden ${bf ? "text-white" : ""}`} style={bf ? bfGlow : undefined}>
-        {!bf && <div className="absolute inset-x-0 top-0 -z-10 h-[40rem] bg-gradient-to-b from-brand-50 to-cream" />}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 -z-10 h-[40rem] bg-gradient-to-b from-brand-50 to-cream" />
         <div className="container-page grid items-center gap-10 pt-8 pb-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:pt-14 lg:pb-20">
           <div className="min-w-0">
             {bf ? (
@@ -144,12 +144,12 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
                   : c.badge}
               </p>
             )}
-            <h1 className={`heading-xl ${bf ? "text-white" : ""}`}>
+            <h1 className="heading-xl">
               {v.title[0]}
-              <span className={bf ? "text-lime-glow" : "text-brand-600"}>{v.title[1]}</span>
+              <span className="text-brand-600">{v.title[1]}</span>
               {v.title[2]}
             </h1>
-            <p className={`mt-5 max-w-xl text-lg leading-relaxed ${bf ? "text-white/75" : "text-muted"}`}>{v.intro}</p>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{v.intro}</p>
             {bf && <BlackFridayOffer promo={bf} l={l} href={mainHref} fromPrice={price} />}
 
             <div className="mt-7 max-w-xl rounded-[var(--radius-card)] border border-line bg-white p-4 shadow-[var(--shadow-lift)] sm:p-5">
@@ -186,9 +186,9 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
               </p>
             )}
             <div className="mt-5">
-              <TrustRow light={Boolean(bf)} />
+              <TrustRow />
             </div>
-            <p className={`mt-3 text-xs ${bf ? "text-white/55" : "text-muted"}`}>{resultDisclaimer[l].short}</p>
+            <p className="mt-3 text-xs text-muted">{resultDisclaimer[l].short}</p>
           </div>
 
           <div className="relative mx-auto w-full max-w-xl">
@@ -200,7 +200,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
                 </span>
               </div>
             )}
-            <div className={`relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)] sm:aspect-square ${bf ? "ring-1 ring-white/10" : ""}`}>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)] sm:aspect-square">
               <Image
                 src={settings.image.src}
                 alt={v.heroAlt}

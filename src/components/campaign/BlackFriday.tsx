@@ -77,12 +77,16 @@ export const bfGlow = {
     "radial-gradient(48rem 26rem at 85% -10%, rgb(200 241 105 / 0.16), transparent 60%), radial-gradient(36rem 22rem at -5% 105%, rgb(244 93 34 / 0.14), transparent 60%)",
 };
 
-/** Het actieblok in de hero: de korting, wat je betaalt, de aftelklok en de startknop. */
+/**
+ * Het actieblok in de hero: de korting, wat je betaalt, de aftelklok en de
+ * startknop. Een zwart blok op de lichte achtergrond, zodat het opvalt zonder
+ * dat de hele pagina donker wordt.
+ */
 export function BlackFridayOffer({ promo, l, href, fromPrice }: { promo: PromoView; l: Locale; href: string; fromPrice: number }) {
   const c = bfCopy[l];
   const pct = promoPercent(promo);
   return (
-    <div className="mt-7 max-w-xl rounded-[var(--radius-card)] bg-white/[0.06] p-5 ring-1 ring-lime-glow/35 sm:p-6">
+    <div className="mt-7 max-w-xl rounded-[var(--radius-card)] p-5 text-white shadow-[var(--shadow-lift)] ring-1 ring-lime-glow/35 sm:p-6" style={bfGlow}>
       <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
         <p className="text-6xl leading-none font-black tracking-tight text-lime-glow sm:text-7xl">{pct}%</p>
         <p className="pb-1 text-xl leading-tight font-extrabold">
