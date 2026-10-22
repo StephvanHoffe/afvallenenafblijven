@@ -57,7 +57,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[lang]">) {
   const l = await lang();
   if (!isLocale(l)) notFound();
   return (
-    <html lang={l} className={`${jakarta.variable} h-full antialiased`}>
+    <html lang={l} className={`${jakarta.variable} h-full antialiased`} data-scroll-behavior="smooth">
       <body className="flex min-h-full flex-col font-sans">
         <LocaleProvider locale={l}>{children}</LocaleProvider>
         <Suspense fallback={null}>

@@ -1,47 +1,24 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import {
-  ArrowRight,
-  CalendarDays,
-  Check,
-  ChefHat,
-  Dumbbell,
-  Flame,
-  House,
-  LineChart,
-  ListChecks,
-  Minus,
-  RefreshCw,
-  Scale,
-  ShieldCheck,
-  ShoppingCart,
-  SlidersHorizontal,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Watch,
-} from "lucide-react";
-import { FixSection, FutureSection, PainSection } from "@/components/conversion";
-import { CtaBanner, FaqList, Guarantee, SectionHeading, Steps, TrustRow } from "@/components/marketing";
-import { resultDisclaimer } from "@/content/disclaimers";
+import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, Target, TrendingDown, X } from "lucide-react";
+import { BlackFridayDeal, BlackFridayStrip, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
+import { StoryChart, storyCopy } from "@/components/campaign/Story";
+import { FutureSection } from "@/components/conversion";
+import { FaqList, Guarantee, SectionHeading, TrustRow } from "@/components/marketing";
+import { Countdown } from "@/components/promo/Countdown";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { BlackFridayFinal, BlackFridayMarquee, BlackFridayOffer, bfCopy, promoHasTiers, promoPercent } from "@/components/campaign/BlackFriday";
-import { WeightChartFor } from "@/components/account/tabs/OverviewTab";
-import { lowestMonthlyPrice, monthlyPrice, SUBSCRIPTION_DURATIONS, type ProductId } from "@/config/pricing";
 import { promotionSummary, site } from "@/config/site";
-import { demoAccountViewFor } from "@/content/demo-account";
+import { resultDisclaimer } from "@/content/disclaimers";
 import { faqInOrder } from "@/content/faq";
 import { landingCopy, variantSettings, type LandingVariant } from "@/content/landing";
+import { painCopy, painLabels } from "@/content/pains";
 import { samplePlansFor } from "@/content/sample-plans";
-import type { Locale } from "@/i18n/config";
 import Link from "@/i18n/Link";
 import { intakeLabels } from "@/i18n/options";
 import { getLocale } from "@/i18n/server";
-import { euro, formatNumber } from "@/lib/format";
-import { isHealthEnabled } from "@/lib/health/config";
+import { formatNumber } from "@/lib/format";
 import type { Intake } from "@/lib/intake";
 import { currentPromotion } from "@/lib/promotion";
-import { buildProgress } from "@/lib/progress";
 
 const goalIcons: Record<Intake["goal"], typeof Target> = {
   afvallen: TrendingDown,
@@ -49,14 +26,6 @@ const goalIcons: Record<Intake["goal"], typeof Target> = {
   afblijven: Scale,
   sterker: Dumbbell,
 };
-
-const getIcons: Record<LandingVariant, (typeof Target)[]> = {
-  afvallen: [Target, ChefHat, Dumbbell, SlidersHorizontal],
-  voeding: [Target, ChefHat, ShoppingCart, RefreshCw],
-  training: [House, TrendingUp, ListChecks, SlidersHorizontal],
-};
-
-const guideIcons = [Scale, CalendarDays, LineChart];
 
 /** Adres van de vragenlijst, met het doel en (per variant) het plan al ingevuld. */
 function startHref(variant: LandingVariant, goal?: Intake["goal"]): string {
@@ -68,11 +37,10 @@ function startHref(variant: LandingVariant, goal?: Intake["goal"]): string {
   return q ? `/start?${q}` : "/start";
 }
 
-/** Laagste maandprijs voor de producten van deze variant. */
-function fromPrice(variant: LandingVariant): number {
-  const product = variantSettings[variant].product;
-  if (!product) return lowestMonthlyPrice();
-  return Math.min(...SUBSCRIPTION_DURATIONS.map((d) => monthlyPrice(product as ProductId, d)));
+/** "Maandag begin je. Alweer.": de laatste zin krijgt de accentkleur. */
+function accentLastSentence(title: string): [string, string] {
+  const i = title.lastIndexOf(". ", title.length - 2);
+  return i === -1 ? [title, ""] : [title.slice(0, i + 2), title.slice(i + 2)];
 }
 
 export async function landingMetadata(variant: LandingVariant): Promise<Metadata> {
@@ -82,134 +50,123 @@ export async function landingMetadata(variant: LandingVariant): Promise<Metadata
   return { title: v.metaTitle, description: v.metaDescription, robots: { index: false, follow: true } };
 }
 
-function Value({ value, l }: { value: string | boolean; l: Locale }) {
-  if (value === true) {
-    return (
-      <span className="inline-flex size-7 items-center justify-center rounded-full bg-brand-600 text-white">
-        <Check className="size-4" aria-hidden />
-        <span className="sr-only">{l === "en" ? "Yes" : "Ja"}</span>
-      </span>
-    );
-  }
-  if (value === false) {
-    return (
-      <span className="inline-flex size-7 items-center justify-center rounded-full bg-sand text-muted">
-        <Minus className="size-4" aria-hidden />
-        <span className="sr-only">{l === "en" ? "No" : "Nee"}</span>
-      </span>
-    );
-  }
-  return <span className="text-sm font-semibold">{value}</span>;
-}
-
-/** De landingspagina voor bezoekers uit een online campagne. */
+/**
+ * De landingspagina voor bezoekers uit een online campagne, als één verhaal:
+ * bovenaan de pijn (herkenning en het patroon dat iedereen kent), dan de
+ * omslag ("het ligt niet aan jou"), de oplossing, hoe het eruitziet, waar je
+ * over 3 maanden staat, het aanbod en tot slot één duidelijke keuze. Elke
+ * stap leidt naar de volgende; de zwevende startknop is er voor wie al
+ * overtuigd is. Tijdens Black Friday komt de actie erbij als accent.
+ */
 export async function CampaignLanding({ variant }: { variant: LandingVariant }) {
   const l = await getLocale();
   const c = landingCopy[l].shared;
   const v = landingCopy[l].variants[variant];
+  const s = storyCopy[l];
+  const pain = painCopy[l][variant];
+  const pl = painLabels[l];
   const settings = variantSettings[variant];
   const labels = intakeLabels(l);
   const promo = await currentPromotion(l);
+  const bf = promo?.theme === "blackfriday" ? promo : null;
   const samples = samplePlansFor(l);
   const day = samples.sampleNutritionPlan.days[0];
   const targets = samples.sampleTargets;
   const workout = samples.sampleTrainingPlan.workouts[0];
   const heroMeal = day.meals.find((m) => /lunch/i.test(m.moment)) ?? day.meals[0];
-  const progress = buildProgress(demoAccountViewFor(l), l);
-  const health = isHealthEnabled();
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
-  const price = fromPrice(variant);
-  // Zolang een Black Friday-actie loopt, krijgt de pagina het Black Friday-thema.
-  const bf = promo?.theme === "blackfriday" ? promo : null;
-  const bfc = bfCopy[l];
+  const [titleStart, titleAccent] = accentLastSentence(pain.painTitle);
 
   return (
     <>
-      {/* HERO */}
+      {/* 1. DE PIJN: herkenning, en het patroon dat iedereen kent */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 -z-10 h-[40rem] bg-gradient-to-b from-brand-50 to-cream" />
-        <div className="container-page grid items-center gap-10 pt-8 pb-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:pt-14 lg:pb-20">
+        <div className="absolute inset-x-0 top-0 -z-10 h-[46rem] bg-gradient-to-b from-sand to-cream" />
+        <div className="container-page grid items-center gap-10 pt-10 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pt-16 lg:pb-20">
           <div className="min-w-0">
             {bf ? (
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-lime-glow/40 bg-black px-3.5 py-1.5 text-sm font-bold tracking-wide text-lime-glow uppercase">
-                <span className="size-2 shrink-0 animate-pulse rounded-full bg-accent-400 motion-reduce:animate-none" aria-hidden />
-                {bfc.badge(bf.endsLabel)}
-              </p>
+              <div className="mb-6">
+                <BlackFridayStrip promo={bf} l={l} />
+              </div>
             ) : (
-              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
+              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
                 <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-                {promo
-                  ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel)
-                  : c.badge}
+                {promo ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel) : c.badge}
               </p>
             )}
+            <p className="eyebrow mb-3 !text-accent-600">{pl.painsEyebrow}</p>
             <h1 className="heading-xl">
-              {v.title[0]}
-              <span className="text-brand-600">{v.title[1]}</span>
-              {v.title[2]}
+              {titleStart}
+              {titleAccent && <span className="text-accent-500">{titleAccent}</span>}
             </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">{v.intro}</p>
-            {bf && <BlackFridayOffer promo={bf} l={l} href={mainHref} fromPrice={price} />}
-
-            <div className="mt-7 max-w-xl rounded-[var(--radius-card)] border border-line bg-white p-4 shadow-[var(--shadow-lift)] sm:p-5">
-              <p className="text-lg font-extrabold">{c.pickTitle}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
-                {settings.goals.map((goal) => {
-                  const Icon = goalIcons[goal];
-                  return (
-                    <Link
-                      key={goal}
-                      href={startHref(variant, goal)}
-                      data-lp-cta="doel"
-                      className="group flex min-h-16 flex-col items-start gap-2 rounded-2xl border border-line bg-cream p-3 text-left transition hover:border-brand-500 hover:bg-brand-50 focus-visible:ring-4 focus-visible:ring-brand-100 focus-visible:outline-none sm:flex-row sm:items-center sm:gap-3"
-                    >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white sm:size-10">
-                        <Icon className="size-5" aria-hidden />
-                      </span>
-                      <span className="min-w-0 text-[0.9375rem] leading-tight font-bold">{labels.goal[goal].label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <p className="max-w-sm text-xs leading-relaxed text-muted">{c.pickNote}</p>
-                <Link href={mainHref} data-lp-cta="hero" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
-                  {c.orStart} <ArrowRight className="size-4" aria-hidden />
-                </Link>
-              </div>
+            <ul className="mt-7 space-y-3.5">
+              {pain.painPoints.slice(0, 3).map((point) => (
+                <li key={point} className="flex gap-3 text-lg leading-relaxed text-ink/85">
+                  <X className="mt-1 size-5 shrink-0 text-accent-500" aria-hidden />
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <a href="#oplossing" className="btn-primary text-lg">
+                {s.heroCta} <ArrowDown className="size-5" aria-hidden />
+              </a>
+              <Link href={mainHref} data-lp-cta="hero" className="inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
+                {s.heroOr} <ArrowRight className="size-4" aria-hidden />
+              </Link>
             </div>
-
-            {!bf && (
-              <p className="mt-5 text-[0.9375rem] font-semibold text-ink/80">
-                <span className="text-brand-700">{c.priceFrom(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> · {c.priceNote}
-              </p>
-            )}
-            <div className="mt-5">
-              <TrustRow />
-            </div>
-            <p className="mt-3 text-xs text-muted">{resultDisclaimer[l].short}</p>
           </div>
+          <StoryChart kind="pain" variant={variant} l={l} />
+        </div>
+      </section>
 
+      {/* 2. DE OMSLAG: het ligt niet aan jou */}
+      <section id="oplossing" className="scroll-mt-16 bg-white">
+        <div className="container-page max-w-3xl py-16 text-center">
+          <span className="mx-auto grid size-12 place-items-center rounded-full bg-lime-glow text-brand-950" aria-hidden>
+            <ArrowDown className="size-6" />
+          </span>
+          <h2 className="heading-lg mt-6">{pain.reframe.title}</h2>
+          <p className="mt-4 text-lg leading-relaxed text-muted">{pain.reframe.text}</p>
+        </div>
+      </section>
+
+      {/* 3. DE OPLOSSING: hetzelfde beeld, maar dan zoals het wél werkt */}
+      <section className="bg-white pb-20">
+        <div className="container-page grid items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
+          <div className="order-2 min-w-0 lg:order-1">
+            <StoryChart kind="fix" variant={variant} l={l} />
+          </div>
+          <div className="order-1 lg:order-2">
+            <p className="eyebrow mb-3">{s.solutionEyebrow}</p>
+            <h2 className="heading-lg">{pl.fixTitle}</h2>
+            <p className="mt-4 text-lg leading-relaxed text-muted">{s.solutionIntro[variant]}</p>
+            <ul className="mt-7 space-y-4">
+              {pain.fixes.map((f) => (
+                <li key={f.pain} className="flex gap-3">
+                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
+                    <Check className="size-4" aria-hidden />
+                  </span>
+                  <span>
+                    <span className="block font-bold">{f.answer}</span>
+                    <span className="mt-0.5 block text-sm text-muted">
+                      {pl.fixLabels[0]}: {f.pain}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. ZO ZIET HET ERUIT: het echte plan */}
+      <section className="bg-sand py-16">
+        <div className="container-page grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
           <div className="relative mx-auto w-full max-w-xl">
-            {bf && (
-              <div className="absolute -top-5 -left-2 z-10 grid size-24 -rotate-12 place-items-center rounded-full bg-lime-glow text-center text-brand-950 shadow-[0_12px_32px_-8px_rgb(200_241_105/0.7)] ring-4 ring-black sm:-left-6 sm:size-32">
-                <span>
-                  {promoHasTiers(bf) && <span className="block text-[0.6875rem] font-extrabold tracking-wide uppercase sm:text-xs">{bfc.upTo}</span>}
-                  <span className="block text-2xl leading-none font-black sm:text-4xl">−{promoPercent(bf)}%</span>
-                  <span className="block text-[0.6875rem] font-extrabold tracking-wide uppercase sm:text-xs">{bfc.sticker}</span>
-                </span>
-              </div>
-            )}
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)] sm:aspect-square">
-              <Image
-                src={settings.image.src}
-                alt={v.heroAlt}
-                fill
-                preload
-                sizes="(min-width: 1024px) 560px, 100vw"
-                className={`object-cover ${settings.image.position}`}
-              />
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)]">
+              <Image src={settings.image.src} alt={v.heroAlt} fill sizes="(min-width: 1024px) 560px, 100vw" className={`object-cover ${settings.image.position}`} />
             </div>
             {variant === "training" ? (
               <>
@@ -219,7 +176,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
                   </p>
                   <p className="max-w-[11rem] text-base leading-snug font-extrabold">{workout.name}</p>
                 </div>
-                <div className="absolute -bottom-6 -left-3 w-[15.5rem] rounded-3xl bg-white p-4 shadow-[var(--shadow-lift)] sm:-left-10">
+                <div className="absolute -bottom-6 -left-3 w-[15.5rem] rounded-3xl bg-white p-4 shadow-[var(--shadow-lift)] sm:-left-8">
                   <p className="text-xs font-bold text-brand-600 uppercase">{workout.exercises[0].muscleGroups}</p>
                   <p className="text-sm leading-snug font-bold">{workout.exercises[0].name}</p>
                   <div className="mt-3 flex gap-1.5 text-[0.6875rem] font-bold">
@@ -241,7 +198,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
                     {n(targets.proteinG)} g {c.protein}
                   </p>
                 </div>
-                <div className="absolute -bottom-6 -left-3 w-[15.5rem] rounded-3xl bg-white p-4 shadow-[var(--shadow-lift)] sm:-left-10">
+                <div className="absolute -bottom-6 -left-3 w-[15.5rem] rounded-3xl bg-white p-4 shadow-[var(--shadow-lift)] sm:-left-8">
                   <p className="text-xs font-bold text-brand-600 uppercase">
                     {heroMeal.moment} · {c.minutes(heroMeal.prepMinutes)}
                   </p>
@@ -258,271 +215,101 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
               </>
             )}
           </div>
-        </div>
-      </section>
-
-      {bf && <BlackFridayMarquee promo={bf} l={l} />}
-
-      {/* HERKEN JE DIT? Eerst het probleem, dan wat het kost, dan de uitweg. */}
-      <PainSection topic={variant} l={l} href={mainHref} cta="pijn" />
-      <FixSection topic={variant} l={l} />
-
-      {/* WAT JE KRIJGT */}
-      <section className="bg-sand py-14">
-        <div className="container-page">
-          <SectionHeading eyebrow={c.getsEyebrow} title={c.getsTitle} />
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {v.gets.map((g, i) => {
-              const Icon = getIcons[variant][i] ?? Target;
-              return (
-                <li key={g.title} className="card p-4 sm:p-5">
-                  <Icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600 sm:size-10" aria-hidden />
-                  <h3 className="mt-3 leading-snug font-bold sm:mt-4">{g.title}</h3>
-                  <p className="mt-1 text-sm text-muted sm:text-[0.9375rem]">{g.text}</p>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </section>
-
-      {/* VOORBEELD */}
-      <section className="container-page py-16">
-        <SectionHeading eyebrow={c.previewEyebrow} title={c.previewTitle} intro={c.previewIntro} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          {settings.preview.includes("voeding") && (
-            <div className="card min-w-0 p-5 sm:p-6">
-              <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                <ChefHat className="size-5 text-brand-600" aria-hidden /> {c.previewDay(day.day)}
-              </h3>
-              <ul className="mt-4 divide-y divide-line">
-                {day.meals.map((m) => (
-                  <li key={m.moment + m.name} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold tracking-wide text-brand-600 uppercase">
-                        {m.moment} · {c.minutes(m.prepMinutes)}
-                      </p>
-                      <p className="font-semibold break-words">{m.name}</p>
-                    </div>
-                    <p className="shrink-0 text-right text-sm tabular-nums">
-                      <span className="font-bold">
-                        {n(m.kcal)} {c.kcal}
-                      </span>
-                      <span className="block text-muted">
-                        {n(m.proteinG)} g {c.protein}
-                      </span>
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {settings.preview.includes("training") ? (
-            <div className="card min-w-0 p-5 sm:p-6">
-              <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                <Dumbbell className="size-5 text-brand-600" aria-hidden /> {c.previewWorkout(workout.name)}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                {workout.focus} · {c.minutes(workout.minutes)}
-              </p>
-              <ol className="mt-4 divide-y divide-line">
-                {workout.exercises.slice(0, 5).map((e, i) => (
-                  <li key={e.name} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">{i + 1}</span>
-                      <span className="min-w-0 font-semibold break-words">{e.name}</span>
-                    </span>
-                    <span className="shrink-0 text-right text-sm tabular-nums">
-                      <span className="font-bold">{c.setsReps(e.sets, e.reps)}</span>
-                      <span className="block text-muted">{c.rest(e.restSeconds)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              {settings.preview.length === 1 && (
-                <div className="mt-5 border-t border-line pt-4">
-                  <p className="text-sm font-bold">{c.previewWeek}</p>
-                  <ul className="mt-2 grid grid-cols-7 gap-1 text-center text-[0.6875rem]">
-                    {samples.sampleTrainingPlan.weekSchedule.map((d) => {
-                      const train = /training|workout/i.test(d.activity);
-                      return (
-                        <li key={d.day} className={`rounded-lg px-0.5 py-2 ${train ? "bg-brand-600 text-white" : "bg-sand text-muted"}`} title={d.activity}>
-                          <span className="block font-bold">{d.day.slice(0, 2)}</span>
-                          <span className="sr-only">{d.activity}</span>
-                          {train ? <Dumbbell className="mx-auto mt-1 size-3.5" aria-hidden /> : <span className="mt-1 block" aria-hidden>·</span>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="card min-w-0 p-5 sm:p-6">
-              <h3 className="flex items-center gap-2 text-lg font-extrabold">
-                <Target className="size-5 text-brand-600" aria-hidden /> {c.previewTargets}
-              </h3>
-              <dl className="mt-4 grid grid-cols-2 gap-3">
-                {[
-                  { k: c.kcal, v: n(targets.calories) },
-                  { k: `g ${c.protein}`, v: n(targets.proteinG) },
-                  { k: `g ${c.carbs}`, v: n(targets.carbsG) },
-                  { k: `g ${c.fat}`, v: n(targets.fatG) },
-                ].map((x) => (
-                  <div key={x.k} className="rounded-2xl bg-sand p-4">
-                    <dt className="text-sm text-muted">{x.k}</dt>
-                    <dd className="text-2xl font-extrabold tabular-nums">{x.v}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-4 text-sm text-muted">{c.previewTargetsNote}</p>
-              <p className="mt-4 flex items-center gap-2 border-t border-line pt-4 text-sm font-semibold">
-                <ShoppingCart className="size-4 text-brand-600" aria-hidden />
-                {samples.sampleNutritionPlan.shoppingList.map((g) => g.category).join(" · ")}
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/voorbeeld" className="btn-secondary">
-            {c.previewFull}
-          </Link>
-          <Link href="/voorbeeld/mijn-schemas" className="btn-secondary">
-            {c.previewAccount}
-          </Link>
-        </div>
-      </section>
-
-      {/* BEGELEIDING */}
-      <section className="bg-brand-950 py-16 text-white">
-        <div className="container-page grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <p className="eyebrow mb-3 !text-lime-glow">{c.guideEyebrow}</p>
-            <h2 className="heading-lg text-white">{c.guideTitle}</h2>
-            <p className="mt-4 text-lg leading-relaxed text-white/75">{c.guideIntro}</p>
-            <ul className="mt-8 space-y-5">
-              {[...c.guidePoints, ...(health ? [c.guideHealth] : [])].map((p, i) => {
-                const Icon = guideIcons[i] ?? Watch;
-                return (
-                  <li key={p.title} className="flex gap-4">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-lime-glow">
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                    <span>
-                      <span className="block font-bold">{p.title}</span>
-                      <span className="mt-0.5 block text-[0.9375rem] text-white/70">{p.text}</span>
-                    </span>
-                  </li>
-                );
-              })}
+            <p className="eyebrow mb-3">{s.proofEyebrow}</p>
+            <h2 className="heading-lg">{s.proofTitle}</h2>
+            <ul className="mt-7 space-y-5">
+              {v.gets.map((g) => (
+                <li key={g.title} className="flex gap-3">
+                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
+                    <Check className="size-4" aria-hidden />
+                  </span>
+                  <span>
+                    <span className="block font-bold">{g.title}</span>
+                    <span className="block text-muted">{g.text}</span>
+                  </span>
+                </li>
+              ))}
             </ul>
-          </div>
-          <div className="min-w-0 rounded-[var(--radius-card)] bg-white p-5 text-ink sm:p-6">
-            <p className="font-extrabold">{c.guideChart}</p>
-            <p className="mb-4 text-sm text-muted">{c.guideChartNote}</p>
-            <WeightChartFor progress={progress} l={l} compact />
+            <Link href="/voorbeeld" className="mt-8 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
+              {c.previewFull} <ArrowRight className="size-4" aria-hidden />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ZO WERKT HET */}
-      <section className="container-page py-16">
-        <SectionHeading eyebrow={c.stepsEyebrow} title={c.stepsTitle} />
-        <Steps />
-        <div className="mt-10 flex justify-center">
-          <Link href={mainHref} data-lp-cta="stappen" className="btn-primary text-lg">
-            {v.ctaLabel} <ArrowRight className="size-5" aria-hidden />
-          </Link>
-        </div>
-      </section>
-
-      {/* VERGELIJKING */}
-      <section className="bg-sand py-16">
-        <div className="container-page">
-          <SectionHeading eyebrow={c.compareEyebrow} title={c.compareTitle} />
-          <div className="relative mx-auto max-w-4xl overflow-x-auto rounded-[var(--radius-card)] border border-line bg-white">
-            <table className="w-full text-left text-sm sm:min-w-[34rem] sm:text-[0.9375rem]">
-              <thead>
-                <tr className="border-b border-line">
-                  <th className="px-3 py-4 sm:px-4">
-                    <span className="sr-only">{l === "en" ? "Comparison" : "Vergelijking"}</span>
-                  </th>
-                  {c.compareCols.map((col, i) => (
-                    <th
-                      key={col}
-                      className={`px-3 py-4 text-center text-xs font-extrabold sm:px-4 sm:text-sm ${i === 0 ? "bg-brand-50 text-brand-800" : "text-muted"} ${i === 2 ? "hidden sm:table-cell" : ""}`}
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {c.compareRows.map((row, ri) => (
-                  <tr key={row.label}>
-                    <th scope="row" className="px-3 py-3.5 font-semibold sm:px-4">
-                      {row.label}
-                    </th>
-                    {row.values.map((val, i) => (
-                      <td key={i} className={`px-3 py-3.5 text-center sm:px-4 ${i === 0 ? "bg-brand-50" : ""} ${i === 2 ? "hidden sm:table-cell" : ""}`}>
-                        {ri === c.compareRows.length - 1 && i === 0 ? (
-                          <span className="text-sm font-extrabold text-brand-800">{c.compareFrom(euro(price, l))}</span>
-                        ) : (
-                          <Value value={val} l={l} />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* OVER 3 MAANDEN: vlak voor de prijzen */}
+      {/* 5. OVER 3 MAANDEN: zo blijven, of vandaag beginnen */}
       <FutureSection topic={variant} l={l} href={mainHref} cta="toekomst" />
 
-      {/* PRIJZEN */}
-      <section id="prijzen" className="container-page scroll-mt-20 py-16">
+      {/* 6. HET AANBOD */}
+      <section id="prijzen" className="container-page scroll-mt-20 pb-16">
         {bf ? (
-          <SectionHeading
-            eyebrow={bfc.pricingEyebrow}
-            title={bfc.pricingTitle(promoPercent(bf), bf.months, promoHasTiers(bf))}
-            intro={bfc.pricingIntro(promoHasTiers(bf))}
-          />
+          <div className="mb-12">
+            <BlackFridayDeal promo={bf} l={l} />
+          </div>
         ) : (
           <SectionHeading eyebrow={c.pricingEyebrow} title={c.pricingTitle} intro={c.pricingIntro} />
         )}
-        <PricingTable promo={promo} only={settings.pricing.only} highlight={settings.pricing.highlight} />
-        <div className="mt-12 space-y-6">
+        <PricingTable promo={promo} only={settings.pricing.only} highlight={settings.pricing.highlight} hidePromoBanner={Boolean(bf)} />
+        <div className="mt-12">
           <Guarantee />
-          <div className="mx-auto flex max-w-3xl gap-4 rounded-[var(--radius-card)] bg-sand p-6">
-            <ShieldCheck className="mt-0.5 size-7 shrink-0 text-brand-600" aria-hidden />
-            <div>
-              <h3 className="font-extrabold">{c.safeTitle}</h3>
-              <p className="mt-1 text-[0.9375rem] text-muted">{c.safeText}</p>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* 7. NOG TWIJFELS: alleen de vragen die het meest tegenhouden */}
       <section className="container-page pb-6">
         <SectionHeading eyebrow={c.faqEyebrow} title={c.faqTitle} />
-        <FaqList items={faqInOrder(l, settings.faq)} />
+        <FaqList items={faqInOrder(l, settings.faq).slice(0, 5)} />
       </section>
 
-      {bf ? (
-        <BlackFridayFinal promo={bf} l={l} href={mainHref} />
-      ) : (
-        <CtaBanner
-          title={v.finalTitle}
-          text={v.finalText + (site.guarantee.enabled ? c.finalRisk(site.guarantee.days) : "")}
-          href={mainHref}
-          label={v.ctaLabel}
-        />
-      )}
+      {/* 8. DE KEUZE: terug naar het begin ("maandag begin je, alweer") en meteen een eerste stap */}
+      <section className="container-page py-16">
+        <div className={`rounded-[2rem] px-5 py-12 text-white sm:px-12 ${bf ? "ring-1 ring-lime-glow/25" : "bg-brand-900"}`} style={bf ? bfGlow : undefined}>
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="eyebrow !text-lime-glow">{bf ? `${bfCopy[l].label} · ${bfCopy[l].until(bf.endsLabel)}` : s.closeEyebrow}</p>
+            <h2 className="heading-lg mt-3 text-white">{v.finalTitle}</h2>
+            <p className="mt-4 text-lg text-white/80">
+              {v.finalText}
+              {site.guarantee.enabled ? c.finalRisk(site.guarantee.days) : ""}
+            </p>
+            {bf && <Countdown endsAt={bf.endsAt} className="mt-7 justify-center" />}
+            <p className="mt-9 text-lg font-extrabold">{c.pickTitle}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-left lg:grid-cols-4">
+              {settings.goals.map((goal) => {
+                const Icon = goalIcons[goal];
+                return (
+                  <Link
+                    key={goal}
+                    href={startHref(variant, goal)}
+                    data-lp-cta="doel"
+                    className="group flex min-h-24 flex-col justify-between gap-3 rounded-2xl bg-white p-4 text-ink transition hover:-translate-y-0.5 hover:ring-4 hover:ring-lime-glow focus-visible:ring-4 focus-visible:ring-lime-glow focus-visible:outline-none"
+                  >
+                    <span className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                    <span className="flex items-end justify-between gap-2 leading-tight font-bold">
+                      {labels.goal[goal].label}
+                      <ArrowRight className="size-4 shrink-0 text-brand-600 transition group-hover:translate-x-0.5" aria-hidden />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            <ol className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-semibold text-white/80">
+              {s.steps.map((step, i) => (
+                <li key={step} className="flex items-center gap-2">
+                  <span className="grid size-6 place-items-center rounded-full bg-white/15 text-xs font-extrabold text-lime-glow">{i + 1}</span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+            <div className="mt-6 flex justify-center">
+              <TrustRow light />
+            </div>
+          </div>
+        </div>
+        <p className="mx-auto mt-4 max-w-3xl text-center text-xs text-muted">{resultDisclaimer[l].short}</p>
+      </section>
     </>
   );
 }

@@ -161,19 +161,6 @@ body {
   }
 }
 
-/* Lopende actieband (Black Friday) */
-@keyframes afb-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.marquee-track {
-  animation: afb-marquee 36s linear infinite;
-}
-
 /* Zwevende startknop: zacht zweven, een gloed die uitdijt en een glans die erlangs trekt */
 @keyframes afb-float {
   0%,
@@ -228,7 +215,6 @@ body {
 
 /* Wie minder beweging wil, krijgt alles stilstaand (oneindige animaties niet versnellen maar uitzetten). */
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track,
   .cta-float,
   .cta-halo,
   .cta-shine,
@@ -238,5 +224,12 @@ body {
   .cta-halo,
   .cta-shine {
     display: none;
+  }
+}
+
+/* Ankerlinks (bijv. "Laat zien hoe het anders kan") scrollen zacht, behalve bij "minder beweging". */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }

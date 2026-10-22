@@ -105,6 +105,8 @@ interface Props {
   highlight?: ProductId;
   /** Looptijd die we de bezoeker aanraden (bijv. op basis van de prognose in de vragenlijst). */
   recommended?: DurationId;
+  /** Verberg de actiebalk boven de prijzen (als de pagina de actie al groot toont). */
+  hidePromoBanner?: boolean;
 }
 
 const ORDER: ProductId[] = ["voeding", "bundel", "training"];
@@ -190,6 +192,7 @@ export function PricingTable({
   selectedProduct,
   highlight = "bundel",
   recommended,
+  hidePromoBanner = false,
 }: Props) {
   const l = useLocale();
   const c = copy[l];
@@ -205,7 +208,7 @@ export function PricingTable({
   return (
     <div className="space-y-10">
       <DurationToggle value={duration} onChange={setDuration} product={focus} recommended={recommended} />
-      {promo && <PromoTiers promo={promo} />}
+      {promo && !hidePromoBanner && <PromoTiers promo={promo} />}
       {duration === "eenmalig" && (
         <Nudge
           text={c.nudgeOneOff(productFor(focus, l).shortName, euro(oneOffPrice, l), monthPrice < oneOffPrice ? euro(monthPrice, l) : null)}
