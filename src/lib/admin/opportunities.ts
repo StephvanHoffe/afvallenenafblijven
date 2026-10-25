@@ -309,12 +309,12 @@ export function buildOpportunities(i: OpportunityInput): { kansen: Kans[]; stren
         area: "afrekenen",
         impact: "hoog",
         title: "Veel mensen openen de betaalpagina maar betalen niet",
-        finding: `${p0(1 - paidShare)} van wie de betaalpagina van Stripe opent, rondt de betaling niet af.`,
+        finding: `${p0(1 - paidShare)} van wie de betaalpagina van Mollie opent, rondt de betaling niet af.`,
         actions: [
           i.reminder.enabled
             ? "De herinnering bij niet-afgeronde betaling staat aan; kijk in de funnel of die mails worden geopend en of mensen alsnog bestellen."
             : "Zet de herinnering bij niet-afgeronde betaling aan (Instellingen).",
-          "Controleer in Stripe of iDEAL | Wero en Bancontact aanstaan, en of de betaalpagina in het Nederlands is.",
+          "Controleer in Mollie of iDEAL | Wero en Bancontact aanstaan, en of de betaalpagina in het Nederlands is.",
           "Leg vóór de betaalpagina uit dat je nu de eerste maand betaalt en daarna maandelijks via incasso.",
         ],
         basis: `${n(stage("checkout"))} keer de betaalpagina geopend`,
@@ -766,7 +766,7 @@ export function buildOpportunities(i: OpportunityInput): { kansen: Kans[]; stren
       finding: `Een klant brengt gemiddeld ${euro(a.kpis.ltvCents)} op (inclusief btw). Een veelgebruikte vuistregel is maximaal een derde daarvan aan advertenties per nieuwe klant.`,
       actions: [
         "Vergelijk dit met wat een klant je nu kost per advertentiekanaal (advertentiekosten gedeeld door het aantal klanten uit dat kanaal).",
-        "Houd rekening met btw, Stripe-kosten en de kosten van Claude per schema.",
+        "Houd rekening met btw, de kosten van Mollie en de kosten van Claude per schema.",
       ],
       basis: `Gemiddeld ${formatNumber(a.kpis.avgLifetimeMonths ?? 0, 1)} maanden klant × ${euro(a.kpis.arpuCents ?? 0)} per maand`,
       link: { href: "/beheer/analyse", label: "Bekijk de klantwaarde" },

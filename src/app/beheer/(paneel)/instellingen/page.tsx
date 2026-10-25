@@ -11,6 +11,7 @@ import { site } from "@/config/site";
 import { adminNow } from "@/lib/admin/clock";
 import { isAdminConfigured, isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { adminEmail } from "@/lib/email";
+import { mollieMode, webhookUrl } from "@/lib/mollie";
 import { db, isDatabaseConfigured } from "@/lib/db";
 import { euro } from "@/lib/format";
 import { adminData } from "@/lib/admin/data";
@@ -46,7 +47,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const sp = await searchParams;
   const env = (k: string) => demo || Boolean(process.env[k]);
   const dbOk = demo || (await databaseReachable());
-  const stripeMode = demo ? "test" : (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live") ? "live" : "test";
+  const paymentMode = demo ? "test" : mollieMode();
+  const webhook = demo ? `${site.url}/api/webhooks/mollie` : webhookUrl();
   const nowMs = adminNow();
   const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
   const [delivery, reminder] = await Promise.all([deliverySettings(), demo ? Promise.resolve({ enabled: true, delayHours: 3 }) : checkoutReminderSettings()]);
@@ -54,8 +56,14 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
 
   const checks: { label: string; ok: boolean; detail: string }[] = [
     { label: "Database", ok: dbOk, detail: dbOk ? "Verbonden" : isDatabaseConfigured() ? "Kan niet verbinden" : "DATABASE_URL ontbreekt" },
-    { label: "Stripe (betalingen)", ok: env("STRIPE_SECRET_KEY"), detail: env("STRIPE_SECRET_KEY") ? `Ingesteld (${stripeMode}modus)` : "STRIPE_SECRET_KEY ontbreekt" },
-    { label: "Stripe-webhook", ok: env("STRIPE_WEBHOOK_SECRET"), detail: env("STRIPE_WEBHOOK_SECRET") ? "Ingesteld" : "STRIPE_WEBHOOK_SECRET ontbreekt" },
+    { label: "Mollie (betalingen)", ok: env("MOLLIE_API_KEY"), detail: env("MOLLIE_API_KEY") ? `Ingesteld (${paymentMode}modus)` : "MOLLIE_API_KEY ontbreekt" },
+    {
+      label: "Mollie-webhook",
+      ok: Boolean(webhook),
+      detail: webhook
+        ? `Gaat automatisch mee met elke betaling: ${webhook}`
+        : "Lokaal adres in NEXT_PUBLIC_SITE_URL: Mollie kan de website niet bereiken (de bedankpagina vangt eerste betalingen op)",
+    },
     { label: "Schema's maken", ok: env("ANTHROPIC_API_KEY"), detail: env("ANTHROPIC_API_KEY") ? `Ingesteld (${process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5"})` : "ANTHROPIC_API_KEY ontbreekt" },
     { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "SMTP_HOST ontbreekt; e-mails komen alleen in de serverlog" },
     {

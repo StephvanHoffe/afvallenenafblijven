@@ -4,10 +4,9 @@ import type { Locale } from "@/i18n/config";
  * Producten, looptijden en prijzen.
  *
  * Dit bestand is de enige bron van waarheid voor prijzen: de website, de
- * Stripe-checkout en de juridische teksten lezen allemaal hieruit. Stripe-
- * producten en -prijzen worden bij de eerste bestelling automatisch
- * aangemaakt (zie src/lib/stripe.ts). Pas je hier een bedrag aan, dan wordt
- * er automatisch een nieuwe Stripe-prijs gebruikt voor nieuwe klanten.
+ * betalingen bij Mollie en de juridische teksten lezen allemaal hieruit. Pas je
+ * hier een bedrag aan, dan geldt dat voor nieuwe klanten; lopende abonnementen
+ * houden het bedrag waarmee ze zijn afgesloten.
  *
  * Alle bedragen zijn in eurocenten, inclusief 21% btw (zie vatPercent).
  */
@@ -19,7 +18,7 @@ export const DURATION_IDS = ["1m", "3m", "6m", "12m", "eenmalig"] as const;
 export type DurationId = (typeof DURATION_IDS)[number];
 export type SubscriptionDurationId = Exclude<DurationId, "eenmalig">;
 
-/** Het btw-tarief dat in de prijzen zit; staat als "inclusief" op de Stripe-facturen. */
+/** Het btw-tarief dat in de prijzen zit; staat als "inclusief" op de facturen. */
 export const vatPercent = 21;
 
 export type PlanType = "voeding" | "training";

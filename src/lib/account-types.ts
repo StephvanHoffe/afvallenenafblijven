@@ -14,7 +14,7 @@ export interface DashboardOrder {
   status: OrderStatus;
   cancelAt: Date | null;
   createdAt: Date;
-  /** Heeft een lopend Stripe-abonnement dat de klant kan beheren. */
+  /** Een abonnement dat de klant kan beheren (opzeggen, betaalmethode). */
   manageable: boolean;
   commitmentEndsAt: Date | null;
   /** De verplichte check-in voor de volgende periode (null als die er niet is). */
@@ -38,7 +38,7 @@ export interface PaymentView {
   duration: DurationId | null;
   /** De hoeveelste maand van het abonnement (1 = de eerste); null bij een los schema of terugbetaling. */
   month: number | null;
-  /** Link naar de factuur (pdf), of null als er geen factuur bij hoort. */
+  /** Link naar de factuur of creditnota (pdf), of null als er geen bij hoort. */
   invoiceHref: string | null;
 }
 
@@ -100,4 +100,13 @@ export interface AccountView {
 
 export type AccountTab = "overzicht" | "schemas" | "voortgang" | "check-in" | "gegevens" | "abonnement" | "betalingen";
 
-export type AccountNotice = "opgezegd" | "opzeggen" | "checkin" | "weegmoment" | "garantie" | "factuur-fout" | null;
+export type AccountNotice =
+  | "opgezegd"
+  | "opzeggen"
+  | "checkin"
+  | "weegmoment"
+  | "garantie"
+  | "factuur-fout"
+  | "betaalmethode"
+  | "betaalmethode-fout"
+  | null;

@@ -210,7 +210,7 @@ async function Funnel({ searchParams }: Pick<PageProps<"/beheer/funnel">, "searc
           </table>
         </div>
         <p className="border-t border-line px-5 py-3 text-xs text-muted">
-          &quot;Hier gestopt&quot;: de laatste vraag die een bezoeker zag, zonder te betalen. Niet elke vraag geldt voor iedereen (training-vragen alleen bij training en de bundel, tempo alleen bij afvallen). Bij &quot;Plannen en afrekenen&quot; tellen ook bezoekers die afhaakten op de betaalpagina van Stripe.
+          &quot;Hier gestopt&quot;: de laatste vraag die een bezoeker zag, zonder te betalen. Niet elke vraag geldt voor iedereen (training-vragen alleen bij training en de bundel, tempo alleen bij afvallen). Bij &quot;Plannen en afrekenen&quot; tellen ook bezoekers die afhaakten op de betaalpagina van Mollie.
         </p>
       </Panel>
 

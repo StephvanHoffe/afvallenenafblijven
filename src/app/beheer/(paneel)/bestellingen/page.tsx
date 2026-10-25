@@ -35,7 +35,7 @@ async function Orders({ searchParams }: Pick<PageProps<"/beheer/bestellingen">, 
   return (
     <>
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
-      <PageTitle title="Bestellingen" intro="Abonnementen en losse aankopen. Betalingen en facturen staan in Stripe.">
+      <PageTitle title="Bestellingen" intro="Abonnementen en losse aankopen. Betalingen staan ook in Mollie; facturen vind je bij de klant onder Betalingen.">
         <a href={exportHref("bestellingen", { status })} className="btn-secondary !px-3.5 !py-2 text-sm">
           <Download className="size-4" aria-hidden /> Exporteer (CSV)
         </a>

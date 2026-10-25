@@ -25,6 +25,6 @@ export const STAGE_DEFS: { key: string; label: string; hint: string }[] = [
   { key: "plan", label: "Plannen bekeken", hint: "Kwam bij de plankeuze" },
   { key: "selected", label: "Plan gekozen", hint: "Koos een plan en looptijd" },
   { key: "submitted", label: "Op betalen geklikt", hint: "Vinkjes gezet en op betalen geklikt" },
-  { key: "checkout", label: "Betaalpagina geopend", hint: "Doorgestuurd naar Stripe" },
+  { key: "checkout", label: "Betaalpagina geopend", hint: "Doorgestuurd naar Mollie" },
   { key: "purchase", label: "Betaald", hint: "Betaling afgerond" },
 ];

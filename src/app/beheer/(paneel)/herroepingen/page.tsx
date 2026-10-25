@@ -7,7 +7,7 @@ import { Badge, EmptyRow, NeedsDatabase, Notice, PageTitle, Panel, planName, tab
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { site } from "@/config/site";
-import { stripeDashboardUrl } from "@/lib/admin/describe";
+import { mollieDashboardUrl } from "@/lib/mollie";
 import { guaranteeDeadline } from "@/lib/guarantee";
 import { euro, formatDate } from "@/lib/format";
 
@@ -32,7 +32,7 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
         title="Herroepingen en garantie"
-        intro="Verklaringen via de herroepingsfunctie op de website. De klant heeft direct een ontvangstbevestiging gekregen. Beoordeel of het herroepingsrecht nog gold, betaal zo nodig terug in Stripe en laat het de klant weten."
+        intro="Verklaringen via de herroepingsfunctie op de website. De klant heeft direct een ontvangstbevestiging gekregen. Beoordeel of het herroepingsrecht nog gold, betaal zo nodig terug via de klantpagina (Terugbetalen) en laat het de klant weten."
       />
       <Panel title="Herroepingen">
         <div className={table.wrap}>
@@ -79,7 +79,7 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
         <Panel title={`Garantie-aanvragen (${site.guarantee.days} dagen geld terug)`}>
           <p className="border-b border-line px-5 py-3.5 text-sm text-muted">
             Aangevraagd door de klant in Mijn schema&apos;s. De klant heeft een bevestiging gekregen waarin staat dat we binnen{" "}
-            {site.responseTimeDays} werkdagen terugbetalen. Met &quot;Terugbetalen via Stripe&quot; betaal je de eerste betaling volledig terug,
+            {site.responseTimeDays} werkdagen terugbetalen. Met &quot;Terugbetalen via Mollie&quot; betaal je de eerste betaling volledig terug (met een creditnota),
             beëindig je het abonnement direct (niet aan het einde van de periode) en markeer je de aanvraag als afgehandeld, in één keer.
           </p>
           <div className={table.wrap}>
@@ -109,20 +109,16 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
                         {planName(g.order.product, g.order.duration)} · besteld {formatDate(g.order.createdAt)} · termijn t/m{" "}
                         {formatDate(guaranteeDeadline(g.order.createdAt))}
                       </span>
-                      {(g.order.stripeSubscriptionId || g.stripeCustomerId) && (
-                        <span className="mt-1 flex flex-wrap gap-x-3 text-xs">
-                          {g.order.stripeSubscriptionId && (
-                            <a href={stripeDashboardUrl("subscriptions", g.order.stripeSubscriptionId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
-                              Abonnement in Stripe
-                            </a>
-                          )}
-                          {g.stripeCustomerId && (
-                            <a href={stripeDashboardUrl("customers", g.stripeCustomerId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
-                              Betalingen in Stripe
-                            </a>
-                          )}
-                        </span>
-                      )}
+                      <span className="mt-1 flex flex-wrap gap-x-3 text-xs">
+                        <a href={mollieDashboardUrl("payments", g.order.checkoutId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
+                          Betaling in Mollie
+                        </a>
+                        {g.mollieCustomerId && (
+                          <a href={mollieDashboardUrl("customers", g.mollieCustomerId)} target="_blank" rel="noreferrer" className="font-semibold text-brand-700 underline">
+                            Klant in Mollie
+                          </a>
+                        )}
+                      </span>
                     </td>
                     <td className={`${table.td} ${table.num}`}>{euro(g.order.amountCents)}</td>
                     <td className={`${table.td} max-w-xs text-muted`}>{g.reason ?? "–"}</td>
@@ -140,12 +136,12 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
                               <input type="hidden" name="aanvraag" value={g.id} />
                               <input type="hidden" name="reden" value="14-dagengarantie" />
                               <input type="hidden" name="terug" value="/beheer/herroepingen" />
-                              {g.order.stripeSubscriptionId && (
+                              {g.order.duration !== "eenmalig" && (
                                 <label className="flex items-center gap-1.5 text-xs">
                                   <input type="checkbox" name="beeindigen" value="1" defaultChecked /> Abonnement direct beëindigen
                                 </label>
                               )}
-                              <SubmitButton className="btn-primary !px-3 !py-1.5 text-xs">Terugbetalen via Stripe</SubmitButton>
+                              <SubmitButton className="btn-primary !px-3 !py-1.5 text-xs">Terugbetalen via Mollie</SubmitButton>
                             </form>
                           )}
                           <form action={markGuaranteeHandled}>

@@ -19,7 +19,6 @@ export interface DiscountCodeRow {
   starts_at: Date | null;
   expires_at: Date | null;
   active: boolean;
-  stripe_coupon_id: string | null;
   created_at: Date;
   /** Aantal bestellingen met deze code. */
   redemptions: number;
@@ -116,9 +115,4 @@ export async function deleteDiscountCode(id: string): Promise<"deleted" | "pause
   if (deleted.length > 0) return "deleted";
   await setDiscountActive(id, false);
   return "paused";
-}
-
-export async function saveStripeCoupon(id: string, couponId: string): Promise<void> {
-  const sql = await db();
-  await sql`update discount_codes set stripe_coupon_id = ${couponId} where id = ${id}`;
 }

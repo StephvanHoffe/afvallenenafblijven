@@ -70,8 +70,8 @@ function Nl() {
           calorieën) en je lichaamsgewicht. Ook dit zijn gezondheidsgegevens. Zie <a href="#gezondheidsapps">punt 5</a>.
         </li>
         <li>
-          <strong>Bestel- en betaalgegevens:</strong> wat je hebt besteld, bedragen, status van je abonnement en (via
-          Stripe) je betaalmethode en factuurgegevens. Wij ontvangen geen volledige bank- of creditcardnummers. Kwam je
+          <strong>Bestel- en betaalgegevens:</strong> wat je hebt besteld, bedragen, je facturen, de status van je
+          abonnement en (via Mollie) je betaalmethode. Wij ontvangen geen volledige bank- of creditcardnummers. Kwam je
           binnen via een advertentie, dan bewaren we bij je bestelling ook de campagnegegevens uit de link (zoals bron en
           naam van de campagne) en de landingspagina.
         </li>
@@ -264,8 +264,8 @@ function Nl() {
           <strong>Anthropic</strong> (VS) – software voor het samenstellen van je schema (verwerker).
         </li>
         <li>
-          <strong>Stripe</strong> (Ierland/VS) – betalingen, abonnementen en facturen. Stripe is voor een deel van de
-          verwerking zelf verantwoordelijk, zie het privacybeleid van Stripe.
+          <strong>Mollie</strong> (Nederland) – betalingen, de incassomachtiging en abonnementen. Mollie is als
+          betaalinstelling voor een deel van de verwerking zelf verantwoordelijk, zie het privacybeleid van Mollie.
         </li>
         <li>
           <strong>Vercel</strong> (VS) – het hosten van de website; de website draait in een datacenter in Frankfurt
@@ -411,8 +411,8 @@ function En() {
           calories) and your body weight. This is also health data. See <a href="#gezondheidsapps">section 5</a>.
         </li>
         <li>
-          <strong>Order and payment details:</strong> what you have ordered, amounts, the status of your subscription
-          and (via Stripe) your payment method and billing details. We do not receive full bank account or credit card
+          <strong>Order and payment details:</strong> what you have ordered, amounts, your invoices, the status of your
+          subscription and (via Mollie) your payment method. We do not receive full bank account or credit card
           numbers. If you came to us through an advert, we also store the campaign details from the link (such as the
           source and campaign name) and the landing page with your order.
         </li>
@@ -593,8 +593,9 @@ function En() {
           <strong>Anthropic</strong> (US) – software for putting your plan together (processor).
         </li>
         <li>
-          <strong>Stripe</strong> (Ireland/US) – payments, subscriptions and invoices. Stripe is itself responsible
-          (controller) for part of the processing; see Stripe&apos;s privacy policy.
+          <strong>Mollie</strong> (Netherlands) – payments, the direct debit mandate and subscriptions. As a payment
+          institution, Mollie is itself responsible (controller) for part of the processing; see Mollie&apos;s privacy
+          policy.
         </li>
         <li>
           <strong>Vercel</strong> (US) – hosting the website; the website runs in a data centre in Frankfurt

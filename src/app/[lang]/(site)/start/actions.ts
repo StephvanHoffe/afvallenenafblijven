@@ -10,7 +10,8 @@ import { isDatabaseConfigured } from "@/lib/db";
 import { createIntake } from "@/lib/repo";
 import { defineCopy } from "@/i18n/config";
 import { requestLocale } from "@/i18n/server";
-import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import { createCheckout } from "@/lib/checkout";
+import { isMollieConfigured } from "@/lib/mollie";
 import { describeDiscount, normalizeCode, type DiscountTerms } from "@/lib/discounts";
 import { checkCode, getDiscountCode, type DiscountProblem } from "@/lib/discounts-server";
 import { recordFunnelEvent } from "@/lib/funnel";
@@ -25,7 +26,7 @@ const copy = defineCopy({
     checkDetails: "Controleer je gegevens en probeer het opnieuw.",
     checkAnswers: "Controleer je antwoorden in de vragenlijst.",
     notConfigured:
-      "Betalen is nog niet geactiveerd op deze website. (Voor de beheerder: stel DATABASE_URL en STRIPE_SECRET_KEY in, zie README.)",
+      "Betalen is nog niet geactiveerd op deze website. (Voor de beheerder: stel DATABASE_URL en MOLLIE_API_KEY in, zie README.)",
     checkoutFailed: "We konden de betaalpagina niet openen. Probeer het over een paar minuten opnieuw.",
     discount: {
       unknown: "Deze kortingscode kennen we niet. Controleer de spelling.",
@@ -42,7 +43,7 @@ const copy = defineCopy({
     checkDetails: "Please check your details and try again.",
     checkAnswers: "Please check your answers in the questionnaire.",
     notConfigured:
-      "Payments haven't been activated on this website yet. (For the administrator: set DATABASE_URL and STRIPE_SECRET_KEY, see README.)",
+      "Payments haven't been activated on this website yet. (For the administrator: set DATABASE_URL and MOLLIE_API_KEY, see README.)",
     checkoutFailed: "We couldn't open the payment page. Please try again in a few minutes.",
     discount: {
       unknown: "We don't recognise this discount code. Please check the spelling.",
@@ -111,7 +112,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   const safety = checkSafety(intake.data, locale);
   if (!safety.ok) return { error: safety.reason };
 
-  if (!isDatabaseConfigured() || !isStripeConfigured()) {
+  if (!isDatabaseConfigured() || !isMollieConfigured()) {
     return { error: c.notConfigured };
   }
 
@@ -139,7 +140,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
       discountCode: discount?.code ?? null,
       duration,
     });
-    url = await createCheckoutSession({ intakeId, product, duration, email: customer.email, name: customer.name, locale, discount });
+    url = await createCheckout({ intakeId, product, duration, email: customer.email, name: customer.name, locale, discount });
     await recordFunnelEvent({
       visitId: payload.data.visitId,
       event: "checkout_start",

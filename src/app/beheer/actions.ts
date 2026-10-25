@@ -26,11 +26,10 @@ import { createDiscountCode, deleteDiscountCode, setDiscountActive } from "@/lib
 import { customerSchema, intakeSchema } from "@/lib/intake";
 import { recordPayment } from "@/lib/payments";
 import { euro } from "@/lib/format";
-import { syncSubscription } from "@/lib/fulfillment";
 import { processOrderPlans, processPlan, releaseAndNotify, startNextPeriod } from "@/lib/plans";
 import { approvePlan as approvePlanInDb, getCustomer, getOrder, latestIntakeForCustomer, plansForOrder } from "@/lib/repo";
 import { saveCheckoutReminderSettings, saveDeliverySettings, setPlanApproval } from "@/lib/settings";
-import { cancelSubscription, refundFirstPayment } from "@/lib/stripe";
+import { cancelOrder, refundFirstPayment } from "@/lib/subscriptions";
 import { connectionsForCustomer } from "@/lib/health/repo";
 import { disconnect } from "@/lib/health/sync";
 import { logAdminAction } from "@/lib/admin/log";
@@ -171,16 +170,14 @@ export async function adminCancelSubscription(formData: FormData): Promise<void>
   await guard(formData);
   const order = await getOrder(String(formData.get("bestelling") ?? ""));
   const customer = order ? await getCustomer(order.customer_id) : null;
-  if (!order?.stripe_subscription_id || !customer) back(formData, "niet-gevonden");
-  const subscription = await cancelSubscription(order.stripe_subscription_id, order.duration);
-  await syncSubscription(subscription);
-  const end = subscription.cancel_at ?? subscription.items.data[0]?.current_period_end ?? null;
+  if (!order || order.duration === "eenmalig" || order.status === "canceled" || !customer) back(formData, "niet-gevonden");
+  const end = order.cancel_at ?? (await cancelOrder(order));
   await sendMail(
     cancellationEmail({
       to: customer.email,
       name: customer.name,
       productName: productFor(order.product, toLocale(customer.locale)).name,
-      endsAt: end ? new Date(end * 1000) : null,
+      endsAt: end,
       locale: toLocale(customer.locale),
     }),
   );
@@ -459,14 +456,14 @@ export async function ratePlan(formData: FormData): Promise<void> {
 
 // ---------- Terugbetalen ----------
 
-/** Betaalt de eerste betaling terug via Stripe (garantie of herroeping) en beëindigt het abonnement desgewenst. */
+/** Betaalt de eerste betaling terug via Mollie (garantie of herroeping), met een creditnota, en beëindigt het abonnement desgewenst. */
 export async function refundOrder(formData: FormData): Promise<void> {
   await guard(formData);
   const order = await getOrder(String(formData.get("bestelling") ?? ""));
   if (!order) back(formData, "niet-gevonden");
   if (order.refunded_cents > 0) back(formData, "al-terugbetaald");
   const cancel = formData.get("beeindigen") === "1";
-  let result: { refundedCents: number; refundId: string };
+  let result: { refundedCents: number; refundId: string; invoiceId: string };
   try {
     result = await refundFirstPayment(order, { cancel });
   } catch (err) {
@@ -486,6 +483,7 @@ export async function refundOrder(formData: FormData): Promise<void> {
     amountCents: -result.refundedCents,
     kind: "refund",
     description: String(formData.get("reden") ?? "terugbetaling"),
+    invoiceId: result.invoiceId,
   });
   const request = String(formData.get("aanvraag") ?? "");
   if (request) await sql`update guarantee_requests set handled_at = now() where id = ${request} and handled_at is null`;

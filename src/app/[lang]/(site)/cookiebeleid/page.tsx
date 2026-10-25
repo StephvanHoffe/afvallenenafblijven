@@ -33,11 +33,11 @@ const copy = defineCopy({
         duration: "90 dagen",
       },
       {
-        name: "__stripe_mid, __stripe_sid",
+        name: "Cookies van Mollie",
         type: "Noodzakelijk",
-        party: "Stripe",
-        purpose: "Veilig betalen en fraude voorkomen op de betaalpagina.",
-        duration: "30 minuten tot 1 jaar",
+        party: "Mollie",
+        purpose: "Veilig betalen en fraude voorkomen op de betaalpagina van Mollie (op mollie.com, niet op deze website).",
+        duration: "Zie het cookiebeleid van Mollie",
       },
       {
         name: "_ga, _ga_*",
@@ -78,11 +78,11 @@ const copy = defineCopy({
         duration: "90 days",
       },
       {
-        name: "__stripe_mid, __stripe_sid",
+        name: "Mollie cookies",
         type: "Necessary",
-        party: "Stripe",
-        purpose: "Secure payments and fraud prevention on the payment page.",
-        duration: "30 minutes to 1 year",
+        party: "Mollie",
+        purpose: "Secure payments and fraud prevention on Mollie's payment page (on mollie.com, not on this website).",
+        duration: "See Mollie's cookie policy",
       },
       {
         name: "_ga, _ga_*",

@@ -20,8 +20,7 @@ import {
 } from "@/lib/repo";
 import { processWeeklyLog, recordWeeklyLog, weeklyWindowForOrder } from "@/lib/weekly-server";
 import type { WeeklyData } from "@/lib/weekly";
-import { billingPortalUrl, cancelSubscription as cancelStripeSubscription, resumeSubscription } from "@/lib/stripe";
-import { syncSubscription } from "@/lib/fulfillment";
+import { cancelOrder, resumeOrder, startPaymentMethodChange } from "@/lib/subscriptions";
 import { adminNotificationEmail, cancellationEmail, guaranteeRequestEmail, sendMail } from "@/lib/email";
 import { guaranteeAvailable, guaranteeOrder } from "@/lib/guarantee";
 import { durations, isSubscription, productFor, products } from "@/config/pricing";
@@ -61,14 +60,25 @@ const copy = defineCopy({
   },
 });
 
-export async function openBillingPortal(formData?: FormData): Promise<void> {
+/**
+ * Betaalmethode wijzigen: de klant bevestigt een nieuwe rekening met een
+ * betaling van € 0,01 bij Mollie (die direct wordt teruggestort). Daarna
+ * schrijven de lopende abonnementen af via de nieuwe machtiging.
+ */
+export async function changePaymentMethod(formData?: FormData): Promise<void> {
   const l = await requestLocale();
   const customer = await currentCustomer();
   if (!customer) redirect(localePath(l, "/inloggen"));
-  if (!customer.stripe_customer_id) redirect(localePath(l, "/contact"));
+  if (!customer.mollie_customer_id) redirect(localePath(l, "/contact"));
   // Terug naar het tabblad waar de klant vandaan kwam (alleen deze twee).
   const back = formData?.get("terug") === "/account/betalingen" ? "/account/betalingen" : "/account/abonnement";
-  const url = await billingPortalUrl(customer.stripe_customer_id, back, l);
+  let url: string;
+  try {
+    url = await startPaymentMethodChange(customer, l, back);
+  } catch (err) {
+    console.error("Betaalmethode wijzigen starten mislukt", err);
+    redirect(localePath(l, `${back}?betaalmethode=fout`));
+  }
   redirect(url);
 }
 
@@ -78,28 +88,26 @@ async function ownSubscriptionOrder(formData: FormData, l: Locale) {
   if (!customer) redirect(localePath(l, "/inloggen"));
   const orderId = String(formData.get("order") ?? "");
   const order = (await ordersForCustomer(customer.id)).find((o) => o.id === orderId);
-  if (!order?.stripe_subscription_id) redirect(localePath(l, "/account"));
-  return { customer, order, subscriptionId: order.stripe_subscription_id };
+  if (!order || !isSubscription(order.duration) || order.status === "canceled" || order.status === "completed") redirect(localePath(l, "/account"));
+  return { customer, order };
 }
 
 export async function cancelSubscription(formData: FormData): Promise<void> {
   const l = await requestLocale();
-  const { customer, order, subscriptionId } = await ownSubscriptionOrder(formData, l);
-  const subscription = await cancelStripeSubscription(subscriptionId, order.duration);
-  await syncSubscription(subscription);
+  const { customer, order } = await ownSubscriptionOrder(formData, l);
+  const endsAt = order.cancel_at ?? (await cancelOrder(order));
   const reason = formData.get("reden");
   const comment = String(formData.get("toelichting") ?? "").trim().slice(0, 1000) || null;
   await setCancelReason(order.id, isCancelReason(reason) ? reason : comment ? "anders" : null, comment).catch((err) =>
     console.error("Opzegreden opslaan mislukt", err),
   );
-  const periodEnd = subscription.cancel_at ?? subscription.items.data[0]?.current_period_end ?? null;
   await sendMail(
     cancellationEmail(
       {
         to: customer.email,
         name: customer.name,
         productName: productFor(order.product, l).name,
-        endsAt: periodEnd ? new Date(periodEnd * 1000) : null,
+        endsAt,
       },
       l,
     ),
@@ -109,9 +117,8 @@ export async function cancelSubscription(formData: FormData): Promise<void> {
 
 export async function undoCancellation(formData: FormData): Promise<void> {
   const l = await requestLocale();
-  const { subscriptionId } = await ownSubscriptionOrder(formData, l);
-  const subscription = await resumeSubscription(subscriptionId);
-  await syncSubscription(subscription);
+  const { order } = await ownSubscriptionOrder(formData, l);
+  await resumeOrder(order).catch((err) => console.error(`Opzegging ${order.id} intrekken mislukt`, err));
   redirect(localePath(l, "/account/abonnement"));
 }
 
@@ -270,7 +277,7 @@ export async function submitWeeklyLog(_prev: FormState, formData: FormData): Pro
 /**
  * Tevredenheidsgarantie: de klant vraagt binnen de termijn de eerste betaling
  * terug. We leggen de aanvraag vast en mailen klant en beheerder; de beheerder
- * betaalt terug en beëindigt het abonnement in Stripe (zie /beheer/herroepingen).
+ * betaalt terug via Mollie en beëindigt daarmee het abonnement (zie /beheer/herroepingen).
  */
 export async function requestGuarantee(_prev: FormState, formData: FormData): Promise<FormState> {
   const l = await requestLocale();
@@ -306,11 +313,7 @@ export async function requestGuarantee(_prev: FormState, formData: FormData): Pr
           "E-mail": customer.email,
           Bestelling: `${reference} · ${productFor(order.product, "nl").name} · ${durations[order.duration].label} · besteld op ${formatDate(order.created_at)}`,
           "Terug te betalen": `${euro(order.amount_cents)} (eerste betaling)`,
-          Abonnement: order.stripe_subscription_id
-            ? `${order.stripe_subscription_id}: direct beëindigen in Stripe`
-            : subscription
-              ? "Nog geen Stripe-abonnement bekend"
-              : undefined,
+          Abonnement: subscription ? "Stopt bij terugbetalen via het beheer (Herroepingen & garantie)" : undefined,
           Reden: reason,
           Taal: l === "en" ? "Engels" : undefined,
         },

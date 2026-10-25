@@ -1,12 +1,12 @@
 import "server-only";
 import { db } from "@/lib/db";
-import type { Stripe } from "@/lib/stripe";
 
 /**
- * Ontvangen betalingen en terugbetalingen, voor de omzetcijfers in het beheer.
- * Abonnementen: elke betaalde factuur (Stripe-webhook invoice.paid), dus ook de
- * eerste maand. Losse schema's: de afgeronde checkout. Terugbetalingen vanuit
- * het beheer worden als negatief bedrag vastgelegd.
+ * Ontvangen betalingen en terugbetalingen, voor de omzetcijfers in het beheer en
+ * het tabblad Betalingen. Elke betaalde Mollie-betaling (de eerste betaling en
+ * de maandelijkse afschrijvingen) komt hier via de webhook, met de factuur
+ * erbij. Terugbetalingen en terugboekingen worden als negatief bedrag
+ * vastgelegd, met een creditnota bij een terugbetaling.
  */
 
 export async function recordPayment(p: {
@@ -17,14 +17,29 @@ export async function recordPayment(p: {
   kind: "payment" | "refund";
   description?: string;
   paidAt?: Date;
-  /** De Stripe-factuur bij deze betaling (niet bij terugbetalingen). */
+  /** De factuur (of creditnota) bij deze betaling. */
   invoiceId?: string | null;
-}): Promise<void> {
+}): Promise<boolean> {
   const sql = await db();
-  await sql`
+  const rows = await sql`
     insert into payments (id, order_id, customer_id, amount_cents, kind, description, paid_at, invoice_id)
     values (${p.id}, ${p.orderId}, ${p.customerId}, ${p.amountCents}, ${p.kind}, ${p.description ?? null}, ${p.paidAt ?? new Date()}, ${p.invoiceId ?? null})
-    on conflict (id) do nothing`;
+    on conflict (id) do nothing returning id`;
+  return rows.length > 0;
+}
+
+/** Is deze betaling al vastgelegd? */
+export async function isPaymentRecorded(id: string): Promise<boolean> {
+  const sql = await db();
+  const rows = await sql`select 1 from payments where id = ${id}`;
+  return rows.length > 0;
+}
+
+/** Hoeveel betalingen er voor een bestelling zijn ontvangen (zonder terugbetalingen). */
+export async function paidPaymentCount(orderId: string): Promise<number> {
+  const sql = await db();
+  const [row] = await sql<{ n: number }[]>`select count(*)::int as n from payments where order_id = ${orderId} and kind = 'payment'`;
+  return row?.n ?? 0;
 }
 
 export interface PaymentRow {
@@ -60,24 +75,4 @@ export async function paymentForCustomer(customerId: string, id: string): Promis
     select id, order_id, amount_cents, kind, description, paid_at, invoice_id
     from payments where id = ${id} and customer_id = ${customerId}`;
   return row ?? null;
-}
-
-/** Een betaalde abonnementsfactuur vastleggen. */
-export async function recordInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-  const subscription = invoice.parent?.subscription_details?.subscription;
-  const subscriptionId = typeof subscription === "string" ? subscription : (subscription?.id ?? null);
-  if (!invoice.id || !subscriptionId || invoice.amount_paid <= 0) return;
-  const sql = await db();
-  const [order] = await sql<{ id: string; customer_id: string }[]>`
-    select id, customer_id from orders where stripe_subscription_id = ${subscriptionId}`;
-  await recordPayment({
-    id: invoice.id,
-    orderId: order?.id ?? null,
-    customerId: order?.customer_id ?? null,
-    amountCents: invoice.amount_paid,
-    kind: "payment",
-    description: invoice.billing_reason ?? undefined,
-    paidAt: invoice.status_transitions?.paid_at ? new Date(invoice.status_transitions.paid_at * 1000) : new Date(),
-    invoiceId: invoice.id,
-  });
 }

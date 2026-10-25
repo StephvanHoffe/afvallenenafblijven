@@ -1,7 +1,7 @@
 /**
- * Telt maanden op bij een datum zoals Stripe dat voor maandelijkse
- * afschrijvingen doet: dezelfde dag van de maand, of de laatste dag als die
- * maand korter is (31 januari + 1 maand = 28/29 februari).
+ * Telt maanden op bij een datum voor maandelijkse afschrijvingen: dezelfde dag
+ * van de maand, of de laatste dag als die maand korter is (31 januari + 1 maand
+ * = 28/29 februari).
  */
 export function addMonthsClamped(date: Date, months: number): Date {
   const d = new Date(date.getTime());
@@ -55,4 +55,22 @@ export function amsterdamHour(date: Date): number {
 /** Kalenderdag in Nederland als "2027-04-26". */
 export function amsterdamDay(date: Date): string {
   return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).toISOString().slice(0, 10);
+}
+
+/** Telt maanden op bij een kalenderdag ("2026-01-31" + 1 = "2026-02-28"). */
+export function addMonthsToDay(day: string, months: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return addMonthsClamped(new Date(Date.UTC(y, m - 1, d)), months).toISOString().slice(0, 10);
+}
+
+/** Telt dagen op bij een kalenderdag ("2026-02-28" + 1 = "2026-03-01"). */
+export function addDaysToDay(day: string, days: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+/** Middernacht (Nederlandse tijd) aan het begin van een kalenderdag ("2026-11-23"). */
+export function amsterdamStartOfDay(day: string): Date {
+  const [y, m, d] = day.split("-").map(Number);
+  return amsterdamMidnight(new Date(Date.UTC(y, m - 1, d, 12)));
 }

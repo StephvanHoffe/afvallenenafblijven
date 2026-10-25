@@ -33,7 +33,7 @@ create table if not exists customers (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   name text not null,
-  stripe_customer_id text unique,
+  mollie_customer_id text unique,
   marketing_consent boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -54,14 +54,27 @@ create table if not exists orders (
   intake_id uuid not null references intakes(id),
   product text not null,
   duration text not null,
-  stripe_session_id text not null unique,
-  stripe_subscription_id text unique,
+  checkout_id text not null unique,
+  subscription_id text unique,
   status text not null default 'active',
   cancel_at timestamptz,
   amount_cents integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Van Stripe naar Mollie: de oude kolomnamen in een eerder aangemaakte database omzetten.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_name = 'customers' and column_name = 'stripe_customer_id') then
+    alter table customers rename column stripe_customer_id to mollie_customer_id;
+  end if;
+  if exists (select 1 from information_schema.columns where table_name = 'orders' and column_name = 'stripe_session_id') then
+    alter table orders rename column stripe_session_id to checkout_id;
+  end if;
+  if exists (select 1 from information_schema.columns where table_name = 'orders' and column_name = 'stripe_subscription_id') then
+    alter table orders rename column stripe_subscription_id to subscription_id;
+  end if;
+end $$;
 
 create table if not exists plans (
   id uuid primary key default gen_random_uuid(),
@@ -204,7 +217,7 @@ alter table intakes add column if not exists discount_code text;
 alter table intakes add column if not exists reminded_at timestamptz;
 alter table intakes add column if not exists duration text;
 
--- Ontvangen betalingen en terugbetalingen (uit de Stripe-webhooks en het beheer).
+-- Ontvangen betalingen en terugbetalingen (uit de Mollie-webhook en het beheer).
 create table if not exists payments (
   id text primary key,
   order_id uuid references orders(id) on delete set null,
@@ -215,14 +228,13 @@ create table if not exists payments (
   paid_at timestamptz not null default now()
 );
 create index if not exists payments_paid_idx on payments(paid_at);
--- De Stripe-factuur bij een betaling, voor het tabblad Betalingen (abonnementen: de factuur zelf; losse schema's: de factuur van de checkout).
+-- De factuur (of creditnota) bij een betaling, voor het tabblad Betalingen.
 alter table payments add column if not exists invoice_id text;
 -- De actie waarmee een bestelling is gedaan (korting op de eerste maand(en)).
 alter table orders add column if not exists promotion text;
-update payments set invoice_id = id where invoice_id is null and kind = 'payment' and id like 'in\_%';
 create index if not exists payments_customer_idx on payments(customer_id, paid_at);
 
--- Kortingscodes (de bijbehorende Stripe-coupon wordt bij het eerste gebruik aangemaakt).
+-- Kortingscodes (de website rekent de korting zelf uit in de betalingen).
 create table if not exists discount_codes (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
@@ -237,7 +249,6 @@ create table if not exists discount_codes (
   starts_at timestamptz,
   expires_at timestamptz,
   active boolean not null default true,
-  stripe_coupon_id text,
   created_at timestamptz not null default now()
 );
 alter table orders add column if not exists discount_code text;
@@ -245,6 +256,48 @@ alter table orders add column if not exists cancel_reason text;
 alter table orders add column if not exists cancel_comment text;
 alter table orders add column if not exists ended_at timestamptz;
 alter table orders add column if not exists refunded_cents integer not null default 0;
+
+-- Mollie: de bedragen van het abonnement en de abonnementen bij Mollie. Een korting
+-- op meer dan één maand is een kort abonnement (intro) voor maand 2 t/m intro_months,
+-- daarna loopt het gewone abonnement (subscription_id) tegen monthly_cents.
+alter table orders add column if not exists intro_cents integer;
+alter table orders add column if not exists intro_months integer not null default 1;
+alter table orders add column if not exists intro_subscription_id text unique;
+-- Wanneer de abonnementen bij Mollie zijn stopgezet (na een opzegging of terugbetaling).
+alter table orders add column if not exists subscription_canceled_at timestamptz;
+-- De laatste mislukte afschrijving (zodat de klant er één mail over krijgt).
+alter table orders add column if not exists failed_payment_id text;
+-- De Mollie-betaling en -klant bij een gestarte betaling (voor de bedankpagina).
+alter table intakes add column if not exists payment_id text;
+alter table intakes add column if not exists mollie_customer_id text;
+
+-- Facturen en creditnota's: de website maakt ze zelf, met een doorlopend nummer per jaar.
+-- Naam en e-mail staan op de factuur zelf, zodat facturen de fiscale bewaartermijn van
+-- 7 jaar halen, ook als de klantgegevens eerder worden verwijderd.
+create table if not exists invoice_counters (
+  year integer primary key,
+  last integer not null
+);
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  number text not null unique,
+  payment_id text not null unique,
+  kind text not null default 'invoice',
+  credit_for uuid references invoices(id),
+  order_id uuid references orders(id) on delete set null,
+  customer_id uuid references customers(id) on delete set null,
+  customer_name text not null,
+  customer_email text not null,
+  description text not null,
+  period_start date,
+  period_end date,
+  amount_cents integer not null,
+  vat_cents integer not null,
+  vat_percent integer not null,
+  method text,
+  issued_at timestamptz not null default now()
+);
+create index if not exists invoices_customer_idx on invoices(customer_id);
 
 -- Aangepaste e-mailteksten uit het beheer (lege velden = standaardtekst).
 create table if not exists email_templates (

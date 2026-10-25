@@ -203,9 +203,10 @@ function Nl() {
         <li>Alle prijzen zijn in euro&apos;s en inclusief 21% btw. Er zijn geen bijkomende kosten.</li>
         <li>
           Een abonnement betaal je per maand, vooraf. De eerste maand betaal je bij het bestellen via onze betaalpartner
-          Stripe met iDEAL | Wero, Bancontact of je IBAN. Daarmee geef je een SEPA-machtiging voor doorlopende
-          incasso: de volgende maanden schrijven we het maandbedrag automatisch af van je rekening, rond dezelfde datum als
-          je eerste betaling. Op je bankafschrift staat de afschrijving van Stripe.
+          Mollie met iDEAL | Wero of Bancontact. Daarmee geef je een SEPA-machtiging voor doorlopende incasso: de volgende
+          maanden schrijven we het maandbedrag automatisch af van je rekening, op dezelfde dag van de maand als je eerste
+          betaling. Op je bankafschrift staat de afschrijving van onze betaalpartner Mollie. Een los schema betaal je
+          eenmalig met iDEAL | Wero, Bancontact of creditcard.
         </li>
         <li>
           De hoogte van het maandbedrag hangt af van de minimale looptijd die je kiest. Het maandbedrag en de datum van
@@ -577,9 +578,10 @@ function En() {
         <li>All prices are in euros and include 21% VAT. There are no additional costs.</li>
         <li>
           You pay for a subscription monthly, in advance. You pay for the first month when you order, via our payment
-          partner Stripe, with iDEAL | Wero, Bancontact or your IBAN. In doing so, you give a SEPA mandate for recurring
-          direct debits: in the following months, we automatically collect the monthly amount from your account, around
-          the same date as your first payment. Your bank statement will show the debit from Stripe.
+          partner Mollie, with iDEAL | Wero or Bancontact. In doing so, you give a SEPA mandate for recurring direct
+          debits: in the following months, we automatically collect the monthly amount from your account, on the same day
+          of the month as your first payment. Your bank statement will show the debit from our payment partner Mollie. You
+          pay for a one-off plan in a single payment with iDEAL | Wero, Bancontact or credit card.
         </li>
         <li>
           The monthly amount depends on the minimum term you choose. The monthly amount and the collection date are

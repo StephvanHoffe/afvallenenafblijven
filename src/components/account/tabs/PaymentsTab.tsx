@@ -1,6 +1,6 @@
 import { CalendarClock, Download } from "lucide-react";
 import Link from "@/i18n/Link";
-import { openBillingPortal } from "@/app/[lang]/(site)/account/actions";
+import { changePaymentMethod } from "@/app/[lang]/(site)/account/actions";
 import { DemoButton } from "@/components/account/DemoButton";
 import { Pill } from "@/components/account/shared";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -16,7 +16,12 @@ const copy = defineCopy({
     invoiceErrorText: "Probeer het over een paar minuten opnieuw. Lukt het dan nog niet, mail ons en we sturen hem toe.",
     pastDueTitle: "Een afschrijving is niet gelukt",
     pastDueText:
-      "Stripe probeert het de komende dagen automatisch opnieuw. Controleer of er genoeg saldo op je rekening staat, of geef een andere rekening of betaalmethode op.",
+      "Onze betaalpartner Mollie probeert het de komende dagen automatisch opnieuw. Controleer of er genoeg saldo op je rekening staat, of geef een andere rekening op.",
+    methodNote: "Je bevestigt je nieuwe rekening met een betaling van € 0,01 via iDEAL | Wero of Bancontact. Die cent krijg je direct terug.",
+    methodChangedTitle: "Bedankt, je nieuwe betaalmethode wordt verwerkt",
+    methodChangedText: "Is de bevestiging van € 0,01 gelukt, dan schrijven we je volgende maanden af van je nieuwe rekening. De cent storten we direct terug.",
+    methodErrorTitle: "Betaalmethode wijzigen lukte niet",
+    methodErrorText: "We konden de betaalpagina niet openen. Probeer het over een paar minuten opnieuw, of mail ons:",
     nextTitle: "Volgende afschrijving",
     nextAmount: (amount: string, date: string) => `${amount} rond ${date}`,
     nextDate: (date: string) => `Rond ${date}`,
@@ -34,9 +39,11 @@ const copy = defineCopy({
     order: (ref: string) => `Bestelnummer ${ref}`,
     invoice: "Factuur",
     invoiceLabel: (date: string) => `Factuur van ${date} downloaden (pdf)`,
+    creditNote: "Creditnota",
+    creditLabel: (date: string) => `Creditnota van ${date} downloaden (pdf)`,
     noInvoice: "Geen factuur",
     note: (vat: number) =>
-      `Alle bedragen zijn inclusief ${vat}% btw; de factuur laat zien hoeveel btw erin zit. Een incasso staat hier zodra hij gelukt is, meestal binnen een paar werkdagen. Een terugbetaling staat binnen 5 tot 10 werkdagen op je rekening.`,
+      `Alle bedragen zijn inclusief ${vat}% btw; de factuur laat zien hoeveel btw erin zit. Een incasso staat hier zodra hij gelukt is, meestal binnen een paar werkdagen. Een terugbetaling staat meestal binnen een paar werkdagen op je rekening.`,
     questionsTitle: "Vragen over een betaling?",
     questionsBefore: "Klopt er iets niet, of heb je een factuur op een andere naam nodig?",
     contact: "Neem contact op",
@@ -47,7 +54,12 @@ const copy = defineCopy({
     invoiceErrorText: "Please try again in a few minutes. If it still doesn't work, email us and we'll send it to you.",
     pastDueTitle: "A payment didn't go through",
     pastDueText:
-      "Stripe will automatically try again over the next few days. Check that there's enough money in your account, or enter a different account or payment method.",
+      "Our payment partner Mollie will automatically try again over the next few days. Check that there's enough money in your account, or enter a different account.",
+    methodNote: "You confirm your new account with a payment of €0.01 via iDEAL | Wero or Bancontact. You'll get that cent back straight away.",
+    methodChangedTitle: "Thank you, your new payment method is being processed",
+    methodChangedText: "Once the €0.01 confirmation has gone through, we'll collect your next months from your new account. We'll refund the cent straight away.",
+    methodErrorTitle: "Changing your payment method didn't work",
+    methodErrorText: "We couldn't open the payment page. Please try again in a few minutes, or email us:",
     nextTitle: "Next payment",
     nextAmount: (amount: string, date: string) => `${amount} around ${date}`,
     nextDate: (date: string) => `Around ${date}`,
@@ -65,9 +77,11 @@ const copy = defineCopy({
     order: (ref: string) => `Order number ${ref}`,
     invoice: "Invoice",
     invoiceLabel: (date: string) => `Download the invoice of ${date} (pdf)`,
+    creditNote: "Credit note",
+    creditLabel: (date: string) => `Download the credit note of ${date} (pdf)`,
     noInvoice: "No invoice",
     note: (vat: number) =>
-      `All amounts include ${vat}% VAT; the invoice shows how much VAT is included. A direct debit appears here once it has gone through, usually within a few working days. A refund reaches your account within 5 to 10 working days.`,
+      `All amounts include ${vat}% VAT; the invoice shows how much VAT is included. A direct debit appears here once it has gone through, usually within a few working days. A refund usually reaches your account within a few working days.`,
     questionsTitle: "Questions about a payment?",
     questionsBefore: "Is something not right, or do you need an invoice in a different name?",
     contact: "Get in touch",
@@ -95,7 +109,7 @@ export function PaymentsTab({ view, demo, notice, l }: { view: AccountView; demo
     demo ? (
       <DemoButton className={`${primary ? "btn-primary" : "btn-secondary"} !px-4 !py-2.5 text-sm`}>{c.changeMethod}</DemoButton>
     ) : (
-      <form action={openBillingPortal}>
+      <form action={changePaymentMethod}>
         <input type="hidden" name="terug" value="/account/betalingen" />
         <SubmitButton className={`${primary ? "btn-primary" : "btn-secondary"} !px-4 !py-2.5 text-sm`}>{c.changeMethod}</SubmitButton>
       </form>
@@ -114,11 +128,32 @@ export function PaymentsTab({ view, demo, notice, l }: { view: AccountView; demo
           </p>
         </div>
       )}
+      {(notice === "betaalmethode" || notice === "betaalmethode-fout") && (
+        <div
+          role="status"
+          className={`rounded-[var(--radius-card)] border-2 p-6 ${notice === "betaalmethode" ? "border-brand-200 bg-brand-50" : "border-accent-200 bg-accent-50"}`}
+        >
+          <h2 className="text-lg font-bold">{notice === "betaalmethode" ? c.methodChangedTitle : c.methodErrorTitle}</h2>
+          <p className="mt-1 text-[0.9375rem]">
+            {notice === "betaalmethode" ? (
+              c.methodChangedText
+            ) : (
+              <>
+                {c.methodErrorText}{" "}
+                <a href={`mailto:${site.company.email}`} className="font-semibold underline">
+                  {site.company.email}
+                </a>
+              </>
+            )}
+          </p>
+        </div>
+      )}
       {pastDue && (
         <div role="status" className="rounded-[var(--radius-card)] border-2 border-accent-200 bg-accent-50 p-6">
           <h2 className="text-lg font-bold">{c.pastDueTitle}</h2>
           <p className="mt-1 mb-4 text-[0.9375rem]">{c.pastDueText}</p>
           {changeButton(true)}
+          <p className="mt-3 text-sm text-muted">{c.methodNote}</p>
         </div>
       )}
 
@@ -144,6 +179,7 @@ export function PaymentsTab({ view, demo, notice, l }: { view: AccountView; demo
         </section>
       )}
       {upcoming.length === 0 && canChange && !pastDue && <div>{changeButton(false)}</div>}
+      {canChange && !pastDue && <p className="-mt-3 text-sm text-muted">{c.methodNote}</p>}
 
       <section>
         <h2 className="heading-md mb-4">{c.listTitle}</h2>
@@ -171,15 +207,15 @@ export function PaymentsTab({ view, demo, notice, l }: { view: AccountView; demo
                     {p.invoiceHref ? (
                       demo ? (
                         <DemoButton className="btn-secondary !px-3.5 !py-2 text-sm">
-                          <Download className="size-4" aria-hidden /> {c.invoice}
+                          <Download className="size-4" aria-hidden /> {refund ? c.creditNote : c.invoice}
                         </DemoButton>
                       ) : (
                         <a
                           href={localePath(l, p.invoiceHref)}
                           className="btn-secondary !px-3.5 !py-2 text-sm"
-                          aria-label={c.invoiceLabel(formatDate(p.date, l))}
+                          aria-label={(refund ? c.creditLabel : c.invoiceLabel)(formatDate(p.date, l))}
                         >
-                          <Download className="size-4" aria-hidden /> {c.invoice}
+                          <Download className="size-4" aria-hidden /> {refund ? c.creditNote : c.invoice}
                         </a>
                       )
                     ) : (
