@@ -1,5 +1,12 @@
+import type { Locale } from "@/i18n/config";
 import type { NutritionTargets } from "@/lib/calculations";
 import type { NutritionPlan, TrainingPlan } from "@/lib/ai/schemas";
+import {
+  sampleNutritionPlanEn,
+  sampleNutritionPlanFollowUpEn,
+  sampleTrainingPlanEn,
+  sampleTrainingPlanFollowUpEn,
+} from "@/content/sample-plans.en";
 
 /**
  * Voorbeeldschema's voor de pagina /voorbeeld en de previews op de site.
@@ -25,6 +32,7 @@ export const sampleNutritionPlan: NutritionPlan = {
   title: "Jouw voedingsschema – periode 1",
   intro:
     "Hoi Sanne! Dit schema helpt je om rustig en zonder honger richting de 68 kilo te gaan. We houden het simpel op werkdagen, met gerechten die je in 15 tot 30 minuten op tafel zet, en we zorgen bij elke maaltijd voor genoeg eiwit, zodat je lang verzadigd blijft en je spieren behoudt.",
+  changes: [],
   principles: [
     "Eet elke maaltijd een eiwitbron: kwark, kip, vis, eieren of peulvruchten.",
     "Vul de helft van je bord met groente; daarmee haal je 250 gram per dag.",
@@ -265,6 +273,7 @@ export const sampleTrainingPlan: TrainingPlan = {
   title: "Jouw trainingsschema – periode 1",
   intro:
     "Hoi Sanne! Je traint 3 keer per week thuis met een set dumbbells. We bouwen rustig op met full-body trainingen, zodat je sterker wordt, je spieren behoudt terwijl je afvalt, en de techniek goed onder de knie krijgt.",
+  changes: [],
   weekSchedule: [
     { day: "Maandag", activity: "Training A – full body (45 min)" },
     { day: "Dinsdag", activity: "Wandelen 30-45 min" },
@@ -407,3 +416,55 @@ export const sampleTrainingPlan: TrainingPlan = {
   ],
   safetyNotes: ["Stop bij scherpe pijn of duizeligheid en raadpleeg bij aanhoudende klachten een (sport)fysiotherapeut."],
 };
+
+/**
+ * Dezelfde voorbeelden als vervolgschema (periode 4), zoals ze na een
+ * check-in in Mijn schema's staan: met de aanpassingen bovenaan.
+ */
+export const sampleTargetsFollowUp: NutritionTargets = { ...sampleTargets, calories: 1540, carbsG: 150 };
+
+export const sampleNutritionPlanFollowUp: NutritionPlan = {
+  ...sampleNutritionPlan,
+  title: "Jouw voedingsschema – periode 4",
+  intro:
+    "Goed bezig, Sanne! Je bent sinds de start 5,7 kilo afgevallen en je volgt het schema heel goed. We houden de basis hetzelfde en brengen variatie aan in je lunches.",
+  changes: [
+    "Je viel deze periode 1,7 kg af, mooi in het geplande tempo. Omdat je lichter bent, gaat je dagdoel licht omlaag naar 1.540 kcal.",
+    "Je had bijna nooit meer honger. De eiwitrijke tussendoortjes houden we daarom vast.",
+    "Je vond de kwarkbowl en de roerbak lekker: die komen terug, met nieuwe lunches voor variatie.",
+  ],
+};
+
+export const sampleTrainingPlanFollowUp: TrainingPlan = {
+  ...sampleTrainingPlan,
+  title: "Jouw trainingsschema – periode 4",
+  intro:
+    "Sterk gedaan, Sanne! Je traint nu drie maanden en wordt merkbaar sterker. In deze periode bouwen we rustig verder op.",
+  changes: [
+    "Je deed de meeste trainingen en ze voelden precies goed: bij de goblet squat en het roeien pak je een iets zwaarder gewicht.",
+    "Je knie zeurde eerder na het wandelen: we houden de reverse lunge aan, die is vriendelijker voor je knieën.",
+    "Nieuw: training A sluit af met de farmer's walk voor je grip en core.",
+  ],
+};
+
+/** Alle voorbeeldschema's in de gegeven taal. De dagdoelen zijn in beide talen gelijk. */
+export function samplePlansFor(l: Locale) {
+  if (l === "en") {
+    return {
+      sampleTargets,
+      sampleNutritionPlan: sampleNutritionPlanEn,
+      sampleTrainingPlan: sampleTrainingPlanEn,
+      sampleTargetsFollowUp,
+      sampleNutritionPlanFollowUp: sampleNutritionPlanFollowUpEn,
+      sampleTrainingPlanFollowUp: sampleTrainingPlanFollowUpEn,
+    };
+  }
+  return {
+    sampleTargets,
+    sampleNutritionPlan,
+    sampleTrainingPlan,
+    sampleTargetsFollowUp,
+    sampleNutritionPlanFollowUp,
+    sampleTrainingPlanFollowUp,
+  };
+}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { site } from "@/config/site";
 
 export function LogoMark({ className = "size-9" }: { className?: string }) {

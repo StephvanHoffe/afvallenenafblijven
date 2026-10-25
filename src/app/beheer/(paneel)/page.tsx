@@ -1,0 +1,301 @@
+import type { Metadata } from "next";
+import Link from "@/i18n/Link";
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { ArrowRight, ChevronRight, CircleAlert, Lightbulb } from "lucide-react";
+import { OrdersChart } from "@/components/beheer/OrdersChart";
+import { Badge, NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, pct, planName, table } from "@/components/beheer/ui";
+import { AREA_LABELS, buildOpportunities, hiddenOpportunities, opportunityInput } from "@/lib/admin/opportunities";
+import { funnelReport } from "@/lib/admin/funnel-report";
+import { durations, products } from "@/config/pricing";
+import { adminData, adminDataAvailable } from "@/lib/admin/data";
+import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
+import { euro, formatDate, formatNumber } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Overzicht" };
+
+export default function OverzichtPage({ searchParams }: PageProps<"/beheer">) {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Overview searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchParams">) {
+  if (!isDemoMode()) await connection();
+  await requireAdmin();
+  if (!adminDataAvailable()) return <NeedsDatabase />;
+  const [o, sp, approval, funnel] = await Promise.all([
+    adminData().overview(),
+    searchParams,
+    adminData().approvalRequired(),
+    funnelReport({ days: 30 }).catch(() => null),
+  ]);
+  const topKansen = await Promise.all([opportunityInput(), hiddenOpportunities()])
+    .then(([input, hidden]) => buildOpportunities(input).kansen.filter((k) => !hidden[k.id]).slice(0, 3))
+    .catch((err) => {
+      console.error("Kansen berekenen mislukt", err);
+      return [];
+    });
+  const funnelKeys = ["visits", "quiz", "result", "selected", "checkout", "purchase"];
+  const funnelStages = funnel ? funnelKeys.map((k) => funnel.stages.find((st) => st.key === k)).filter((st) => st !== undefined) : [];
+  const conversion = o.checkoutStarts30 > 0 ? Math.round((o.newOrders30 / o.checkoutStarts30) * 100) : null;
+  const toApprove = approval ? o.plansAwaitingApproval : 0;
+  const attention = o.plansFailed + o.openWithdrawals + o.openGuaranteeRequests + toApprove;
+  const mixTotal = o.productMix.reduce((s, m) => s + m.count, 0);
+
+  return (
+    <>
+      <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
+      <div className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Overzicht</h1>
+        <p className="mt-1 text-[0.9375rem] text-muted">Abonnementen, omzet en schema&apos;s in één oogopslag.</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Terugkerende omzet per maand"
+          value={euro(o.mrrCents)}
+          hint={`${o.activeSubscriptions} actieve abonnementen, incl. btw`}
+        />
+        <StatTile
+          label="Nieuwe bestellingen"
+          value={formatNumber(o.newOrders30)}
+          hint={`Laatste 30 dagen · ${euro(o.firstPayments30Cents)} eerste betalingen`}
+        />
+        <StatTile
+          label="Conversie afrekenen"
+          value={conversion === null ? "–" : `${conversion}%`}
+          hint={`${o.newOrders30} van ${o.checkoutStarts30} gestarte betalingen (30 dagen)`}
+        />
+        <StatTile
+          label="Aandacht nodig"
+          value={formatNumber(attention)}
+          tone={attention > 0 ? "warn" : "default"}
+          hint={`${approval ? `${toApprove} goed te keuren · ` : ""}${o.plansFailed} mislukte schema's · ${o.openWithdrawals} herroepingen · ${o.openGuaranteeRequests} garantie-aanvragen`}
+        />
+      </div>
+
+      {attention > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {toApprove > 0 && (
+            <Link href="/beheer/schemas?status=goedkeuren" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
+              <CircleAlert className="size-4" aria-hidden /> {toApprove} schema{toApprove === 1 ? "" : "'s"} goedkeuren
+            </Link>
+          )}
+          {o.plansFailed > 0 && (
+            <Link href="/beheer/schemas?status=failed" className="inline-flex items-center gap-1.5 rounded-full bg-accent-50 px-3.5 py-1.5 text-sm font-bold text-accent-600">
+              <CircleAlert className="size-4" aria-hidden /> {o.plansFailed} mislukte schema&apos;s bekijken
+            </Link>
+          )}
+          {o.openWithdrawals > 0 && (
+            <Link href="/beheer/herroepingen" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
+              <CircleAlert className="size-4" aria-hidden /> {o.openWithdrawals} herroeping{o.openWithdrawals === 1 ? "" : "en"} afhandelen
+            </Link>
+          )}
+          {o.openGuaranteeRequests > 0 && (
+            <Link href="/beheer/herroepingen#garantie" className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-bold text-amber-800">
+              <CircleAlert className="size-4" aria-hidden /> {o.openGuaranteeRequests} garantie-aanvra{o.openGuaranteeRequests === 1 ? "ag" : "gen"} afhandelen
+            </Link>
+          )}
+        </div>
+      )}
+
+      {topKansen.length > 0 && (
+        <Panel
+          title="Belangrijkste kansen"
+          className="mt-6"
+          action={
+            <Link href="/beheer/kansen" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700">
+              Alle kansen <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          }
+        >
+          <ul className="divide-y divide-line">
+            {topKansen.map((k) => (
+              <li key={k.id} className="flex items-start gap-3 px-5 py-3.5 text-sm">
+                <Lightbulb className="mt-0.5 size-4.5 shrink-0 text-brand-700" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="font-semibold">{k.title}</span>
+                  <span className="block text-muted">{k.finding}</span>
+                </span>
+                <span className="hidden shrink-0 sm:block">
+                  <Badge tone={k.impact === "hoog" ? "bad" : k.impact === "middel" ? "warn" : "muted"}>{AREA_LABELS[k.area]}</Badge>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+
+      {funnelStages.length > 0 && funnelStages[0].count > 0 && (
+        <Panel
+          title="Funnel (laatste 30 dagen)"
+          className="mt-6"
+          action={
+            <Link href="/beheer/funnel" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700">
+              Waar haken ze af? <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          }
+        >
+          <ol className="grid gap-px overflow-hidden rounded-b-2xl bg-line sm:grid-cols-3 xl:grid-cols-6">
+            {funnelStages.map((st, i) => {
+              const prev = i > 0 ? funnelStages[i - 1].count : null;
+              return (
+                <li key={st.key} className="bg-white px-5 py-4">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-muted">
+                    {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
+                    {st.label}
+                  </p>
+                  <p className="mt-1 text-xl font-extrabold tabular-nums">{formatNumber(st.count)}</p>
+                  <p className="text-xs text-muted tabular-nums">{prev === null ? "100%" : `${pct(st.count, prev)} van vorige stap`}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </Panel>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <Panel title="Nieuwe bestellingen per dag (laatste 30 dagen)">
+          <div className="p-5">
+            <OrdersChart data={o.ordersPerDay} />
+          </div>
+        </Panel>
+        <Panel title="Actieve abonnementen per plan">
+          <ul className="divide-y divide-line">
+            {o.productMix.length === 0 && <li className="px-5 py-8 text-center text-sm text-muted">Nog geen actieve abonnementen.</li>}
+            {o.productMix.map((m) => (
+              <li key={`${m.product}-${m.duration}`} className="px-5 py-3">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-semibold">
+                    {products[m.product].shortName} · {m.duration === "1m" ? "per maand" : `min. ${durations[m.duration].label}`}
+                  </span>
+                  <span className="font-bold tabular-nums">{m.count}</span>
+                </div>
+                <div className="mt-1.5 h-1.5 rounded-full bg-brand-50" aria-hidden>
+                  <div className="h-full rounded-full bg-brand-600" style={{ width: `${(m.count / mixTotal) * 100}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="grid grid-cols-2 gap-3 border-t border-line p-5 text-sm">
+            <div>
+              <p className="text-muted">Schema&apos;s gemaakt (30 dagen)</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.plansReady30}</p>
+            </div>
+            <div>
+              <p className="text-muted">Opgezegd, loopt nog</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.pendingCancellations}</p>
+            </div>
+            <div>
+              <p className="text-muted">Wachten op check-in</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.checkinsOpen}</p>
+            </div>
+            <div>
+              <p className="text-muted">Check-in verlopen</p>
+              <p className="text-lg font-extrabold tabular-nums">{o.checkinsOverdue}</p>
+            </div>
+          </div>
+          <p className="border-t border-line px-5 py-3 text-xs text-muted">
+            Een nieuw schema wordt pas gemaakt na de check-in. Klanten krijgen automatisch een uitnodiging en herinneringen.
+          </p>
+        </Panel>
+      </div>
+
+      <Panel title="Campagnes (laatste 30 dagen)" className="mt-6">
+        {o.campaigns.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-muted">Nog geen gestarte betalingen in de laatste 30 dagen.</p>
+        ) : (
+          <div className={table.wrap}>
+            <table className={table.table}>
+              <thead>
+                <tr>
+                  <th className={table.th}>Bron</th>
+                  <th className={table.th}>Campagne</th>
+                  <th className={`${table.th} text-right`}>Betaalstap gestart</th>
+                  <th className={`${table.th} text-right`}>Bestellingen</th>
+                  <th className={`${table.th} text-right`}>Conversie</th>
+                  <th className={`${table.th} text-right`}>Eerste betalingen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {o.campaigns.map((r) => (
+                  <tr key={`${r.source}|${r.campaign}`}>
+                    <td className={`${table.td} font-semibold`}>{r.source ?? <span className="font-normal text-muted">Geen campagne</span>}</td>
+                    <td className={table.td}>{r.campaign ?? "–"}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{formatNumber(r.started)}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{formatNumber(r.orders)}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{r.started > 0 ? `${Math.round((r.orders / r.started) * 100)}%` : "–"}</td>
+                    <td className={`${table.td} ${table.num} text-right`}>{euro(r.firstPaymentsCents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="border-t border-line px-5 py-3 text-xs text-muted">
+          Op basis van de utm-parameters in je advertentielinks. &quot;Geen campagne&quot; is direct verkeer, zoekmachines en links zonder utm.
+          Gebruik voor advertenties de landingspagina&apos;s /lp, /lp/voeding en /lp/training (zie README).
+        </p>
+      </Panel>
+
+      <Panel
+        title="Laatste bestellingen"
+        className="mt-6"
+        action={
+          <Link href="/beheer/bestellingen" className="inline-flex items-center gap-1 text-sm font-bold text-brand-700">
+            Alles <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        }
+      >
+        <div className={table.wrap}>
+          <table className={table.table}>
+            <thead>
+              <tr>
+                <th className={table.th}>Klant</th>
+                <th className={table.th}>Plan</th>
+                <th className={table.th}>Status</th>
+                <th className={`${table.th} text-right`}>Per maand</th>
+                <th className={table.th}>Datum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {o.recentOrders.map((r) => (
+                <tr key={r.id} className="hover:bg-sand/50">
+                  <td className={table.td}>
+                    <Link href={`/beheer/klanten/${r.customerId}`} className="font-semibold hover:underline">
+                      {r.customerName}
+                    </Link>
+                    <span className="block text-xs text-muted">{r.customerEmail}</span>
+                  </td>
+                  <td className={table.td}>{planName(r.product, r.duration)}</td>
+                  <td className={table.td}>
+                    <OrderStatusBadge status={r.status} cancelAt={r.cancelAt} />
+                  </td>
+                  <td className={`${table.td} text-right ${table.num}`}>{r.monthlyCents ? euro(r.monthlyCents) : "–"}</td>
+                  <td className={`${table.td} ${table.num}`}>{formatDate(r.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="animate-pulse space-y-4" aria-hidden>
+      <div className="h-8 w-48 rounded-xl bg-line" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-28 rounded-2xl bg-white" />
+        ))}
+      </div>
+      <div className="h-72 rounded-2xl bg-white" />
+    </div>
+  );
+}

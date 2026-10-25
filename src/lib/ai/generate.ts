@@ -6,6 +6,7 @@ import type { Intake } from "@/lib/intake";
 import {
   NUTRITION_SYSTEM_PROMPT,
   TRAINING_SYSTEM_PROMPT,
+  languageInstruction,
   nutritionUserPrompt,
   trainingUserPrompt,
   type ProgressContext,
@@ -18,6 +19,8 @@ import {
   type TrainingPlan,
 } from "@/lib/ai/schemas";
 import { dayTotals } from "@/lib/ai/plan-math";
+import { allergenProblems } from "@/lib/allergens";
+import type { Locale } from "@/i18n/config";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5";
 
@@ -30,21 +33,31 @@ function anthropic(): Anthropic {
 
 export class PlanGenerationError extends Error {}
 
-async function generateStructured<T extends z.ZodType>(
+/**
+ * Vraagt Claude om JSON in de vorm van `schema`. `system` mag uit meerdere
+ * delen bestaan (bijv. de vaste prompt plus een taalinstructie); alleen het
+ * eerste deel wordt gecachet, zodat de vaste prompt voor iedereen gelijk blijft.
+ */
+export async function generateStructured<T extends z.ZodType>(
   schema: T,
-  system: string,
+  system: string | readonly string[],
   userPrompt: string,
+  options: { effort?: "low" | "medium" | "high"; maxTokens?: number } = {},
 ): Promise<z.infer<T>> {
+  const [base, ...extra] = typeof system === "string" ? [system] : system;
   const stream = anthropic().beta.messages.stream({
     model: MODEL,
-    max_tokens: 64000,
+    max_tokens: options.maxTokens ?? 64000,
     // Bij een (onterechte) weigering door de veiligheidsfilters probeert de API
     // het verzoek automatisch opnieuw op het aanbevolen fallback-model.
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: betaZodOutputFormat(schema) },
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+    output_config: { effort: options.effort ?? "high", format: betaZodOutputFormat(schema) },
+    system: [
+      { type: "text", text: base, cache_control: { type: "ephemeral" } },
+      ...extra.map((text) => ({ type: "text" as const, text })),
+    ],
     messages: [{ role: "user", content: userPrompt }],
   });
 
@@ -88,6 +101,8 @@ export function reviewNutritionPlan(
       problems.push(`${day.day} bevat ${t.proteinG} g eiwit terwijl het doel minimaal ${targets.proteinG} g is.`);
     }
   }
+  // Allergenen: elk ingrediënt, gerecht en product op de boodschappenlijst wordt nagelopen.
+  problems.push(...allergenProblems(plan, intake));
   return problems;
 }
 
@@ -105,53 +120,55 @@ export function reviewTrainingPlan(plan: TrainingPlan, intake: Intake): string[]
 
 /**
  * Genereert een voedingsschema. Voldoet de eerste versie niet aan de harde
- * eisen (calorieën, eiwit, aantal maaltijden), dan vragen we één keer om een
+ * eisen (calorieën, eiwit, aantal maaltijden, allergenen), dan vragen we één keer om een
  * gecorrigeerde versie. Blijft er een kleine afwijking over, dan accepteren
  * we die binnen een ruimere marge; anders falen we zodat het later opnieuw
  * geprobeerd wordt.
  */
+/** De systeemprompt, met voor Engelstalige klanten een taalinstructie erachter. */
+function systemFor(base: string, l: Locale, kind: "voeding" | "training"): string | string[] {
+  const language = languageInstruction(l, kind);
+  return language ? [base, language] : base;
+}
+
 export async function generateNutritionPlan(
   name: string,
   intake: Intake,
   progress: ProgressContext,
+  /** Dagdoelen na bijstelling op basis van de check-in; standaard berekend uit de intake. */
+  adjusted?: { targets: NutritionTargets; adjustmentKcal: number },
+  /** De taal waarin het schema voor de klant wordt geschreven. */
+  l: Locale = "nl",
 ): Promise<Extract<PlanContent, { type: "voeding" }>> {
-  const targets = nutritionTargets(intake);
-  let plan = await generateStructured(
-    nutritionPlanSchema,
-    NUTRITION_SYSTEM_PROMPT,
-    nutritionUserPrompt(name, intake, targets, progress),
-  );
+  const targets = adjusted?.targets ?? nutritionTargets(intake);
+  const system = systemFor(NUTRITION_SYSTEM_PROMPT, l, "voeding");
+  let plan = await generateStructured(nutritionPlanSchema, system, nutritionUserPrompt(name, intake, targets, progress, undefined, l));
 
   let problems = reviewNutritionPlan(plan, intake, targets);
   if (problems.length > 0) {
     const feedback = `Een eerdere versie van dit schema voldeed niet aan de eisen:\n- ${problems.join("\n- ")}\nMaak een volledig nieuw schema waarin deze punten zijn opgelost.`;
-    plan = await generateStructured(
-      nutritionPlanSchema,
-      NUTRITION_SYSTEM_PROMPT,
-      nutritionUserPrompt(name, intake, targets, progress, feedback),
-    );
+    plan = await generateStructured(nutritionPlanSchema, system, nutritionUserPrompt(name, intake, targets, progress, feedback, l));
     problems = reviewNutritionPlan(plan, intake, targets, 0.12);
     if (problems.length > 0) {
       throw new PlanGenerationError(`Voedingsschema voldoet niet: ${problems.join(" ")}`);
     }
   }
-  return { type: "voeding", plan, targets };
+  return { type: "voeding", plan, targets, ...(adjusted?.adjustmentKcal ? { adjustmentKcal: adjusted.adjustmentKcal } : {}) };
 }
 
 export async function generateTrainingPlan(
   name: string,
   intake: Intake,
   progress: ProgressContext,
+  /** De taal waarin het schema voor de klant wordt geschreven. */
+  l: Locale = "nl",
 ): Promise<Extract<PlanContent, { type: "training" }>> {
-  let plan = await generateStructured(trainingPlanSchema, TRAINING_SYSTEM_PROMPT, trainingUserPrompt(name, intake, progress));
+  const system = systemFor(TRAINING_SYSTEM_PROMPT, l, "training");
+  let plan = await generateStructured(trainingPlanSchema, system, trainingUserPrompt(name, intake, progress, undefined, l));
   let problems = reviewTrainingPlan(plan, intake);
   if (problems.length > 0) {
     const feedback = `Een eerdere versie van dit schema voldeed niet aan de eisen:\n- ${problems.join("\n- ")}\nMaak een volledig nieuw schema waarin deze punten zijn opgelost.`;
-    plan = await generateStructured(
-      trainingPlanSchema,
-      TRAINING_SYSTEM_PROMPT,
-      trainingUserPrompt(name, intake, progress, feedback),
-    );
+    plan = await generateStructured(trainingPlanSchema, system, trainingUserPrompt(name, intake, progress, feedback, l));
     problems = reviewTrainingPlan(plan, intake);
     if (problems.length > 0) {
       throw new PlanGenerationError(`Trainingsschema voldoet niet: ${problems.join(" ")}`);

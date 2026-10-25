@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/config/site";
+import { localeUrl, locales } from "@/i18n/config";
 
 const pages: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
@@ -10,7 +11,6 @@ const pages: { path: string; priority: number }[] = [
   { path: "/prijzen", priority: 0.8 },
   { path: "/voorbeeld", priority: 0.7 },
   { path: "/hoe-werkt-het", priority: 0.7 },
-  { path: "/veelgestelde-vragen", priority: 0.6 },
   { path: "/over-ons", priority: 0.5 },
   { path: "/contact", priority: 0.5 },
   { path: "/algemene-voorwaarden", priority: 0.3 },
@@ -21,6 +21,14 @@ const pages: { path: string; priority: number }[] = [
   { path: "/herroepen", priority: 0.2 },
 ];
 
+/** Elke pagina in beide talen, met de andere taal als alternatief (hreflang). */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return pages.map((p) => ({ url: `${site.url}${p.path}`, priority: p.priority, changeFrequency: "monthly" }));
+  return pages.flatMap((p) =>
+    locales.map((l) => ({
+      url: localeUrl(site.url, l, p.path),
+      priority: p.priority,
+      changeFrequency: "monthly" as const,
+      alternates: { languages: Object.fromEntries(locales.map((x) => [x, localeUrl(site.url, x, p.path)])) },
+    })),
+  );
 }

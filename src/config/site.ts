@@ -1,10 +1,14 @@
+import type { DurationId } from "@/config/pricing";
+import { intlLocale, type Locale } from "@/i18n/config";
+
 /**
  * Centrale bedrijfs- en site-instellingen.
  *
- * LET OP: vul vóór livegang de echte bedrijfsgegevens in. Deze gegevens worden
- * gebruikt in de footer, de juridische pagina's en e-mails. Een webwinkel is
- * wettelijk verplicht om naam, adres, KvK-nummer, btw-nummer en een
- * e-mailadres te tonen.
+ * De bedrijfsgegevens worden gebruikt in de footer, de juridische pagina's en
+ * e-mails. Een webwinkel is wettelijk verplicht om naam, adres, KvK-nummer,
+ * btw-nummer en een e-mailadres te tonen; houd ze dus actueel. Het adres is
+ * een woonadres en staat daarom alleen in de algemene voorwaarden (artikel 2
+ * en het modelformulier); de contact- en herroepingspagina verwijzen ernaar.
  */
 export const site = {
   name: "Afvallen & Afblijven",
@@ -13,23 +17,23 @@ export const site = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://afvallenenafblijven.nl",
   tagline: "Persoonlijke voedings- en trainingsschema's die écht bij jou passen",
   description:
-    "Persoonlijke voedingsschema's en trainingsschema's, afgestemd op jouw doel, lichaam en agenda. Binnen enkele minuten in je mailbox. Maandelijks opzegbaar.",
+    "Persoonlijke voedingsschema's en trainingsschema's, afgestemd op jouw doel, lichaam en agenda. Binnen 2 uur in je mailbox. Maandelijks opzegbaar.",
 
   company: {
-    legalName: "[Bedrijfsnaam / handelsnaam]",
-    address: "[Straat en huisnummer]",
-    postalCode: "[Postcode]",
-    city: "[Plaats]",
+    legalName: "Afvallen en Afblijven",
+    address: "De Savornin Lohmanlaan 7",
+    postalCode: "3741 TW",
+    city: "Baarn",
     country: "Nederland",
-    kvk: "[KvK-nummer]",
-    vat: "[Btw-identificatienummer]",
+    kvk: "89513908",
+    vat: "NL004738412B27",
     email: "info@afvallenenafblijven.nl",
     privacyEmail: "privacy@afvallenenafblijven.nl",
     phone: "",
   },
 
   /** Datum van de laatste wijziging van de juridische teksten. */
-  legalUpdated: "20 oktober 2026",
+  legalUpdated: "21 oktober 2026",
 
   /** Hoe snel reageren we op e-mail (gebruikt in contact- en klachtenteksten). */
   responseTimeDays: 2,
@@ -41,24 +45,83 @@ export const site = {
    */
   guarantee: {
     enabled: true,
-    days: 30,
+    days: 14,
   },
 
   /**
-   * Lanceringsactie: automatische korting op de eerste betaling.
-   * Wordt alleen getoond én toegepast tussen startsAt en endsAt.
+   * Acties: automatische korting per looptijd (0 = geen korting voor die
+   * looptijd) op de eerste `months` maandbetalingen; een los schema is één
+   * betaling. Een actie wordt alleen getoond én toegepast tussen startsAt en
+   * endsAt; lopen er twee tegelijk, dan geldt de eerste in de lijst. Een
+   * kortingscode van een klant vervangt de actiekorting. `theme` geeft de
+   * landingspagina's en de startknop een eigen uiterlijk zolang de actie loopt.
+   * De Stripe-coupons worden bij het eerste gebruik automatisch aangemaakt.
+   * Testen voor de startdatum: zet PROMOTION_OVERRIDE=<id> (nooit in productie).
    */
-  launchOffer: {
-    enabled: true,
-    couponId: "LANCERING2027",
-    percentOff: 20,
-    startsAt: "2026-12-01T00:00:00+01:00",
-    endsAt: "2027-01-31T23:59:59+01:00",
-    label: "Lanceringsactie",
+  promotions: [
+    {
+      // Black Week tot en met Cyber Monday: korting op de eerste 3 maanden, oplopend
+      // met de looptijd. 12 maanden krijgt het maximum (50%); de rest staat in
+      // verhouding: 50% × √(looptijd / 12), afgerond op 5%. Zo levert een langere
+      // looptijd steeds meer op, zonder dat korte looptijden de helft krijgen.
+      id: "blackfriday-2026",
+      enabled: true,
+      label: "Black Friday",
+      labelEn: "Black Friday",
+      startsAt: "2026-11-23T00:00:00+01:00",
+      endsAt: "2026-11-30T23:59:59+01:00",
+      percentOff: { "1m": 15, "3m": 25, "6m": 35, "12m": 50, eenmalig: 15 },
+      months: 3,
+      theme: "blackfriday",
+    },
+    {
+      // Januari: de drukste maand voor afvallen (goede voornemens).
+      id: "nieuwjaar-2027",
+      enabled: true,
+      label: "Goede voornemens-actie",
+      labelEn: "New Year offer",
+      startsAt: "2027-01-01T00:00:00+01:00",
+      endsAt: "2027-01-31T23:59:59+01:00",
+      percentOff: { "1m": 20, "3m": 20, "6m": 20, "12m": 20, eenmalig: 20 },
+      months: 1,
+      theme: null,
+    },
+  ],
+
+  /**
+   * Lengte van een periode: abonnees krijgen elke 4 weken een nieuw schema, na
+   * hun check-in. Elke periode start op dezelfde weekdag (zie src/lib/schedule.ts),
+   * zodat het nieuwe schema met boodschappenlijst op tijd voor het weekend klaarstaat.
+   */
+  planIntervalDays: 28,
+  /** Weekdag waarop elke periode start: 1 = maandag (0 = zondag … 6 = zaterdag). */
+  periodStartWeekday: 1,
+
+  checkin: {
+    /** Zoveel dagen voor de start van de nieuwe periode opent de check-in (4 = donderdag). */
+    opensDaysBefore: 4,
+    /** Zoveel dagen voor de start adviseren we de check-in uiterlijk in te vullen (2 = zaterdag), voor de boodschappen. */
+    advisedDaysBefore: 2,
+    /** Uitnodiging en herinneringen: dagen na het openen van de check-in (do, za, ma, maandag erna). */
+    reminderDays: [0, 2, 4, 11],
   },
 
-  /** Hoe vaak abonnees een nieuw schema ontvangen. */
-  planIntervalDays: 28,
+  /**
+   * Levering: een nieuw schema wordt direct gemaakt, maar staat pas op een
+   * willekeurig moment tussen `minMinutes` en `maxMinutes` klaar (de ene klant
+   * na 23 minuten, de andere na anderhalf uur). De klant krijgt dan een e-mail.
+   * We beloven "binnen `promiseHours` uur"; houd `maxMinutes` daar ruim onder,
+   * want de geplande taak draait elke 5 minuten. `afterCheckin` geldt hetzelfde
+   * voor het nieuwe schema na een check-in. De teksten op de website, in de
+   * e-mails en in de voorwaarden noemen "2 uur"; pas die mee aan als je de
+   * belofte verandert.
+   */
+  delivery: {
+    minMinutes: 20,
+    maxMinutes: 110,
+    promiseHours: 2,
+    afterCheckin: true,
+  },
 
   social: {
     instagram: "",
@@ -72,21 +135,62 @@ export function companyAddressLine() {
   return `${c.address}, ${c.postalCode} ${c.city}`;
 }
 
-export type LaunchOffer = typeof site.launchOffer;
-
-/** Is de lanceringsactie op het gegeven moment actief? */
-export function isLaunchOfferActive(now: Date): boolean {
-  const o = site.launchOffer;
-  if (!o.enabled) return false;
-  const t = now.getTime();
-  return t >= Date.parse(o.startsAt) && t <= Date.parse(o.endsAt);
+/** Of de juridische naam echt afwijkt van de merknaam ("en" en "&" tellen als gelijk). */
+export function hasSeparateLegalName() {
+  const norm = (s: string) => s.toLowerCase().replace(/&/g, "en").replace(/\s+/g, " ").trim();
+  return norm(site.company.legalName) !== norm(site.name);
 }
 
-export function launchOfferEndLabel(): string {
-  return new Intl.DateTimeFormat("nl-NL", {
+export type Promotion = (typeof site.promotions)[number];
+
+/**
+ * De actie die op het gegeven moment loopt, of null. Met PROMOTION_OVERRIDE=<id>
+ * staat die actie nu al aan, ook in de checkout: alleen voor testen en
+ * voorbeeldomgevingen, nooit in productie.
+ */
+export function activePromotion(now: Date): Promotion | null {
+  const forced = process.env.PROMOTION_OVERRIDE;
+  if (forced) {
+    const p = site.promotions.find((x) => x.id === forced);
+    if (p) return p;
+  }
+  const t = now.getTime();
+  return site.promotions.find((p) => p.enabled && t >= Date.parse(p.startsAt) && t <= Date.parse(p.endsAt)) ?? null;
+}
+
+/** Korting (in procenten) op de eerste betaling(en) voor deze looptijd. */
+export function promotionPercent(p: Pick<Promotion, "percentOff">, duration: DurationId): number {
+  return p.percentOff[duration] ?? 0;
+}
+
+/** Op hoeveel betalingen de actiekorting geldt: een los schema is één betaling. */
+export function promotionMonths(p: Pick<Promotion, "months">, duration: DurationId): number {
+  return duration === "eenmalig" ? 1 : Math.max(1, p.months);
+}
+
+/** Laatste dag van de actie, bijv. "maandag 30 november". */
+export function promotionEndLabel(p: Pick<Promotion, "endsAt">, l: Locale = "nl"): string {
+  return new Intl.DateTimeFormat(intlLocale(l), {
+    weekday: "long",
     day: "numeric",
     month: "long",
-    year: "numeric",
     timeZone: "Europe/Amsterdam",
-  }).format(new Date(site.launchOffer.endsAt));
+  }).format(new Date(p.endsAt));
+}
+
+/**
+ * Korte omschrijving van de korting: "50% korting op je eerste 2 maanden",
+ * "20% korting op je eerste betaling", of "tot 50% korting op je eerste maand"
+ * als de looptijden verschillen.
+ */
+export function promotionSummary(percentOff: Record<DurationId, number>, months: number, l: Locale = "nl"): string {
+  const values = Object.values(percentOff).filter((v) => v > 0);
+  const max = Math.max(0, ...values);
+  const same = values.length > 0 && values.every((v) => v === max);
+  if (l === "en") {
+    const period = months > 1 ? `first ${months} months` : same ? "first payment" : "first month";
+    return same ? `${max}% off your ${period}` : `up to ${max}% off your ${period}`;
+  }
+  const period = months > 1 ? `eerste ${months} maanden` : same ? "eerste betaling" : "eerste maand";
+  return same ? `${max}% korting op je ${period}` : `tot ${max}% korting op je ${period}`;
 }

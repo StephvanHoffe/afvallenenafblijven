@@ -34,12 +34,10 @@ export function bmi(weightKg: number, heightCm: number): number {
   return weightKg / (m * m);
 }
 
-/** Mifflin-St Jeor. Bij "anders" nemen we het gemiddelde van beide formules. */
+/** Ruststofwisseling volgens Mifflin-St Jeor; de formule verschilt voor mannen en vrouwen. */
 export function bmr(intake: Pick<Intake, "sex" | "weightKg" | "heightCm" | "age">): number {
   const base = 10 * intake.weightKg + 6.25 * intake.heightCm - 5 * intake.age;
-  if (intake.sex === "man") return base + 5;
-  if (intake.sex === "vrouw") return base - 161;
-  return base - 78;
+  return intake.sex === "man" ? base + 5 : base - 161;
 }
 
 export function activityFactor(intake: Pick<Intake, "activity" | "trainingDays" | "product">): number {
@@ -54,10 +52,15 @@ function roundTo(n: number, step: number) {
   return Math.round(n / step) * step;
 }
 
+/** Ondergrens voor de energie-inname; daaronder gaan we nooit. */
+export function minimumCalories(intake: Pick<Intake, "sex">): number {
+  return intake.sex === "man" ? 1500 : 1200;
+}
+
 export function nutritionTargets(intake: Intake): NutritionTargets {
   const b = bmr(intake);
   const tdee = b * activityFactor(intake);
-  const minCalories = intake.sex === "man" ? 1500 : 1200;
+  const minCalories = minimumCalories(intake);
 
   let calories = tdee;
   let expectedKgPerWeek = 0;
@@ -100,6 +103,24 @@ export function nutritionTargets(intake: Intake): NutritionTargets {
     steps: intake.activity === "zittend" ? 8000 : 10000,
     bmi: Math.round(currentBmi * 10) / 10,
     expectedKgPerWeek: Math.round(expectedKgPerWeek * 100) / 100,
+  };
+}
+
+/**
+ * Past het caloriedoel aan na een check-in (bijv. -100 kcal). Eiwit en vet
+ * blijven gelijk; de koolhydraten bewegen mee.
+ */
+export function withCalorieOffset(intake: Intake, base: NutritionTargets, offsetKcal: number): NutritionTargets {
+  if (!offsetKcal) return base;
+  const calories = roundTo(Math.max(base.calories + offsetKcal, minimumCalories(intake)), 10);
+  const carbsG = Math.max(roundTo((calories - base.proteinG * 4 - base.fatG * 9) / 4, 5), 50);
+  const expected = base.expectedKgPerWeek + ((calories - base.calories) * 7) / KCAL_PER_KG_FAT;
+  return {
+    ...base,
+    calories,
+    carbsG,
+    fiberG: Math.round((calories / 1000) * 14),
+    expectedKgPerWeek: Math.round(expected * 100) / 100,
   };
 }
 

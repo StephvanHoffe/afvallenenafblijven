@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { constructWebhookEvent, type Stripe } from "@/lib/stripe";
 import { fulfillCheckoutSession, syncSubscription } from "@/lib/fulfillment";
 import { processOrderPlans } from "@/lib/plans";
+import { recordInvoicePaid } from "@/lib/payments";
 
 export const maxDuration = 300;
 
@@ -26,6 +27,9 @@ export async function POST(request: Request) {
         if (order) after(() => processOrderPlans(order.id));
         break;
       }
+      case "invoice.paid":
+        await recordInvoicePaid(event.data.object);
+        break;
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":

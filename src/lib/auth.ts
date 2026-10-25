@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { getCustomer, type Customer } from "@/lib/repo";
 import { site } from "@/config/site";
+import { localeUrl, type Locale } from "@/i18n/config";
 
 /**
  * Inloggen zonder wachtwoord: klanten krijgen een persoonlijke inloglink per
@@ -34,9 +35,13 @@ export async function createLoginToken(customerId: string, days = LOGIN_LINK_DAY
   return raw;
 }
 
-export async function loginUrl(customerId: string): Promise<string> {
+/**
+ * Persoonlijke inloglink; met `naar` kom je direct op de juiste plek in Mijn schema's.
+ * Engelstalige klanten krijgen een link naar /en/inloggen/link.
+ */
+export async function loginUrl(customerId: string, naar?: "opzeggen" | "check-in" | "weegmoment", l: Locale = "nl"): Promise<string> {
   const raw = await createLoginToken(customerId);
-  return `${site.url}/inloggen/link?token=${encodeURIComponent(raw)}`;
+  return localeUrl(site.url, l, `/inloggen/link?token=${encodeURIComponent(raw)}${naar ? `&naar=${naar}` : ""}`);
 }
 
 export async function customerForLoginToken(raw: string): Promise<string | null> {

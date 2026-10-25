@@ -146,6 +146,10 @@ body {
   .avoid-break {
     break-inside: avoid;
   }
+  /* Bij printen alle tabbladen en recepten tonen */
+  .tab-panel[hidden] {
+    display: block !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -154,5 +158,78 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Zwevende startknop: zacht zweven, een gloed die uitdijt en een glans die erlangs trekt */
+@keyframes afb-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes afb-halo {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(1.08, 1.5);
+    opacity: 0;
+  }
+}
+@keyframes afb-shine {
+  0%,
+  65% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(320%) skewX(-20deg);
+  }
+}
+@keyframes afb-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+.cta-float {
+  animation: afb-float 3.2s ease-in-out infinite;
+}
+.cta-halo {
+  animation: afb-halo 2.6s ease-out infinite;
+}
+.cta-shine {
+  animation: afb-shine 4.5s ease-in-out infinite;
+}
+.cta-nudge {
+  animation: afb-nudge 1.4s ease-in-out infinite;
+}
+
+/* Wie minder beweging wil, krijgt alles stilstaand (oneindige animaties niet versnellen maar uitzetten). */
+@media (prefers-reduced-motion: reduce) {
+  .cta-float,
+  .cta-halo,
+  .cta-shine,
+  .cta-nudge {
+    animation: none !important;
+  }
+  .cta-halo,
+  .cta-shine {
+    display: none;
+  }
+}
+
+/* Ankerlinks (bijv. "Laat zien hoe het anders kan") scrollen zacht, behalve bij "minder beweging". */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
