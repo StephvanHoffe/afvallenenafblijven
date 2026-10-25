@@ -13,8 +13,9 @@ import { isAdminConfigured, isDemoMode, mustChangePassword, requireAdmin } from 
 import { adminEmail } from "@/lib/email";
 import { mollieMode, webhookUrl } from "@/lib/mollie";
 import { db, isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
-import { euro } from "@/lib/format";
+import { euro, formatDateTime } from "@/lib/format";
 import { adminData } from "@/lib/admin/data";
+import { lastCronRun } from "@/lib/admin/koppelingen";
 import { EXPORTS, exportHref, type ExportKind } from "@/lib/admin/export";
 import Link from "@/i18n/Link";
 import { checkoutReminderSettings, deliverySettings } from "@/lib/settings";
@@ -53,6 +54,8 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const webhook = demo ? `${site.url}/api/webhooks/mollie` : webhookUrl();
   const nowMs = adminNow();
   const mustChange = demo ? false : await mustChangePassword();
+  const cronRun = dbOk && !demo ? await lastCronRun().catch(() => null) : null;
+  const cronRecent = Boolean(cronRun && nowMs - cronRun.getTime() < 30 * 60 * 1000);
   const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
   const [delivery, reminder] = await Promise.all([deliverySettings(), demo ? Promise.resolve({ enabled: true, delayHours: 3 }) : checkoutReminderSettings()]);
   const here = "/beheer/instellingen";
@@ -71,10 +74,13 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
     { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "Nog niet ingevuld (zie Koppelingen); e-mails komen alleen in de serverlog" },
     {
       label: "Geplande taak",
-      ok: env("CRON_SECRET"),
-      detail: env("CRON_SECRET")
-        ? "Ingesteld: elke 5 minuten (schema's vrijgeven en mailen); herinneringen dagelijks vanaf 08:00. Vereist Vercel Pro."
-        : "CRON_SECRET ontbreekt bij Vercel: zie Koppelingen",
+      ok: demo || cronRecent,
+      detail:
+        demo || cronRecent
+          ? `${cronRun ? `Laatst gedraaid: ${formatDateTime(cronRun)}. ` : ""}Elke 5 minuten (schema's vrijgeven en mailen); herinneringen dagelijks vanaf 08:00. ${process.env.CRON_SECRET ? "Beveiligd met CRON_SECRET." : "Zonder sleutel: hooguit eens per 3 minuten."}`
+          : cronRun
+            ? `Laatst gedraaid: ${formatDateTime(cronRun)}. Draait niet meer elke 5 minuten: controleer of je project op Vercel Pro staat.`
+            : "Nog niet gedraaid: controleer of je project op Vercel Pro staat (zie Koppelingen).",
     },
     { label: "Websiteadres", ok: true, detail: site.url },
     {

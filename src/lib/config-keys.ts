@@ -5,7 +5,8 @@
  * Een waarde uit het beheer gaat voor op dezelfde variabele bij de hosting.
  *
  * Niet hier: DATABASE_URL (nodig om de database te kunnen lezen) en
- * CRON_SECRET (Vercel stuurt die zelf mee met de geplande taak).
+ * CRON_SECRET (Vercel stuurt alleen de waarde uit zijn eigen instellingen mee
+ * met de geplande taak; zonder CRON_SECRET werkt de taak ook, zie /api/cron).
  */
 export const STORED_CONFIG_KEYS = [
   "MOLLIE_API_KEY",

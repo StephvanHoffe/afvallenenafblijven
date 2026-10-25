@@ -101,7 +101,7 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
       )}
       <PageTitle
         title="Koppelingen"
-        intro="De gegevens waarmee de website betaalt, schema's maakt en mailt. Je vult ze hier in; bij Vercel hoeft alleen de database en CRON_SECRET te staan."
+        intro="De gegevens waarmee de website betaalt, schema's maakt en mailt. Je vult ze hier in; bij Vercel hoeft alleen de database gekoppeld te zijn."
       >
         {!demo && (
           <p className="text-sm font-semibold text-muted">
@@ -191,7 +191,7 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
         </div>
 
         <div className="space-y-6">
-          <Panel title="Bij Vercel (eenmalig)">
+          <Panel title="Bij Vercel">
             <ul className="divide-y divide-line text-sm">
               <li className="flex items-start gap-3 px-5 py-3">
                 <CircleCheck className="mt-0.5 size-5 shrink-0 text-brand-600" aria-label="In orde" />
@@ -201,29 +201,33 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
                 </span>
               </li>
               <li className="flex items-start gap-3 px-5 py-3">
-                {cronSecret && !cronStale ? (
+                {demo || !cronStale ? (
                   <CircleCheck className="mt-0.5 size-5 shrink-0 text-brand-600" aria-label="In orde" />
                 ) : (
                   <CircleAlert className="mt-0.5 size-5 shrink-0 text-accent-500" aria-label="Actie nodig" />
                 )}
                 <span className="min-w-0">
-                  <span className="font-semibold">Geplande taak (CRON_SECRET)</span>
-                  {cronSecret ? (
-                    <span className="block text-muted">
-                      Ingesteld.{" "}
-                      {cronRun
-                        ? `Laatst gedraaid: ${formatDateTime(cronRun)}.`
-                        : "Nog niet gedraaid."}
-                      {!demo && cronStale && " Draait hij niet elke 5 minuten, controleer dan of je project op Vercel Pro staat."}
-                    </span>
-                  ) : (
-                    <span className="block text-muted">
-                      Ontbreekt. Zonder deze taak worden schema&apos;s niet verstuurd. Zet bij Vercel → Settings → Environment Variables:
-                      <span className="mt-2 block rounded-xl bg-sand px-3 py-2 font-mono text-xs break-all text-ink">
+                  <span className="font-semibold">Geplande taak</span>
+                  <span className="block text-muted">
+                    {cronSecret ? "Beveiligd met CRON_SECRET." : "Niets in te vullen: de taak draait ook zonder sleutel."}{" "}
+                    {cronRun ? `Laatst gedraaid: ${formatDateTime(cronRun)}.` : "Nog niet gedraaid."}
+                    {!demo && cronStale && " Draait hij niet elke 5 minuten, controleer dan of je project op Vercel Pro staat."}
+                  </span>
+                  {!cronSecret && (
+                    <details className="mt-2 text-xs text-muted">
+                      <summary className="cursor-pointer font-semibold text-ink">Extra slot erop (optioneel)</summary>
+                      <span className="mt-1 block">
+                        Zonder sleutel kan iedereen de taak starten, maar hij draait hooguit eens per 3 minuten en doet alleen wat toch al
+                        gepland stond. Wil je dat alleen Vercel hem kan starten, zet dan bij Vercel → Settings → Environment Variables:
+                      </span>
+                      <span className="mt-2 block rounded-xl bg-sand px-3 py-2 font-mono break-all text-ink">
                         CRON_SECRET = {randomBytes(24).toString("base64url")}
                       </span>
-                      <span className="mt-1 block text-xs">Daarna: Deployments → Redeploy. Dit is de enige sleutel die bij Vercel moet blijven.</span>
-                    </span>
+                      <span className="mt-1 block">
+                        en kies daarna Deployments → Redeploy. Dit kan niet op deze pagina: Vercel stuurt alleen de sleutel uit zijn eigen
+                        instellingen mee.
+                      </span>
+                    </details>
                   )}
                 </span>
               </li>
