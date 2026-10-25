@@ -1,4 +1,4 @@
-import { isDatabaseConfigured } from "@/lib/db";
+import { db, isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
 import { amsterdamDay, amsterdamHour } from "@/lib/dates";
 import { runScheduledWork } from "@/lib/plans";
 import { claimDailyRun, cleanupExpiredData } from "@/lib/repo";
@@ -24,6 +24,11 @@ export async function GET(request: Request) {
     return new Response("Niet toegestaan", { status: 401 });
   }
   if (!isDatabaseConfigured()) return Response.json({ skipped: "geen database" });
+  await loadStoredConfig();
+  // Voor Beheer → Koppelingen: wanneer de geplande taak voor het laatst draaide.
+  await (await db())`
+    insert into settings (key, value) values ('cron_last_run', to_jsonb(now()))
+    on conflict (key) do update set value = excluded.value, updated_at = now()`.catch(() => {});
   const now = new Date();
   const daily = amsterdamHour(now) >= DAILY_FROM_HOUR && (await claimDailyRun(amsterdamDay(now)));
   let cleanup = null;

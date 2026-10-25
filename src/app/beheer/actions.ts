@@ -5,9 +5,19 @@ import { redirect } from "next/navigation";
 import { DURATION_IDS, PRODUCT_IDS, isProductId, productFor, type DurationId, type ProductId } from "@/config/pricing";
 import { site } from "@/config/site";
 import { localeUrl, toLocale, type Locale } from "@/i18n/config";
-import { endAdminSession, isAdminConfigured, isDemoMode, passwordMatches, requireAdmin, startAdminSession } from "@/lib/admin/auth";
+import {
+  MIN_PASSWORD_LENGTH,
+  endAdminSession,
+  isAdminConfigured,
+  isDemoMode,
+  mustChangePassword,
+  passwordMatches,
+  requireAdmin,
+  setAdminPassword,
+  startAdminSession,
+} from "@/lib/admin/auth";
 import { loginUrl } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, loadStoredConfig } from "@/lib/db";
 import {
   MAIL_KINDS,
   adminEmail,
@@ -33,6 +43,7 @@ import { cancelOrder, refundFirstPayment } from "@/lib/subscriptions";
 import { connectionsForCustomer } from "@/lib/health/repo";
 import { disconnect } from "@/lib/health/sync";
 import { logAdminAction } from "@/lib/admin/log";
+import { CONFIG_GROUPS, saveGroup, testGroup, type ConfigGroupId } from "@/lib/admin/koppelingen";
 import { cancelReasonLabel, isCancelReason } from "@/lib/cancel-reasons";
 import { aiAdvice, generateAiAdvice, hideOpportunity as hideOpportunityInDb, showAllOpportunities as showAllOpportunitiesInDb } from "@/lib/admin/opportunities";
 
@@ -57,15 +68,47 @@ async function guard(formData: FormData): Promise<void> {
 export async function adminLogin(_prev: LoginState, formData: FormData): Promise<LoginState> {
   if (isDemoMode()) redirect("/beheer");
   if (!isAdminConfigured()) {
-    return { error: "Stel eerst ADMIN_PASSWORD in (minimaal 12 tekens) bij je hosting." };
+    return { error: "Koppel eerst de database bij je hosting (DATABASE_URL). Zie het stappenplan." };
   }
-  if (!passwordMatches(String(formData.get("wachtwoord") ?? ""))) {
+  let ok: boolean;
+  try {
+    ok = await passwordMatches(String(formData.get("wachtwoord") ?? ""));
+  } catch (err) {
+    console.error("Inloggen op beheer mislukt", err);
+    return { error: "De database is niet bereikbaar. Controleer DATABASE_URL bij je hosting en probeer het opnieuw." };
+  }
+  if (!ok) {
     // Vertraging maakt raden van het wachtwoord onaantrekkelijk.
     await new Promise((r) => setTimeout(r, 1200));
     return { error: "Onjuist wachtwoord." };
   }
   await startAdminSession();
-  redirect("/beheer");
+  // Met het startwachtwoord eerst een eigen wachtwoord kiezen.
+  redirect((await mustChangePassword()) ? "/beheer/wachtwoord" : "/beheer");
+}
+
+export interface PasswordState {
+  error?: string;
+}
+
+/** Een eigen beheerwachtwoord kiezen (verplicht na het startwachtwoord) of het wachtwoord wijzigen. */
+export async function changeAdminPassword(_prev: PasswordState, formData: FormData): Promise<PasswordState> {
+  await requireAdmin({ allowPasswordChange: true });
+  if (isDemoMode()) return { error: "In de demo kun je het wachtwoord niet wijzigen." };
+  const first = await mustChangePassword();
+  const current = String(formData.get("huidig") ?? "");
+  const next = String(formData.get("nieuw") ?? "");
+  const repeat = String(formData.get("herhaal") ?? "");
+  if (!first && !(await passwordMatches(current))) {
+    await new Promise((r) => setTimeout(r, 1200));
+    return { error: "Je huidige wachtwoord klopt niet." };
+  }
+  if (next.length < MIN_PASSWORD_LENGTH) return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.` };
+  if (next !== repeat) return { error: "De twee nieuwe wachtwoorden zijn niet gelijk." };
+  if (first && (await passwordMatches(next))) return { error: "Kies een ander wachtwoord dan het startwachtwoord." };
+  await setAdminPassword(next);
+  await logAdminAction(first ? "Eigen beheerwachtwoord ingesteld" : "Beheerwachtwoord gewijzigd");
+  redirect(first ? "/beheer/koppelingen?welkom=1" : "/beheer/koppelingen?melding=wachtwoord-gewijzigd");
 }
 
 export async function adminLogout(): Promise<void> {
@@ -491,6 +534,33 @@ export async function refundOrder(formData: FormData): Promise<void> {
   back(formData, "terugbetaald");
 }
 
+// ---------- Koppelingen (Mollie, Claude, e-mail) ----------
+
+/** Slaat de gegevens van één koppeling op en test daarna meteen de verbinding. */
+export async function saveKoppeling(formData: FormData): Promise<void> {
+  await guard(formData);
+  const group = String(formData.get("groep") ?? "") as ConfigGroupId;
+  if (!CONFIG_GROUPS.some((g) => g.id === group)) back(formData, "niet-gevonden");
+  const problem = await saveGroup(
+    group,
+    (name) => String(formData.get(name) ?? ""),
+    (name) => formData.get(`${name}__wissen`) === "1",
+  );
+  if (problem) back(formData, `koppeling-${problem}`);
+  // Alleen wat er is gewijzigd, nooit de waarden zelf.
+  await logAdminAction("Koppeling opgeslagen", CONFIG_GROUPS.find((g) => g.id === group)!.title);
+  const result = await testGroup(group);
+  back(formData, result.ok ? "koppeling-werkt" : "koppeling-opgeslagen");
+}
+
+export async function testKoppeling(formData: FormData): Promise<void> {
+  await guard(formData);
+  const group = String(formData.get("groep") ?? "") as ConfigGroupId;
+  if (!CONFIG_GROUPS.some((g) => g.id === group)) back(formData, "niet-gevonden");
+  const result = await testGroup(group);
+  back(formData, result.ok ? "koppeling-getest" : "koppeling-werkt-niet");
+}
+
 // ---------- Instellingen ----------
 
 export async function saveDelivery(formData: FormData): Promise<void> {
@@ -560,6 +630,7 @@ export async function showAllOpportunities(formData: FormData): Promise<void> {
 /** Vraagt Claude om advies op basis van de opgetelde cijfers (duurt ongeveer een minuut). */
 export async function requestAiAdvice(formData: FormData): Promise<void> {
   await guard(formData);
+  await loadStoredConfig();
   if (!process.env.ANTHROPIC_API_KEY) back(formData, "ai-geen-sleutel");
   const previous = await aiAdvice();
   if (previous && Date.now() - Date.parse(previous.at) < 10 * 60 * 1000) back(formData, "ai-te-snel");

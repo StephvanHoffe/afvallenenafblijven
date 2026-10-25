@@ -1,5 +1,6 @@
 import "server-only";
 import { site } from "@/config/site";
+import { loadStoredConfig } from "@/lib/db";
 import type { Locale } from "@/i18n/config";
 
 /**
@@ -114,6 +115,8 @@ async function call<T>(
   body?: object,
   { idempotencyKey }: { idempotencyKey?: string } = {},
 ): Promise<T> {
+  // De sleutel kan in het beheer (Koppelingen) staan.
+  await loadStoredConfig();
   const key = process.env.MOLLIE_API_KEY;
   if (!key) throw new Error("MOLLIE_API_KEY is niet ingesteld");
   // MOLLIE_API_BASE alleen voor tests tegen een nagebootste Mollie (bijv. http://127.0.0.1:4343/v2).
@@ -254,6 +257,12 @@ export async function cancelMollieSubscription(customerId: string, id: string): 
     if (err instanceof MollieError && (err.status === 404 || err.status === 422)) return;
     throw err;
   }
+}
+
+/** De betaalmethoden die aanstaan, voor een eerste betaling of voor de maandelijkse incasso (ter controle in het beheer). */
+export async function listMethods(sequenceType: "first" | "recurring"): Promise<{ id: string; description: string }[]> {
+  const page = await call<{ _embedded?: { methods?: { id: string; description: string }[] } }>("GET", `/methods?sequenceType=${sequenceType}&locale=nl_NL`);
+  return page._embedded?.methods ?? [];
 }
 
 /** Link naar een betaling of klant in het Mollie-dashboard. */

@@ -9,10 +9,10 @@ import { Notice, PageTitle, Panel, table } from "@/components/beheer/ui";
 import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, durations, monthlyPrice, products } from "@/config/pricing";
 import { site } from "@/config/site";
 import { adminNow } from "@/lib/admin/clock";
-import { isAdminConfigured, isDemoMode, requireAdmin } from "@/lib/admin/auth";
+import { isAdminConfigured, isDemoMode, mustChangePassword, requireAdmin } from "@/lib/admin/auth";
 import { adminEmail } from "@/lib/email";
 import { mollieMode, webhookUrl } from "@/lib/mollie";
-import { db, isDatabaseConfigured } from "@/lib/db";
+import { db, isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
 import { euro } from "@/lib/format";
 import { adminData } from "@/lib/admin/data";
 import { EXPORTS, exportHref, type ExportKind } from "@/lib/admin/export";
@@ -44,19 +44,22 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
   const demo = isDemoMode();
   if (!demo) await connection();
   await requireAdmin();
+  // Koppelingen kunnen in het beheer staan in plaats van bij de hosting.
+  if (!demo) await loadStoredConfig();
   const sp = await searchParams;
   const env = (k: string) => demo || Boolean(process.env[k]);
   const dbOk = demo || (await databaseReachable());
   const paymentMode = demo ? "test" : mollieMode();
   const webhook = demo ? `${site.url}/api/webhooks/mollie` : webhookUrl();
   const nowMs = adminNow();
+  const mustChange = demo ? false : await mustChangePassword();
   const approval = dbOk ? await adminData().approvalRequired().catch(() => false) : false;
   const [delivery, reminder] = await Promise.all([deliverySettings(), demo ? Promise.resolve({ enabled: true, delayHours: 3 }) : checkoutReminderSettings()]);
   const here = "/beheer/instellingen";
 
   const checks: { label: string; ok: boolean; detail: string }[] = [
     { label: "Database", ok: dbOk, detail: dbOk ? "Verbonden" : isDatabaseConfigured() ? "Kan niet verbinden" : "DATABASE_URL ontbreekt" },
-    { label: "Mollie (betalingen)", ok: env("MOLLIE_API_KEY"), detail: env("MOLLIE_API_KEY") ? `Ingesteld (${paymentMode}modus)` : "MOLLIE_API_KEY ontbreekt" },
+    { label: "Mollie (betalingen)", ok: env("MOLLIE_API_KEY"), detail: env("MOLLIE_API_KEY") ? `Ingesteld (${paymentMode}modus)` : "Nog niet ingevuld: zie Koppelingen" },
     {
       label: "Mollie-webhook",
       ok: Boolean(webhook),
@@ -64,16 +67,16 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
         ? `Gaat automatisch mee met elke betaling: ${webhook}`
         : "Lokaal adres in NEXT_PUBLIC_SITE_URL: Mollie kan de website niet bereiken (de bedankpagina vangt eerste betalingen op)",
     },
-    { label: "Schema's maken", ok: env("ANTHROPIC_API_KEY"), detail: env("ANTHROPIC_API_KEY") ? `Ingesteld (${process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5"})` : "ANTHROPIC_API_KEY ontbreekt" },
-    { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "SMTP_HOST ontbreekt; e-mails komen alleen in de serverlog" },
+    { label: "Schema's maken", ok: env("ANTHROPIC_API_KEY"), detail: env("ANTHROPIC_API_KEY") ? `Ingesteld (${process.env.ANTHROPIC_MODEL || "claude-opus-5-5"})` : "Nog niet ingevuld: zie Koppelingen" },
+    { label: "E-mail (SMTP)", ok: env("SMTP_HOST"), detail: env("SMTP_HOST") ? `Meldingen naar ${adminEmail()}` : "Nog niet ingevuld (zie Koppelingen); e-mails komen alleen in de serverlog" },
     {
       label: "Geplande taak",
       ok: env("CRON_SECRET"),
       detail: env("CRON_SECRET")
         ? "Ingesteld: elke 5 minuten (schema's vrijgeven en mailen); herinneringen dagelijks vanaf 08:00. Vereist Vercel Pro."
-        : "CRON_SECRET ontbreekt",
+        : "CRON_SECRET ontbreekt bij Vercel: zie Koppelingen",
     },
-    { label: "Websiteadres", ok: env("NEXT_PUBLIC_SITE_URL"), detail: site.url },
+    { label: "Websiteadres", ok: true, detail: site.url },
     {
       label: "Gezondheidsapps: Withings (optioneel)",
       ok: demo || isWithingsConfigured(),
@@ -87,7 +90,11 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
           ? `Ingesteld: ${junctionProviders().join(", ")}${demo || isAppleHealthEnabled() ? " + Apple Health" : ""}${demo || process.env.JUNCTION_WEBHOOK_SECRET ? "" : " (JUNCTION_WEBHOOK_SECRET ontbreekt)"}`
           : "Niet ingesteld (JUNCTION_API_KEY)",
     },
-    { label: "Beheerwachtwoord", ok: demo || isAdminConfigured(), detail: demo ? "Demo-modus" : isAdminConfigured() ? "Ingesteld" : "ADMIN_PASSWORD ontbreekt of is te kort" },
+    {
+      label: "Beheerwachtwoord",
+      ok: demo || (isAdminConfigured() && !mustChange),
+      detail: demo ? "Demo-modus" : mustChange ? "Nog het startwachtwoord: kies een eigen wachtwoord" : "Eigen wachtwoord ingesteld (wijzigen kan bij Koppelingen)",
+    },
   ];
 
   return (
@@ -95,7 +102,7 @@ async function Settings({ searchParams }: Pick<PageProps<"/beheer/instellingen">
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
         title="Instellingen"
-        intro="Levering, herinneringen en exports pas je hier aan. De koppelingen stel je in bij je hosting (omgevingsvariabelen), prijzen en acties in de code."
+        intro="Levering, herinneringen en exports pas je hier aan. Mollie, Claude en e-mail vul je in bij Koppelingen; prijzen en acties staan in de code."
       />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Panel title="Koppelingen">

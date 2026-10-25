@@ -1,5 +1,5 @@
 import { after, type NextRequest } from "next/server";
-import { isDatabaseConfigured } from "@/lib/db";
+import { isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
 import { orderForIntake } from "@/lib/fulfillment";
 import { isMollieConfigured } from "@/lib/mollie";
 import { processOrderPlans, releaseAndNotify } from "@/lib/plans";
@@ -15,6 +15,7 @@ export const maxDuration = 300;
  */
 export async function GET(request: NextRequest) {
   const intakeId = request.nextUrl.searchParams.get("bestelling") ?? "";
+  await loadStoredConfig();
   if (!/^[0-9a-f-]{36}$/i.test(intakeId) || !isDatabaseConfigured() || !isMollieConfigured()) {
     return Response.json({ state: "unknown" }, { status: 400 });
   }

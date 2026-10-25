@@ -143,6 +143,14 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   terugbetaald: { tone: "ok", text: "De betaling is terugbetaald via Mollie, met een creditnota." },
   "levering-ongeldig": { tone: "warn", text: "De levertijd moet tussen 0 en 110 minuten liggen, met het minimum lager dan het maximum." },
   "instellingen-opgeslagen": { tone: "ok", text: "De instellingen zijn opgeslagen." },
+  "koppeling-werkt": { tone: "ok", text: "Opgeslagen en getest: de koppeling werkt. Wijzigingen gelden binnen een halve minuut, zonder opnieuw te deployen." },
+  "koppeling-getest": { tone: "ok", text: "Opnieuw getest: de koppeling werkt." },
+  "koppeling-opgeslagen": { tone: "warn", text: "Opgeslagen, maar de koppeling werkt nog niet. Zie de uitleg bij het onderdeel hieronder." },
+  "koppeling-werkt-niet": { tone: "warn", text: "De koppeling werkt niet. Zie de uitleg bij het onderdeel hieronder." },
+  "koppeling-mollie-sleutel": { tone: "warn", text: "Dit is geen Mollie-sleutel. Een API-sleutel begint met test_ of live_ (niet de profiel-ID of de organisatietoken)." },
+  "koppeling-poort": { tone: "warn", text: "De poort is een getal, meestal 465 of 587." },
+  "koppeling-e-mail": { tone: "warn", text: "Controleer het e-mailadres voor de meldingen." },
+  "wachtwoord-gewijzigd": { tone: "ok", text: "Je beheerwachtwoord is gewijzigd. Andere apparaten zijn uitgelogd." },
   "herinnering-ongeldig": { tone: "warn", text: "Kies een wachttijd tussen 1 en 48 uur." },
   "herinnering-niet-mogelijk": { tone: "warn", text: "Een herinnering kan alleen als de bezoeker toestemming gaf voor e-mail, nog niet heeft betaald en nog geen herinnering kreeg." },
   "herinnering-verstuurd": { tone: "ok", text: "De herinnering is verstuurd." },
@@ -151,7 +159,7 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "ai-klaar": { tone: "ok", text: "Het advies van Claude staat hieronder." },
   "ai-mislukt": { tone: "warn", text: "Het advies kon niet worden gemaakt. Controleer de API-sleutel en het tegoed bij Anthropic, en probeer het later opnieuw." },
   "ai-te-snel": { tone: "warn", text: "Je hebt net al advies gevraagd. Probeer het over tien minuten opnieuw." },
-  "ai-geen-sleutel": { tone: "warn", text: "Stel eerst ANTHROPIC_API_KEY in bij je hosting." },
+  "ai-geen-sleutel": { tone: "warn", text: "Vul eerst de API-sleutel van Claude in bij Koppelingen." },
 };
 
 export function Notice({ code }: { code?: string }) {
@@ -220,7 +228,7 @@ export function NeedsDatabase() {
     <div className="rounded-2xl border border-line bg-white p-8 text-center">
       <h1 className="text-xl font-extrabold">Nog geen database gekoppeld</h1>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-        Stel DATABASE_URL in bij je hosting om klanten, bestellingen en schema&apos;s te zien. Op de pagina Instellingen zie je
+        Koppel de database bij je hosting (bij Vercel: Storage → Neon) om klanten, bestellingen en schema&apos;s te zien. Op de pagina Instellingen zie je
         welke koppelingen nog ontbreken.
       </p>
       <Link href="/beheer/instellingen" className="btn-primary mt-5 !px-5 !py-2.5 text-sm">

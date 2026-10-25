@@ -6,7 +6,7 @@ import { DURATION_IDS, PRODUCT_IDS, isSubscription, type DurationId, type Produc
 import { consentSchema, customerSchema, intakeMessage, intakeSchema } from "@/lib/intake";
 import { campaignSchema } from "@/lib/campaign";
 import { checkSafety } from "@/lib/safety";
-import { isDatabaseConfigured } from "@/lib/db";
+import { isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
 import { createIntake } from "@/lib/repo";
 import { defineCopy } from "@/i18n/config";
 import { requestLocale } from "@/i18n/server";
@@ -26,7 +26,7 @@ const copy = defineCopy({
     checkDetails: "Controleer je gegevens en probeer het opnieuw.",
     checkAnswers: "Controleer je antwoorden in de vragenlijst.",
     notConfigured:
-      "Betalen is nog niet geactiveerd op deze website. (Voor de beheerder: stel DATABASE_URL en MOLLIE_API_KEY in, zie README.)",
+      "Betalen is nog niet geactiveerd op deze website. (Voor de beheerder: vul Mollie in bij Beheer → Koppelingen, zie README.)",
     checkoutFailed: "We konden de betaalpagina niet openen. Probeer het over een paar minuten opnieuw.",
     discount: {
       unknown: "Deze kortingscode kennen we niet. Controleer de spelling.",
@@ -43,7 +43,7 @@ const copy = defineCopy({
     checkDetails: "Please check your details and try again.",
     checkAnswers: "Please check your answers in the questionnaire.",
     notConfigured:
-      "Payments haven't been activated on this website yet. (For the administrator: set DATABASE_URL and MOLLIE_API_KEY, see README.)",
+      "Payments haven't been activated on this website yet. (For the administrator: fill in Mollie under Beheer → Koppelingen, see README.)",
     checkoutFailed: "We couldn't open the payment page. Please try again in a few minutes.",
     discount: {
       unknown: "We don't recognise this discount code. Please check the spelling.",
@@ -112,6 +112,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   const safety = checkSafety(intake.data, locale);
   if (!safety.ok) return { error: safety.reason };
 
+  await loadStoredConfig();
   if (!isDatabaseConfigured() || !isMollieConfigured()) {
     return { error: c.notConfigured };
   }

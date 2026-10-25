@@ -945,9 +945,9 @@ export function buildOpportunities(i: OpportunityInput): { kansen: Kans[]; stren
       impact: "hoog",
       title: "E-mails worden niet verstuurd",
       finding: `${n(i.skippedEmails)} e-mails zijn niet verstuurd omdat de SMTP-instellingen ontbreken. Klanten krijgen dan hun schema, inloglinks en bevestigingen niet.`,
-      actions: ["Zet SMTP_HOST, SMTP_PORT, SMTP_USER en SMTP_PASS bij je hosting (zie de README) en stuur een testmail."],
+      actions: ["Vul de gegevens van je mailbox in bij Koppelingen → E-mail, klik op Opslaan en testen en stuur daarna een testmail."],
       basis: "E-maillog",
-      link: { href: "/beheer/instellingen", label: "Naar de instellingen" },
+      link: { href: "/beheer/koppelingen#email", label: "Naar Koppelingen" },
       weight: i.skippedEmails * 5,
     });
   }

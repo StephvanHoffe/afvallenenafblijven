@@ -6,6 +6,7 @@ import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro } from "@/lib/format";
 import { nextPeriodStart } from "@/lib/schedule";
 import { logMail, mailTextOverride } from "@/lib/email-store";
+import { loadStoredConfig } from "@/lib/db";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -17,24 +18,36 @@ import { logMail, mailTextOverride } from "@/lib/email-store";
  * E-mails aan de beheerder zijn altijd Nederlands.
  */
 
-let transporter: Transporter | null = null;
+let transporter: { signature: string; transporter: Transporter } | null = null;
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST);
 }
 
-function transport(): Transporter {
-  transporter ??= nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-  });
-  return transporter;
+/** De SMTP-verbinding. De gegevens kunnen in het beheer zijn gewijzigd: dan maken we een nieuwe. */
+export function transport(): Transporter {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const signature = [process.env.SMTP_HOST, port, process.env.SMTP_USER, process.env.SMTP_PASS].join("|");
+  if (transporter?.signature !== signature) {
+    transporter = {
+      signature,
+      transporter: nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: port === 465,
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        // Niet minutenlang wachten op een mailserver die niet antwoordt.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 30_000,
+      }),
+    };
+  }
+  return transporter.transporter;
 }
 
-const FROM = () => process.env.EMAIL_FROM ?? `${site.name} <${site.company.email}>`;
-export const adminEmail = () => process.env.ADMIN_EMAIL ?? site.company.email;
+const FROM = () => process.env.EMAIL_FROM || `${site.name} <${site.company.email}>`;
+export const adminEmail = () => process.env.ADMIN_EMAIL || site.company.email;
 
 /**
  * Klantmails waarvan je onderwerp, hoofdtekst en knop in het beheer kunt
@@ -84,7 +97,9 @@ export interface Mail {
 }
 
 export async function sendMail(mail: Mail): Promise<boolean> {
-  let final = mail;
+  // De SMTP-gegevens en het beheeradres kunnen in het beheer (Koppelingen) staan.
+  await loadStoredConfig();
+  let final = mail.kind === "admin" ? { ...mail, to: adminEmail() } : mail;
   // Teksten die in het beheer zijn aangepast, gaan voor op de standaardteksten.
   if (mail.render && mail.kind && mail.kind !== "admin" && mail.locale) {
     const override = await mailTextOverride(mail.kind, mail.locale).catch(() => null);

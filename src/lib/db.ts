@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { STORED_CONFIG_KEYS, STORED_CONFIG_SETTING } from "@/lib/config-keys";
 
 /**
  * PostgreSQL-verbinding. Werkt met elke Postgres-aanbieder (bijv. Neon of
@@ -9,17 +10,24 @@ import postgres from "postgres";
 declare global {
   var __afbSql: postgres.Sql | undefined;
   var __afbSchemaReady: Promise<void> | undefined;
+  var __afbConfig: { loadedAt: number; envAtStart: Record<string, string | undefined> } | undefined;
+}
+
+/** De database-link. Koppel je Neon via Vercel (Storage), dan zet Vercel hem zelf. */
+function databaseUrl(): string | undefined {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || undefined;
 }
 
 export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(databaseUrl());
 }
 
 function client(): postgres.Sql {
-  if (!process.env.DATABASE_URL) {
+  const url = databaseUrl();
+  if (!url) {
     throw new Error("DATABASE_URL is niet ingesteld");
   }
-  globalThis.__afbSql ??= postgres(process.env.DATABASE_URL, {
+  globalThis.__afbSql ??= postgres(url, {
     max: 5,
     idle_timeout: 20,
     prepare: false,
@@ -402,7 +410,36 @@ create table if not exists health_workouts (
 create index if not exists health_workouts_started_idx on health_workouts(customer_id, started_at);
 `;
 
-/** Geeft de SQL-client terug nadat het schema gegarandeerd bestaat. */
+/** Hoe lang de instellingen uit het beheer (Koppelingen) in het geheugen blijven voordat we ze opnieuw lezen. */
+const CONFIG_TTL_MS = 30_000;
+
+/** De waarden die de hosting zelf meegaf, vóórdat we er instellingen uit het beheer overheen legden. */
+export function hostingValue(key: string): string | undefined {
+  return (globalThis.__afbConfig?.envAtStart ?? process.env)[key] || undefined;
+}
+
+/**
+ * Legt de instellingen uit het beheer over process.env (een waarde uit het
+ * beheer gaat voor op die van de hosting). Gebeurt bij elk gebruik van de
+ * database, hooguit eens per 30 seconden; `force` leest ze direct opnieuw.
+ */
+async function applyStoredConfig(sql: postgres.Sql, force = false): Promise<void> {
+  const state = (globalThis.__afbConfig ??= {
+    loadedAt: 0,
+    envAtStart: Object.fromEntries(STORED_CONFIG_KEYS.map((k) => [k, process.env[k]])),
+  });
+  if (!force && Date.now() - state.loadedAt < CONFIG_TTL_MS) return;
+  const [row] = await sql<{ value: Record<string, string> }[]>`select value from settings where key = ${STORED_CONFIG_SETTING}`;
+  const stored = row?.value ?? {};
+  for (const key of STORED_CONFIG_KEYS) {
+    const value = stored[key] || state.envAtStart[key];
+    if (value) process.env[key] = value;
+    else delete process.env[key];
+  }
+  state.loadedAt = Date.now();
+}
+
+/** Geeft de SQL-client terug nadat het schema gegarandeerd bestaat (en de instellingen uit het beheer zijn geladen). */
 export async function db(): Promise<postgres.Sql> {
   const sql = client();
   globalThis.__afbSchemaReady ??= sql
@@ -413,5 +450,20 @@ export async function db(): Promise<postgres.Sql> {
       throw err;
     });
   await globalThis.__afbSchemaReady;
+  await applyStoredConfig(sql);
   return sql;
+}
+
+/**
+ * Laadt de instellingen uit het beheer, voor code die process.env leest vóórdat
+ * de database is gebruikt (bijv. "is Mollie ingesteld?"). Zonder database: niets.
+ */
+export async function loadStoredConfig({ force = false }: { force?: boolean } = {}): Promise<void> {
+  if (!isDatabaseConfigured()) return;
+  try {
+    const sql = await db();
+    if (force) await applyStoredConfig(sql, true);
+  } catch (err) {
+    console.error("Instellingen uit het beheer laden mislukt", err);
+  }
 }

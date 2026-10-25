@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE, isDemoMode, verifyAdminCookieValue } from "@/lib/admin/auth";
+import { ADMIN_COOKIE, isDemoMode, looksLikeAdminCookie } from "@/lib/admin/session-cookie";
 
 /**
- * - Beheer: bezoekers zonder geldige beheersessie gaan direct naar de inlogpagina.
- *   Elke beheerpagina en -actie controleert de sessie daarnaast zelf.
+ * - Beheer: bezoekers zonder (geldig ogende) beheersessie gaan direct naar de
+ *   inlogpagina. Elke beheerpagina en -actie controleert de sessie daarnaast volledig.
  * - Talen: Nederlands staat zonder voorvoegsel (/prijzen) en wordt intern
  *   herschreven naar /nl/prijzen; Engels staat onder /en. Adressen met /nl
  *   sturen we door naar de versie zonder voorvoegsel. De header x-taal geeft
@@ -14,7 +14,7 @@ export function proxy(request: NextRequest) {
 
   if (pathname === "/beheer" || pathname.startsWith("/beheer/")) {
     if (isDemoMode() || pathname.startsWith("/beheer/inloggen")) return NextResponse.next();
-    if (verifyAdminCookieValue(request.cookies.get(ADMIN_COOKIE)?.value)) return NextResponse.next();
+    if (looksLikeAdminCookie(request.cookies.get(ADMIN_COOKIE)?.value)) return NextResponse.next();
     return NextResponse.redirect(new URL("/beheer/inloggen", request.url));
   }
 

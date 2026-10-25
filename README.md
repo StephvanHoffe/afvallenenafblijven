@@ -66,7 +66,8 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - Ontkoppelen stopt het ophalen direct en wist alle gegevens van die koppeling. Toegangstokens worden versleuteld opgeslagen. Code: `src/lib/health/`.
 
 **Beheer (`/beheer`)**
-- Inloggen met één wachtwoord (`ADMIN_PASSWORD`, minimaal 12 tekens).
+- Inloggen met één wachtwoord. De eerste keer log je in met het eenmalige startwachtwoord (dat staat niet in de code, alleen een vingerafdruk ervan; je krijgt het apart). Daarna moet je eerst een eigen wachtwoord kiezen (minimaal 12 tekens); vanaf dan werkt het startwachtwoord niet meer. Het wachtwoord staat versleuteld (scrypt) in de database. Wijzig je het, dan worden andere apparaten uitgelogd. `ADMIN_PASSWORD` bij de hosting (minimaal 12 tekens) werkt altijd als noodsleutel, bijvoorbeeld als je je wachtwoord kwijt bent.
+- **Koppelingen**: hier vul je de gegevens van Mollie (API-sleutel), Claude (API-sleutel, eventueel een ander model) en e-mail (SMTP van je mailbox, afzender en het adres voor meldingen) in, in plaats van bij de hosting. Per onderdeel: opslaan en direct testen (Mollie: welke betaalmethoden aanstaan, inclusief SEPA-incasso; Claude: of de sleutel werkt; e-mail: inloggen op de mailserver). Wijzigingen gelden binnen een halve minuut, zonder opnieuw te deployen. Sleutels en wachtwoorden zie je na het opslaan nooit meer (van een API-sleutel alleen de laatste vier tekens); ze komen niet in het logboek. Staat een waarde ook bij de hosting, dan gaat die van het beheer voor. Alleen de database en `CRON_SECRET` moeten bij de hosting blijven: zonder database kan de website het beheer niet lezen, en Vercel stuurt `CRON_SECRET` zelf mee met de geplande taak. Code: `src/lib/admin/koppelingen.ts`, `src/lib/config-keys.ts`.
 - **Overzicht**: terugkerende omzet per maand, nieuwe bestellingen, conversie, een samenvatting van de funnel, bestellingen per dag, actieve abonnementen per plan en campagnes. Alles wat aandacht nodig heeft (goed te keuren of mislukte schema's, herroepingen, garantie-aanvragen) staat bovenaan.
 - **Kansen**: tips en verbeteringen, berekend uit alle cijfers (funnel, bezoekers, omzet en behoud, feedback, e-mails, kortingscodes). Per kans: wat de cijfers laten zien, wat je kunt doen, waarop het is gebaseerd en een link naar de juiste pagina. Gesorteerd op impact, te filteren op onderwerp en 30 dagen te verbergen. Een kans verschijnt pas als er genoeg gegevens zijn. Met de knop "Vraag advies" denkt Claude mee met dezelfde cijfers (alleen opgetelde cijfers, geen namen, e-mailadressen of opmerkingen van klanten; maximaal één keer per 10 minuten). De top 3 staat ook op het Overzicht.
 - **Bezoekers**: bezoeken, paginaweergaven, pagina's per bezoek, bouncepercentage, bezoekduur, conversie en mobiel, steeds vergeleken met de periode ervoor. Live: bezoekers in de laatste 30 minuten. Per pagina weergaven, tijd op de pagina, instap en uitstap; kanalen (campagnes, zoekmachines, social, e-mail, andere websites, direct), verwijzende websites, campagnes, apparaten, taal en een heatmap per weekdag en uur. Periode 7, 30 of 90 dagen.
@@ -142,18 +143,11 @@ Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwi
 De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro), de database bij Neon. Alle drie in Europa: Vercel draait de website in Frankfurt (`"regions": ["fra1"]` in `vercel.json`), kies bij Neon ook Frankfurt.
 
 **1. Database (Neon)**
-1. Maak een account op [neon.tech](https://neon.tech) en een nieuw project. Kies als regio **AWS Europe Central 1 (Frankfurt)**.
-2. Kopieer de connection string (de "pooled" variant is prima). Die wordt `DATABASE_URL`. De tabellen worden bij de eerste aanvraag automatisch aangemaakt.
-3. Sluit de verwerkersovereenkomst (DPA) van Neon af.
+Het makkelijkst via Vercel, nadat je het project hebt geïmporteerd (stap 3): Storage → Create Database → **Neon**, regio **Frankfurt** (AWS Europe Central 1), en koppel de database aan het project. Vercel zet `DATABASE_URL` dan zelf. Of maak een project aan op [neon.tech](https://neon.tech) (ook Frankfurt) en zet de connection string ("pooled" is prima) als `DATABASE_URL`. De tabellen worden bij de eerste aanvraag automatisch aangemaakt. Sluit de verwerkersovereenkomst (DPA) van Neon af.
 
 **2. E-mailadres voor de website (Vimexx)**
 1. Maak in DirectAdmin een mailbox aan, bijv. `info@jouwdomein.nl` (Vimexx-hulp: "Hoe kan ik een e-mail account aanmaken in DirectAdmin?").
-2. De SMTP-gegevens voor de website:
-   - `SMTP_HOST=mail.jouwdomein.nl`
-   - `SMTP_PORT=465` (SSL; lukt dat niet, gebruik dan `587`)
-   - `SMTP_USER=info@jouwdomein.nl`
-   - `SMTP_PASS=` het wachtwoord van die mailbox
-   - `EMAIL_FROM="Afvallen & Afblijven <info@jouwdomein.nl>"` en `ADMIN_EMAIL=` het adres waar jij de meldingen wilt ontvangen
+2. De SMTP-gegevens vul je later in bij Beheer → Koppelingen → E-mail. Mailserver (`mail.jouwdomein.nl`), poort (`465`; lukt dat niet, dan `587`), gebruikersnaam (`info@jouwdomein.nl`), afzender en meldingsadres staan daar al ingevuld; alleen het wachtwoord van de mailbox typ je zelf.
 3. Controleer in DirectAdmin (DNS-beheer) dat er een SPF-record is en dat DKIM aanstaat, zodat de mails niet in de spam belanden. Bij een Vimexx-pakket staat dit meestal al goed.
 4. Vraag bij Vimexx na hoeveel mails per uur je mag versturen. Voor de start is dat ruim genoeg; worden het er veel, stap dan over op een maildienst zoals Brevo of Postmark (alleen de SMTP-gegevens veranderen).
 
@@ -161,9 +155,10 @@ De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro)
 1. Maak een account op [vercel.com](https://vercel.com) en kies **Pro** (nodig voor een commerciële site en voor de taak die elke 5 minuten draait).
 2. Kies "Add New → Project" en importeer de GitHub-repository. Geeft Vercel de repository niet weer, kies dan "Configure GitHub App" en geef de Vercel-app toegang tot alleen deze repository. Vercel herkent Next.js vanzelf en kiest `main` als productiebranch (te controleren bij Settings → Environments → Production → Branch Tracking).
    Daarna gaat elke merge naar `main` vanzelf live. Andere branches worden bewust niet gedeployd (`git.deploymentEnabled` in `vercel.json`): een preview zou dezelfde live database en Mollie-sleutel gebruiken. Wil je toch previews, geef ze dan eigen testwaarden bij de omgevingsvariabelen (omgeving Preview) en haal de regel `"**": false` weg.
-3. Zet bij Settings → Environment Variables (omgeving Production) alle waarden uit `.env.example`: de database, de SMTP-gegevens hierboven, `MOLLIE_API_KEY`, `ANTHROPIC_API_KEY`, `CRON_SECRET` (een lange willekeurige tekst), `ADMIN_PASSWORD` en `NEXT_PUBLIC_SITE_URL=https://jouwdomein.nl`.
-4. Deploy. Controleer bij Settings → Functions dat de regio Frankfurt (`fra1`) is.
-5. Open `/beheer/instellingen` op het `.vercel.app`-adres en stuur een testmail. Alle koppelingen moeten groen zijn.
+3. Koppel de database (Storage → Neon, zie stap 1).
+4. Zet bij Settings → Environment Variables (omgeving Production) alleen `CRON_SECRET`: een lange willekeurige tekst (bijv. `openssl rand -base64 32`; staat hij er niet, dan toont Beheer → Koppelingen een kant-en-klare waarde). Meer is niet nodig: Mollie, Claude en e-mail vul je in het beheer in. `NEXT_PUBLIC_SITE_URL` hoeft alleen als het adres niet `https://afvallenenafblijven.nl` is.
+5. Deploy (of Redeploy na het zetten van de variabelen). Controleer bij Settings → Functions dat de regio Frankfurt (`fra1`) is.
+6. Open `/beheer` op het `.vercel.app`-adres en log in met het startwachtwoord. Kies een eigen wachtwoord; je komt dan op **Koppelingen**. Vul Mollie, Claude en e-mail in en klik bij elk op "Opslaan en testen" tot alles "Werkt" toont. Stuur daarna bij Instellingen een testmail.
 
 **4. Domeinnaam naar Vercel laten wijzen (Vimexx)**
 1. Voeg bij Vercel → Settings → Domains `jouwdomein.nl` en `www.jouwdomein.nl` toe. Vercel laat zien welke records je moet zetten: meestal een **A-record** voor het hoofddomein (`76.76.21.21`) en een **CNAME** voor `www` (de waarde die Vercel toont).
@@ -180,21 +175,21 @@ De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro)
 ## Live zetten (checklist)
 
 1. **Bedrijfsgegevens** controleren in `src/config/site.ts`: naam, adres, KvK, btw en e-mailadressen (zijn ingevuld). Naam, KvK en btw verschijnen in de footer en de e-mails. Het adres is een woonadres en staat alleen in de algemene voorwaarden (artikel 2 en het modelformulier voor herroeping); de contactpagina en de herroepingspagina verwijzen ernaar.
-2. **Hosting**: zet het project op [Vercel](https://vercel.com), op het **Pro**-abonnement (zie het stappenplan hierboven). De website draait in Frankfurt (`regions` in `vercel.json`). De geplande taak in `vercel.json` draait elke 5 minuten (schema's vrijgeven en mailen, mislukte schema's opnieuw proberen); de herinneringen en het opruimen gebeuren één keer per dag vanaf 08:00. Op het gratis Hobby-abonnement mag een geplande taak maar één keer per dag draaien en mislukt de deploy met deze instelling; Hobby is bovendien alleen voor niet-commercieel gebruik. Wil je toch Hobby gebruiken, zet dan in `vercel.json` een dagelijkse planning en laat een externe dienst (bijv. cron-job.org) elke 5 minuten `GET /api/cron` aanroepen met de header `Authorization: Bearer <CRON_SECRET>`. Zet de omgevingsvariabelen uit `.env.example`.
-3. **Database**: maak een PostgreSQL-database aan in een EU-regio (bijv. Neon of Supabase) en zet `DATABASE_URL`. De tabellen worden automatisch aangemaakt.
+2. **Hosting**: zet het project op [Vercel](https://vercel.com), op het **Pro**-abonnement (zie het stappenplan hierboven). De website draait in Frankfurt (`regions` in `vercel.json`). De geplande taak in `vercel.json` draait elke 5 minuten (schema's vrijgeven en mailen, mislukte schema's opnieuw proberen); de herinneringen en het opruimen gebeuren één keer per dag vanaf 08:00. Op het gratis Hobby-abonnement mag een geplande taak maar één keer per dag draaien en mislukt de deploy met deze instelling; Hobby is bovendien alleen voor niet-commercieel gebruik. Wil je toch Hobby gebruiken, zet dan in `vercel.json` een dagelijkse planning en laat een externe dienst (bijv. cron-job.org) elke 5 minuten `GET /api/cron` aanroepen met de header `Authorization: Bearer <CRON_SECRET>`. Bij Vercel staan alleen de database en `CRON_SECRET`.
+3. **Database**: koppel een PostgreSQL-database in een EU-regio (bijv. Neon via Vercel Storage) zodat `DATABASE_URL` is gezet. De tabellen worden automatisch aangemaakt.
 4. **Mollie**
    - Maak een account op [mollie.com](https://www.mollie.com) en rond de verificatie af (KvK, ID, bankrekening). Dat duurt een paar werkdagen; tot die tijd kun je testen met de testsleutel.
    - Zet bij je websiteprofiel de betaalmethoden aan: **iDEAL | Wero**, **Bancontact**, **SEPA-incasso** (nodig voor de maandelijkse afschrijving) en **creditcard** (voor losse schema's). Een abonnement begint altijd met iDEAL | Wero of Bancontact; dat levert de SEPA-machtiging op.
-   - Kopieer bij Developers → API-sleutels de **testsleutel** (`test_…`) naar `MOLLIE_API_KEY`; voor live later de live-sleutel (`live_…`).
+   - Kopieer bij Developers → API-sleutels de **testsleutel** (`test_…`) naar Beheer → Koppelingen → Mollie; voor live later de live-sleutel (`live_…`). De test daar laat zien of iDEAL | Wero, Bancontact en SEPA-incasso aanstaan.
    - Een webhook hoef je niet in te stellen: de website stuurt bij elke betaling en elk abonnement zelf het adres `https://jouwdomein.nl/api/webhooks/mollie` mee. Mollie stuurt alleen het ID; de website haalt de status zelf op. Lokaal (localhost) kan Mollie de site niet bereiken; daar vangt de bedankpagina de eerste betaling op.
    - Producten en prijzen maak je niet aan in Mollie: de website maakt klanten, betalingen en abonnementen zelf aan. Kortingen (acties en kortingscodes) rekent de website zelf uit: een korting op meer maanden wordt een kort abonnement tegen het lagere bedrag, gevolgd door het gewone abonnement.
    - **Facturen** maakt de website zelf (Mollie maakt geen facturen voor je klanten), met een doorlopend nummer per jaar en de btw. Op de factuur staan je bedrijfsnaam, adres, KvK en btw-nummer uit `src/config/site.ts`. Facturen en creditnota's worden 7 jaar bewaard.
    - Terugbetalen doe je vanuit het beheer; dan staat het in de omzetcijfers en krijgt de klant een creditnota. Mollie heeft voor een terugbetaling saldo nodig op je Mollie-rekening.
    - Btw: de prijzen zijn inclusief 21%. Verkoop je ook aan België, kijk dan naar de OSS-regeling.
    - Voor tests zonder Mollie: `MOLLIE_API_BASE` wijst de website naar een nagebootste Mollie. Nooit in productie zetten.
-5. **E-mail**: zet de SMTP-gegevens van je e-mailaanbieder en stel SPF/DKIM in voor je domein, zodat mails niet in de spam belanden.
-6. **Claude**: maak een API-sleutel aan op platform.claude.com, zet `ANTHROPIC_API_KEY` en draai `npm run schema:test` om de kwaliteit te beoordelen.
-7. **Cron en beheer**: zet `CRON_SECRET` en een sterk `ADMIN_PASSWORD`. Kijk daarna op `/beheer/instellingen` of alle koppelingen groen zijn.
+5. **E-mail**: vul het wachtwoord van je mailbox in bij Beheer → Koppelingen → E-mail en stel SPF/DKIM in voor je domein, zodat mails niet in de spam belanden.
+6. **Claude**: maak een API-sleutel aan op platform.claude.com, zet hem bij Beheer → Koppelingen → Claude en draai lokaal `npm run schema:test` om de kwaliteit te beoordelen.
+7. **Cron en beheer**: zet `CRON_SECRET` bij Vercel en kies na de eerste keer inloggen een sterk eigen wachtwoord. Kijk daarna op `/beheer/koppelingen` en `/beheer/instellingen` of alles groen is.
 8. **Test** de hele flow met de testsleutel van Mollie (op de testbetaalpagina kies je zelf of een betaling lukt): bestellen, factuur, schema ontvangen, check-in, opzeggen, opzegging intrekken, betaalmethode wijzigen en terugbetalen.
 9. **Gezondheidsapps (optioneel)**
    - Zet `HEALTH_ENCRYPTION_KEY` (64 hextekens, bijv. `openssl rand -hex 32`).
