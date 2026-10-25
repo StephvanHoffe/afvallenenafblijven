@@ -38,7 +38,7 @@ export function CustomerDetailsForm({ customer, back }: { customer: AdminCustome
         <input type="checkbox" name="herinneringen" value="1" defaultChecked={customer.weeklyReminders} /> Herinneringen voor het weegmoment
       </label>
       <p className="text-xs text-muted">
-        Een nieuw e-mailadres geldt hier direct. Pas het zo nodig ook aan in Stripe, zodat facturen op het juiste adres aankomen.
+        Een nieuw e-mailadres geldt hier direct, ook op nieuwe facturen. Eerdere facturen houden het oude adres.
       </p>
       <SubmitButton className={small}>
         <Save className="size-4" aria-hidden /> Opslaan

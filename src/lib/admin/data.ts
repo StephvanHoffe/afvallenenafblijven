@@ -24,7 +24,10 @@ export interface AdminOrderRow {
   amountCents: number;
   monthlyCents: number;
   createdAt: Date;
-  stripeSubscriptionId: string | null;
+  /** De eerste betaling bij Mollie (tr_…). */
+  checkoutId: string;
+  /** Het abonnement bij Mollie (sub_…), als dat er is. */
+  subscriptionId: string | null;
   /** Via welke campagne (utm) en landingspagina de bestelling binnenkwam. */
   campaign: Campaign | null;
   /** Alleen gevuld in de klantdetails: de check-in voor de volgende periode. */
@@ -41,7 +44,7 @@ export interface AdminCustomerRow {
   email: string;
   createdAt: Date;
   marketing: boolean;
-  stripeCustomerId: string | null;
+  mollieCustomerId: string | null;
   activeSubscriptions: number;
   orders: number;
   plans: number;
@@ -89,14 +92,14 @@ export interface AdminPlanDetail extends AdminPlanRow {
 /** Filter in het schema-overzicht: een status, of nog niet bij de klant (gepland / wacht op goedkeuring). */
 export type AdminPlanFilter = PlanStatus | "gepland" | "goedkeuren";
 
-/** Een betaling of terugbetaling van een klant (uit de Stripe-webhooks en het beheer). */
+/** Een betaling of terugbetaling van een klant (uit de Mollie-webhook en het beheer). */
 export interface AdminPaymentRow {
   id: string;
   date: Date;
   kind: "payment" | "refund";
   /** In centen; negatief bij een terugbetaling. */
   amountCents: number;
-  /** Stripe-reden (subscription_create, subscription_cycle), "eenmalig" of de reden van de terugbetaling. */
+  /** "maand 2", "eenmalig" of de reden van de terugbetaling. */
   description: string | null;
   orderReference: string | null;
   invoiceId: string | null;
@@ -129,7 +132,7 @@ export interface AdminGuaranteeRow {
   handledAt: Date | null;
   reason: string | null;
   order: AdminOrderRow;
-  stripeCustomerId: string | null;
+  mollieCustomerId: string | null;
 }
 
 export interface AdminOverview {
@@ -193,7 +196,8 @@ type OrderSql = {
   amount_cents: number;
   monthly_cents: number;
   created_at: Date;
-  stripe_subscription_id: string | null;
+  checkout_id: string;
+  subscription_id: string | null;
   campaign: Campaign | null;
   discount_code: string | null;
   refunded_cents: number;
@@ -215,7 +219,8 @@ const toOrder = (r: OrderSql): AdminOrderRow => ({
   amountCents: r.amount_cents,
   monthlyCents: r.monthly_cents,
   createdAt: r.created_at,
-  stripeSubscriptionId: r.stripe_subscription_id,
+  checkoutId: r.checkout_id,
+  subscriptionId: r.subscription_id,
   discountCode: r.discount_code,
   refundedCents: r.refunded_cents ?? 0,
   cancelReason: r.cancel_reason,
@@ -271,7 +276,7 @@ type CustomerSql = {
   email: string;
   created_at: Date;
   marketing_consent: boolean;
-  stripe_customer_id: string | null;
+  mollie_customer_id: string | null;
   active_subscriptions: number;
   orders: number;
   plans: number;
@@ -285,7 +290,7 @@ const toCustomer = (r: CustomerSql): AdminCustomerRow => ({
   email: r.email,
   createdAt: r.created_at,
   marketing: r.marketing_consent,
-  stripeCustomerId: r.stripe_customer_id,
+  mollieCustomerId: r.mollie_customer_id,
   activeSubscriptions: r.active_subscriptions,
   orders: r.orders,
   plans: r.plans,
@@ -528,9 +533,9 @@ const dbAdminData: AdminData = {
   async guaranteeRequests() {
     const sql = await db();
     const rows = await sql<
-      (OrderSql & { request_id: string; reason: string | null; requested_at: Date; handled_at: Date | null; stripe_customer_id: string | null })[]
+      (OrderSql & { request_id: string; reason: string | null; requested_at: Date; handled_at: Date | null; mollie_customer_id: string | null })[]
     >`
-      select o.*, c.name as customer_name, c.email as customer_email, c.stripe_customer_id, i.campaign,
+      select o.*, c.name as customer_name, c.email as customer_email, c.mollie_customer_id, i.campaign,
              g.id as request_id, g.reason, g.created_at as requested_at, g.handled_at
       from guarantee_requests g
       join orders o on o.id = g.order_id
@@ -543,7 +548,7 @@ const dbAdminData: AdminData = {
       handledAt: r.handled_at,
       reason: r.reason,
       order: toOrder(r),
-      stripeCustomerId: r.stripe_customer_id,
+      mollieCustomerId: r.mollie_customer_id,
     }));
   },
 };

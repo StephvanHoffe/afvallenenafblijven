@@ -8,8 +8,8 @@ import { subscriptionCheckinOrders } from "@/lib/repo";
 
 /**
  * Cijfers voor /beheer/analyse: omzet, abonnementen, behoud, betrokkenheid en
- * resultaten. Omzet komt uit de vastgelegde betalingen (Stripe-webhook
- * invoice.paid); zonder die betalingen schatten we de omzet uit de abonnementen.
+ * resultaten. Omzet komt uit de vastgelegde betalingen (Mollie-webhook);
+ * zonder die betalingen schatten we de omzet uit de abonnementen.
  */
 
 export interface MonthRow {

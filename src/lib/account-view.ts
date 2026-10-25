@@ -1,11 +1,11 @@
 import type { HealthView } from "@/lib/health/view";
 import type { AccountView, DashboardOrder, DashboardPlan, GuaranteeView, PaymentView } from "@/lib/account-types";
-import { applyPercentOff, durations, isSubscription } from "@/config/pricing";
-import { promotionMonths, promotionPercent, site } from "@/config/site";
+import { durations, isSubscription } from "@/config/pricing";
+import { chargeDay, paymentAmount } from "@/lib/billing";
 import type { NutritionTargets } from "@/lib/calculations";
 import { checkinWindow } from "@/lib/checkin";
 import { weeklyWindow } from "@/lib/weekly";
-import { addMonthsClamped } from "@/lib/dates";
+import { amsterdamDay, amsterdamStartOfDay } from "@/lib/dates";
 import { guaranteeAvailable, guaranteeDeadline, guaranteeOrder } from "@/lib/guarantee";
 import { periodStarts, periodsAt } from "@/lib/schedule";
 import type { PaymentRow } from "@/lib/payments";
@@ -44,7 +44,7 @@ export function toAccountView(input: {
     // Weegmomenten horen bij de periode die al loopt.
     const running = periodsAt(starts, now).current;
     const months = durations[o.duration].months;
-    const commitmentEnd = months > 1 ? addMonthsClamped(new Date(o.created_at), months) : null;
+    const commitmentEnd = months > 1 ? amsterdamStartOfDay(chargeDay(amsterdamDay(new Date(o.created_at)), months + 1)) : null;
     return {
       id: o.id,
       reference: o.id.slice(0, 8).toUpperCase(),
@@ -53,7 +53,7 @@ export function toAccountView(input: {
       status: o.status,
       cancelAt: o.cancel_at,
       createdAt: o.created_at,
-      manageable: Boolean(o.stripe_subscription_id) && isSubscription(o.duration),
+      manageable: isSubscription(o.duration) && o.status !== "canceled" && o.status !== "completed",
       commitmentEndsAt: commitmentEnd && commitmentEnd.getTime() > now ? commitmentEnd : null,
       checkin: checkinWindow({
         duration: o.duration,
@@ -123,22 +123,22 @@ export function toAccountView(input: {
 }
 
 /**
- * De volgende maandelijkse afschrijving van een lopend abonnement. Stripe
- * schrijft elke maand af op de dag van de aankoop. Valt die nog binnen een
- * actie (bijv. de 2e maand met Black Friday), dan geldt de actieprijs; met een
- * kortingscode kan het bedrag afwijken, dan tonen we alleen de datum.
+ * De volgende maandelijkse afschrijving van een lopend abonnement: elke maand
+ * op de dag van de eerste betaling. In de kortingsmaanden (bijv. maand 2 en 3
+ * met Black Friday) geldt het lagere bedrag.
  */
 function nextPaymentFor(o: Order, now: number): DashboardOrder["nextPayment"] {
-  if (!isSubscription(o.duration) || !o.stripe_subscription_id || o.status !== "active") return null;
-  let n = 1;
-  let next = addMonthsClamped(new Date(o.created_at), n);
-  while (next.getTime() <= now) next = addMonthsClamped(new Date(o.created_at), ++n);
-  if (o.cancel_at && next.getTime() >= o.cancel_at.getTime()) return null;
-  if (o.discount_code || !o.monthly_cents) return { date: next, amountCents: null };
-  // De volgende afschrijving is betaling nummer n + 1.
-  const promo = o.promotion ? site.promotions.find((p) => p.id === o.promotion) : undefined;
-  const discounted = promo && n + 1 <= promotionMonths(promo, o.duration);
-  return { date: next, amountCents: discounted ? applyPercentOff(o.monthly_cents, promotionPercent(promo, o.duration)) : o.monthly_cents };
+  if (!isSubscription(o.duration) || o.status !== "active" || o.subscription_canceled_at) return null;
+  const first = amsterdamDay(new Date(o.created_at));
+  const today = amsterdamDay(new Date(now));
+  let n = 2;
+  while (chargeDay(first, n) <= today) n++;
+  const date = amsterdamStartOfDay(chargeDay(first, n));
+  if (o.cancel_at && date.getTime() >= o.cancel_at.getTime()) return null;
+  return {
+    date,
+    amountCents: paymentAmount({ firstCents: o.amount_cents, introCents: o.intro_cents, introMonths: o.intro_months, monthlyCents: o.monthly_cents }, n),
+  };
 }
 
 /** Betalingen met de bestelling erbij en, bij abonnementen, de hoeveelste maand het is. */
@@ -162,7 +162,7 @@ function toPaymentViews(rows: PaymentRow[], orders: Order[]): PaymentView[] {
       product: order?.product ?? null,
       duration: order?.duration ?? null,
       month: order && isSubscription(order.duration) && p.kind === "payment" ? (month.get(p.id) ?? null) : null,
-      invoiceHref: p.kind === "payment" && p.invoice_id ? `/account/factuur/${encodeURIComponent(p.id)}` : null,
+      invoiceHref: p.invoice_id ? `/account/factuur/${encodeURIComponent(p.id)}` : null,
     };
   });
 }

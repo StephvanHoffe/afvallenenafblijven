@@ -64,6 +64,6 @@ export default async function BedanktPage({ searchParams }: PageProps<"/[lang]/b
 
 async function Status({ searchParams }: Pick<PageProps<"/[lang]/bedankt">, "searchParams">) {
   const sp = await searchParams;
-  const sessionId = typeof sp.session_id === "string" ? sp.session_id : "";
-  return <OrderStatus sessionId={sessionId} />;
+  const intakeId = typeof sp.bestelling === "string" ? sp.bestelling : "";
+  return <OrderStatus intakeId={intakeId} />;
 }

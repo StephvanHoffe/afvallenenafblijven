@@ -238,7 +238,7 @@ async function Codes({ searchParams }: Pick<PageProps<"/beheer/kortingscodes">, 
               <Plus className="size-4" aria-hidden /> Kortingscode aanmaken
             </SubmitButton>
             <p className="mt-2 text-xs text-muted">
-              De korting wordt via Stripe verrekend (de bijbehorende coupon wordt bij het eerste gebruik automatisch aangemaakt). Voorwaarden van een
+              De website rekent de korting zelf uit in de eerste betaling en de maandbedragen bij Mollie. Voorwaarden van een
               bestaande code kun je niet wijzigen; maak dan een nieuwe code en pauzeer de oude.
             </p>
           </div>

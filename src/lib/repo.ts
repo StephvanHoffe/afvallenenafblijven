@@ -18,7 +18,8 @@ export interface Customer {
   id: string;
   email: string;
   name: string;
-  stripe_customer_id: string | null;
+  /** De klant bij Mollie (cst_…), nodig voor abonnementen. */
+  mollie_customer_id: string | null;
   marketing_consent: boolean;
   weekly_reminders: boolean;
   /** "nl" of "en": de taal van e-mails, schema's en PDF's. */
@@ -43,6 +44,9 @@ export interface IntakeRow {
   duration: string | null;
   /** Herinnering verstuurd voor een niet-afgeronde betaling. */
   reminded_at: Date | null;
+  /** De laatst gestarte Mollie-betaling en de Mollie-klant. */
+  payment_id: string | null;
+  mollie_customer_id: string | null;
   created_at: Date;
 }
 
@@ -52,12 +56,22 @@ export interface Order {
   intake_id: string;
   product: ProductId;
   duration: DurationId;
-  stripe_session_id: string;
-  stripe_subscription_id: string | null;
+  /** De eerste betaling bij Mollie (tr_…). */
+  checkout_id: string;
+  /** Het gewone abonnement bij Mollie (sub_…), en het korte kortingsabonnement voor maand 2 t/m intro_months. */
+  subscription_id: string | null;
+  intro_subscription_id: string | null;
   status: OrderStatus;
   cancel_at: Date | null;
   amount_cents: number;
   monthly_cents: number;
+  /** Maandbedrag met korting voor maand 2 t/m intro_months (null = alleen de eerste betaling had korting). */
+  intro_cents: number | null;
+  intro_months: number;
+  /** Wanneer de abonnementen bij Mollie zijn stopgezet. */
+  subscription_canceled_at: Date | null;
+  /** De laatste mislukte afschrijving. */
+  failed_payment_id: string | null;
   checkin_reminded_seq: number | null;
   checkin_reminders: number;
   weekly_reminded_at: Date | null;
@@ -149,6 +163,24 @@ export async function resumableIntake(id: string): Promise<IntakeRow | null> {
   return row ?? null;
 }
 
+/** Onthoudt de gestarte Mollie-betaling (en de Mollie-klant) bij een vragenlijst. */
+export async function setIntakePayment(id: string, paymentId: string, mollieCustomerId: string | null): Promise<void> {
+  const sql = await db();
+  await sql`update intakes set payment_id = ${paymentId}, mollie_customer_id = ${mollieCustomerId} where id = ${id}`;
+}
+
+/** Een bestaande Mollie-klant voor dit e-mailadres (klant of eerdere poging), zodat er geen dubbele ontstaan. */
+export async function mollieCustomerIdFor(email: string): Promise<string | null> {
+  const sql = await db();
+  const [row] = await sql<{ id: string | null }[]>`
+    select coalesce(
+      (select mollie_customer_id from customers where email = ${email.toLowerCase()}),
+      (select mollie_customer_id from intakes where lower(email) = ${email.toLowerCase()} and mollie_customer_id is not null
+        order by created_at desc limit 1)
+    ) as id`;
+  return row?.id ?? null;
+}
+
 export async function getIntake(id: string): Promise<IntakeRow | null> {
   const sql = await db();
   const [row] = await sql<IntakeRow[]>`select * from intakes where id = ${id}`;
@@ -173,18 +205,18 @@ export async function updateIntakeData(id: string, data: Intake): Promise<void> 
 export async function upsertCustomer(input: {
   email: string;
   name: string;
-  stripeCustomerId: string | null;
+  mollieCustomerId: string | null;
   marketingConsent: boolean;
   locale: Locale;
 }): Promise<Customer> {
   const sql = await db();
   const [row] = await sql<Customer[]>`
-    insert into customers (email, name, stripe_customer_id, marketing_consent, locale)
-    values (${input.email}, ${input.name}, ${input.stripeCustomerId}, ${input.marketingConsent}, ${input.locale})
+    insert into customers (email, name, mollie_customer_id, marketing_consent, locale)
+    values (${input.email}, ${input.name}, ${input.mollieCustomerId}, ${input.marketingConsent}, ${input.locale})
     on conflict (email) do update set
       name = excluded.name,
       locale = excluded.locale,
-      stripe_customer_id = coalesce(excluded.stripe_customer_id, customers.stripe_customer_id),
+      mollie_customer_id = coalesce(customers.mollie_customer_id, excluded.mollie_customer_id),
       marketing_consent = customers.marketing_consent or excluded.marketing_consent
     returning *`;
   return row;
@@ -211,29 +243,31 @@ export async function getCustomerByEmail(email: string): Promise<Customer | null
 // ---------- Bestellingen ----------
 
 /**
- * Legt een bestelling vast. Geeft null terug als deze checkout al eerder is
- * verwerkt (Stripe kan webhooks meerdere keren versturen).
+ * Legt een bestelling vast. Geeft null terug als deze betaling al eerder is
+ * verwerkt (de webhook en de bedankpagina kunnen dat allebei doen).
  */
 export async function createOrder(input: {
   customerId: string;
   intakeId: string;
   product: ProductId;
   duration: DurationId;
-  stripeSessionId: string;
-  stripeSubscriptionId: string | null;
+  checkoutId: string;
   status: OrderStatus;
   amountCents: number;
   monthlyCents: number;
+  introCents: number | null;
+  introMonths: number;
   discountCode?: string | null;
   promotion?: string | null;
 }): Promise<Order | null> {
   const sql = await db();
   const [row] = await sql<Order[]>`
-    insert into orders (customer_id, intake_id, product, duration, stripe_session_id, stripe_subscription_id, status, amount_cents, monthly_cents, discount_code, promotion)
-    values (${input.customerId}, ${input.intakeId}, ${input.product}, ${input.duration}, ${input.stripeSessionId},
-            ${input.stripeSubscriptionId}, ${input.status}, ${input.amountCents}, ${input.monthlyCents}, ${input.discountCode ?? null},
+    insert into orders (customer_id, intake_id, product, duration, checkout_id, status, amount_cents, monthly_cents, intro_cents, intro_months,
+                        discount_code, promotion)
+    values (${input.customerId}, ${input.intakeId}, ${input.product}, ${input.duration}, ${input.checkoutId}, ${input.status},
+            ${input.amountCents}, ${input.monthlyCents}, ${input.introCents}, ${input.introMonths}, ${input.discountCode ?? null},
             ${input.promotion ?? null})
-    on conflict (stripe_session_id) do nothing
+    on conflict (checkout_id) do nothing
     returning *`;
   if (row) {
     await sql`update intakes set customer_id = ${input.customerId} where id = ${input.intakeId}`;
@@ -241,9 +275,23 @@ export async function createOrder(input: {
   return row ?? null;
 }
 
-export async function getOrderBySession(sessionId: string): Promise<Order | null> {
+export async function getOrderByCheckout(checkoutId: string): Promise<Order | null> {
   const sql = await db();
-  const [row] = await sql<Order[]>`select * from orders where stripe_session_id = ${sessionId}`;
+  const [row] = await sql<Order[]>`select * from orders where checkout_id = ${checkoutId}`;
+  return row ?? null;
+}
+
+export async function getOrderByIntake(intakeId: string): Promise<Order | null> {
+  const sql = await db();
+  const [row] = await sql<Order[]>`select * from orders where intake_id = ${intakeId} order by created_at desc limit 1`;
+  return row ?? null;
+}
+
+/** De bestelling bij een abonnement bij Mollie (het gewone of het kortingsabonnement). */
+export async function getOrderBySubscription(subscriptionId: string): Promise<Order | null> {
+  const sql = await db();
+  const [row] = await sql<Order[]>`
+    select * from orders where subscription_id = ${subscriptionId} or intro_subscription_id = ${subscriptionId} limit 1`;
   return row ?? null;
 }
 
@@ -258,15 +306,14 @@ export async function ordersForCustomer(customerId: string): Promise<Order[]> {
   return sql<Order[]>`select * from orders where customer_id = ${customerId} order by created_at desc`;
 }
 
-export async function updateOrderBySubscription(
-  subscriptionId: string,
-  update: { status: OrderStatus; cancelAt: Date | null },
-): Promise<void> {
+/** Status en einddatum van een abonnement bijwerken. */
+export async function updateOrderStatus(orderId: string, update: { status: OrderStatus; cancelAt?: Date | null }): Promise<void> {
   const sql = await db();
   await sql`
-    update orders set status = ${update.status}, cancel_at = ${update.cancelAt}, updated_at = now(),
+    update orders set status = ${update.status}, updated_at = now(),
+      cancel_at = ${update.cancelAt === undefined ? sql`cancel_at` : update.cancelAt},
       ended_at = case when ${update.status} = 'canceled' then coalesce(ended_at, now()) else null end
-    where stripe_subscription_id = ${subscriptionId}`;
+    where id = ${orderId}`;
 }
 
 // ---------- Schema's ----------
@@ -713,7 +760,8 @@ export async function createGuaranteeRequest(input: {
 /**
  * Verwijdert gegevens waarvan de bewaartermijn is verstreken: vragenlijsten
  * zonder bestelling na 30 dagen, en klanten zonder lopend abonnement 12
- * maanden na hun laatste bestelling (factuurgegevens blijven bij Stripe).
+ * maanden na hun laatste bestelling. Facturen blijven 7 jaar bewaard (fiscale
+ * bewaarplicht); naam en e-mail staan daarvoor op de factuur zelf.
  */
 export async function cleanupExpiredData(): Promise<{ intakes: number; customers: number; junctionUserIds: string[] }> {
   const sql = await db();
@@ -743,6 +791,9 @@ export async function cleanupExpiredData(): Promise<{ intakes: number; customers
   await sql`delete from funnel_events where created_at < now() - interval '13 months'`;
   await sql`delete from email_log where created_at < now() - interval '12 months'`;
   await sql`delete from admin_log where created_at < now() - interval '24 months'`;
+  // Facturen: 7 jaar (fiscale bewaarplicht), daarna weg.
+  await sql`delete from invoices where issued_at < now() - interval '7 years' and kind = 'credit'`;
+  await sql`delete from invoices i where i.issued_at < now() - interval '7 years' and not exists (select 1 from invoices c where c.credit_for = i.id)`;
   return { intakes: intakes.count, customers: customers.count, junctionUserIds: junction.map((r) => r.external_user_id) };
 }
 

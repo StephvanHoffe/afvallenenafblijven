@@ -8,7 +8,9 @@ import {
   guaranteeRequestEmail,
   loginEmail,
   orderConfirmationEmail,
+  paymentFailedEmail,
   plansReadyEmail,
+  subscriptionEndedEmail,
   weeklyReminderEmail,
   withdrawalConfirmationEmail,
   type Mail,
@@ -160,6 +162,22 @@ export const mailCatalog: MailCatalogEntry[] = [
     placeholders: { naam: p.naam, product: p.product, einddatum: "Laatste dag van het abonnement" },
     sample: (l) =>
       cancellationEmail({ to, name, productName: "Bundel: Voeding + Training", endsAt: new Date(Date.now() + 40 * DAY), locale: l }),
+  },
+  {
+    kind: "payment-failed",
+    label: "Maandelijkse betaling mislukt",
+    group: "Opzeggen, garantie en herroeping",
+    trigger: "Als een maandelijkse afschrijving niet lukt. Mollie probeert het daarna zelf tot 5 keer opnieuw; de klant krijgt één mail.",
+    placeholders: { naam: p.naam, product: p.product, bedrag: "Het bedrag van de mislukte afschrijving" },
+    sample: (l) => paymentFailedEmail({ to, name, productName: "Bundel: Voeding + Training", amountCents: 1395, locale: l }),
+  },
+  {
+    kind: "subscription-ended",
+    label: "Abonnement gestopt na mislukte betalingen",
+    group: "Opzeggen, garantie en herroeping",
+    trigger: "Als Mollie een abonnement stopt, meestal na herhaald mislukte incasso's of een ingetrokken machtiging. Jij krijgt dan ook een melding.",
+    placeholders: { naam: p.naam, product: p.product },
+    sample: (l) => subscriptionEndedEmail({ to, name, productName: "Bundel: Voeding + Training", locale: l }),
   },
   {
     kind: "guarantee",

@@ -19,7 +19,8 @@ import { CustomerDetailsForm, IntakeEditForm, NotesPanelBody } from "@/component
 import { Badge, NeedsDatabase, Notice, OrderStatusBadge, Panel, PlanDelivery, PlanStatusBadge, planName, table } from "@/components/beheer/ui";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
-import { describeCheckin, describeIntake, stripeDashboardUrl } from "@/lib/admin/describe";
+import { describeCheckin, describeIntake } from "@/lib/admin/describe";
+import { mollieDashboardUrl } from "@/lib/mollie";
 import { customerEmails, customerJourney, customerNotes } from "@/lib/admin/insights";
 import { catalogEntry } from "@/lib/admin/mail-catalog";
 import { CANCEL_REASONS, cancelReasonLabel } from "@/lib/cancel-reasons";
@@ -95,9 +96,9 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
               <Send className="size-4" aria-hidden /> Inloglink sturen
             </SubmitButton>
           </form>
-          {c.stripeCustomerId && !demo && (
-            <a href={stripeDashboardUrl("customers", c.stripeCustomerId)} target="_blank" rel="noopener noreferrer" className={small}>
-              <ExternalLink className="size-4" aria-hidden /> Open in Stripe
+          {c.mollieCustomerId && !demo && (
+            <a href={mollieDashboardUrl("customers", c.mollieCustomerId)} target="_blank" rel="noopener noreferrer" className={small}>
+              <ExternalLink className="size-4" aria-hidden /> Open in Mollie
             </a>
           )}
         </div>
@@ -149,7 +150,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                       </td>
                       <td className={`${table.td} ${table.num}`}>{formatDate(o.createdAt)}</td>
                       <td className={`${table.td} text-right`}>
-                        {o.stripeSubscriptionId && o.status === "active" && !o.cancelAt && (
+                        {o.duration !== "eenmalig" && o.status === "active" && !o.cancelAt && (
                           <details className="inline-block text-left">
                             <summary className="cursor-pointer list-none text-sm font-bold text-accent-600 [&::-webkit-details-marker]:hidden">
                               Opzeggen
@@ -199,11 +200,11 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                               <input type="hidden" name="bestelling" value={o.id} />
                               <input type="hidden" name="terug" value={here} />
                               <p>
-                                Betaalt de eerste betaling volledig terug via Stripe (bijv. bij de 14-dagengarantie of een herroeping). De
-                                klant krijgt het bedrag binnen 5-10 werkdagen terug.
+                                Betaalt de eerste betaling volledig terug via Mollie (bijv. bij de 14-dagengarantie of een herroeping), met een
+                                creditnota. De klant krijgt het bedrag meestal binnen een paar werkdagen terug.
                               </p>
                               <input name="reden" maxLength={200} className="input !py-1.5 text-xs" placeholder="Reden, bijv. garantie" aria-label="Reden" />
-                              {o.stripeSubscriptionId && o.status !== "canceled" && (
+                              {o.duration !== "eenmalig" && o.status !== "canceled" && (
                                 <label className="flex items-start gap-1.5">
                                   <input type="checkbox" name="beeindigen" value="1" defaultChecked className="mt-0.5" /> Abonnement direct beëindigen
                                   (geen nieuwe incasso&apos;s)
@@ -213,14 +214,14 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
                             </form>
                           </details>
                         )}
-                        {o.stripeSubscriptionId && !demo && (
+                        {!demo && (
                           <a
-                            href={stripeDashboardUrl("subscriptions", o.stripeSubscriptionId)}
+                            href={mollieDashboardUrl("payments", o.checkoutId)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="ml-3 text-sm font-semibold text-muted hover:text-ink"
                           >
-                            Stripe
+                            Mollie
                           </a>
                         )}
                       </td>
@@ -234,7 +235,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
           <Panel title="Betalingen">
             {payments.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted">
-                Nog geen betalingen vastgelegd. Betalingen komen binnen via de Stripe-webhook (invoice.paid en de afgeronde checkout).
+                Nog geen betalingen vastgelegd. Betalingen komen binnen via de Mollie-webhook, met de factuur erbij.
               </p>
             ) : (
               <div className={table.wrap}>
@@ -493,7 +494,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
               <input type="hidden" name="terug" value={here} />
               <p className="text-muted">
                 Verwijdert de klant met alle bestellingen, schema&apos;s, antwoorden en check-ins (AVG-verzoek). Zeg een lopend
-                abonnement eerst op. Facturen blijven bewaard in Stripe.
+                abonnement eerst op. Facturen en creditnota&apos;s blijven 7 jaar bewaard (fiscale bewaarplicht).
               </p>
               <label className="block">
                 <span className="label">Typ VERWIJDER ter bevestiging</span>
@@ -510,7 +511,7 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
   );
 }
 
-/** Link naar de factuur (pdf) van een betaling; de route vraagt Stripe om een verse link. */
+/** Link naar de factuur of creditnota (pdf) van een betaling. */
 function invoiceHref(paymentId: string): string {
   return `/beheer/factuur/${encodeURIComponent(paymentId)}`;
 }
@@ -518,13 +519,11 @@ function invoiceHref(paymentId: string): string {
 function paymentLabel(kind: "payment" | "refund", description: string | null): string {
   if (kind === "refund") return description ? `Terugbetaling (${description})` : "Terugbetaling";
   switch (description) {
-    case "subscription_create":
+    case "maand 1":
       return "Eerste betaling";
-    case "subscription_cycle":
-      return "Maandbedrag (incasso)";
     case "eenmalig":
       return "Los schema";
     default:
-      return description ? `Betaling (${description})` : "Betaling";
+      return description?.startsWith("maand ") ? `Incasso ${description}` : description ? `Betaling (${description})` : "Betaling";
   }
 }

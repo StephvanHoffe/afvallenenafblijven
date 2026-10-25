@@ -452,12 +452,11 @@ export function demoDiscountCodes(): DiscountCodeRow[] {
     starts_at: null,
     expires_at: null,
     active: true,
-    stripe_coupon_id: null,
     checkouts: 0,
   } satisfies Partial<DiscountCodeRow>;
   return [
     { ...base, id: "d0000001-0000-4000-8000-000000000001", code: "WELKOM10", description: "Nieuwsbrief en social", percent_off: 10, duration: "once", created_at: new Date(TODAY - 40 * DAY), redemptions: 14, checkouts: 31, revenue_cents: 21220 },
-    { ...base, id: "d0000001-0000-4000-8000-000000000002", code: "SANNE20", description: "Influencer Sanne (Instagram)", percent_off: 20, duration: "repeating", duration_months: 3, max_redemptions: 50, created_at: new Date(TODAY - 25 * DAY), redemptions: 9, checkouts: 17, revenue_cents: 12510, stripe_coupon_id: "afb_code_SANNE20_d0000001" },
+    { ...base, id: "d0000001-0000-4000-8000-000000000002", code: "SANNE20", description: "Influencer Sanne (Instagram)", percent_off: 20, duration: "repeating", duration_months: 3, max_redemptions: 50, created_at: new Date(TODAY - 25 * DAY), redemptions: 9, checkouts: 17, revenue_cents: 12510 },
     { ...base, id: "d0000001-0000-4000-8000-000000000003", code: "VOORJAAR", description: "Voorjaarsactie", percent_off: 15, duration: "once", starts_at: new Date(TODAY - 5 * DAY), expires_at: new Date(TODAY + 25 * DAY), products: ["bundel"], created_at: new Date(TODAY - 6 * DAY), redemptions: 3, checkouts: 8, revenue_cents: 4290 },
     { ...base, id: "d0000001-0000-4000-8000-000000000004", code: "BEDRIJF5", description: "Bedrijfsfitness Acme", percent_off: null, amount_off_cents: 500, duration: "forever", durations: ["6m", "12m"], created_at: new Date(TODAY - 60 * DAY), redemptions: 2, checkouts: 2, revenue_cents: 2990 },
     { ...base, id: "d0000001-0000-4000-8000-000000000005", code: "BLACKFRIDAY", description: "Black Friday 2026", percent_off: 30, duration: "once", expires_at: new Date(TODAY - 80 * DAY), active: false, created_at: new Date(TODAY - 90 * DAY), redemptions: 0, checkouts: 4, revenue_cents: 0 },

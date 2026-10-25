@@ -80,7 +80,8 @@ for (let i = 0; i < 48; i++) {
     amountCents: monthlyPrice(product, duration),
     monthlyCents: subscription ? monthlyPrice(product, duration) : 0,
     createdAt,
-    stripeSubscriptionId: subscription ? `sub_demo${String(i + 1).padStart(4, "0")}` : null,
+    checkoutId: `tr_demo${String(i + 1).padStart(4, "0")}`,
+    subscriptionId: subscription ? `sub_demo${String(i + 1).padStart(4, "0")}` : null,
     campaign: CAMPAIGN_CYCLE[i % CAMPAIGN_CYCLE.length],
     discountCode: i % 5 === 1 ? "WELKOM10" : i % 9 === 4 ? "SANNE20" : null,
     refundedCents: 0,
@@ -131,7 +132,7 @@ for (let i = 0; i < 48; i++) {
     email: orders[orders.length - 1].customerEmail,
     createdAt,
     marketing: i % 3 === 0,
-    stripeCustomerId: `cus_demo${String(i + 1).padStart(4, "0")}`,
+    mollieCustomerId: `cst_demo${String(i + 1).padStart(4, "0")}`,
     activeSubscriptions: subscription && (status === "active" || status === "past_due") ? 1 : 0,
     orders: 1,
     plans: planCount,
@@ -175,7 +176,7 @@ const guaranteeRequests: AdminGuaranteeRow[] = orders
     reason: i === 0 ? "Het past toch niet in mijn drukke werkweek." : null,
     createdAt: new Date(order.createdAt.getTime() + (i + 2) * DAY),
     handledAt: i === 1 ? new Date(order.createdAt.getTime() + (i + 3) * DAY) : null,
-    stripeCustomerId: null,
+    mollieCustomerId: null,
   }));
 
 

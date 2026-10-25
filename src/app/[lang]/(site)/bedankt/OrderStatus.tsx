@@ -9,8 +9,9 @@ import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 
 type Status = {
-  state: "ready" | "processing" | "failed" | "awaiting_payment" | "unknown";
+  state: "ready" | "processing" | "failed" | "awaiting_payment" | "payment_failed" | "unknown";
   value?: number;
+  orderReference?: string;
   product?: string;
   duration?: string;
   plans?: { type: "voeding" | "training"; status: string }[];
@@ -37,6 +38,9 @@ const copy = defineCopy({
     unknownTitle: "Bedankt voor je bestelling!",
     unknownText: "Je ontvangt je schema per e-mail zodra het klaar is. Check ook je spammap.",
     awaitingPayment: "We wachten op de bevestiging van je betaling…",
+    paymentFailedTitle: "Je betaling is niet gelukt",
+    paymentFailedText: "De betaling is afgebroken of niet gelukt, dus er is niets afgeschreven. Je antwoorden zijn bewaard: je kunt het meteen opnieuw proberen.",
+    retry: "Opnieuw betalen",
   },
   en: {
     steps: ["Payment received", "We're putting your plan together and checking it", "Your plan is ready and we'll email you"],
@@ -56,30 +60,33 @@ const copy = defineCopy({
     unknownTitle: "Thank you for your order!",
     unknownText: "You'll receive your plan by email as soon as it's ready. Be sure to check your spam folder too.",
     awaitingPayment: "We're waiting for confirmation of your payment…",
+    paymentFailedTitle: "Your payment didn't go through",
+    paymentFailedText: "The payment was cancelled or didn't go through, so nothing has been charged. Your answers have been saved, so you can try again straight away.",
+    retry: "Try paying again",
   },
 });
 
-export function OrderStatus({ sessionId }: { sessionId: string }) {
+export function OrderStatus({ intakeId }: { intakeId: string }) {
   const l = useLocale();
   const c = copy[l];
   const steps = c.steps;
   // Zonder bestelnummer (bijv. de pagina direct geopend) valt er niets op te vragen.
-  const [status, setStatus] = useState<Status>({ state: sessionId ? "awaiting_payment" : "unknown" });
+  const [status, setStatus] = useState<Status>({ state: intakeId ? "awaiting_payment" : "unknown" });
   const tracked = useRef(false);
 
   useEffect(() => {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
-    if (!sessionId) return;
+    if (!intakeId) return;
     async function poll() {
       try {
-        const res = await fetch(`/api/bestelling/status?session_id=${encodeURIComponent(sessionId)}`, { cache: "no-store" });
+        const res = await fetch(`/api/bestelling/status?bestelling=${encodeURIComponent(intakeId)}`, { cache: "no-store" });
         const data = (await res.json()) as Status;
         if (stop) return;
         setStatus(data);
         if (!tracked.current && data.value !== undefined) {
           tracked.current = true;
-          trackEvent("purchase", { value: data.value, currency: "EUR", transaction_id: sessionId });
+          trackEvent("purchase", { value: data.value, currency: "EUR", transaction_id: data.orderReference ?? intakeId });
         }
         // Wachten op de betaling: vaak kijken. Daarna rustig: het schema staat binnen 2 uur klaar.
         if (data.state === "awaiting_payment") timer = setTimeout(poll, 5000);
@@ -93,7 +100,7 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
       stop = true;
       clearTimeout(timer);
     };
-  }, [sessionId]);
+  }, [intakeId]);
 
   if (status.state === "ready") {
     return (
@@ -101,7 +108,7 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
         <CircleCheck className="mx-auto size-14 text-brand-600" aria-hidden />
         <h2 className="heading-md mt-4">{c.readyTitle}</h2>
         <p className="mt-2 text-muted">{c.readyText}</p>
-        <a href={`/api/bestelling/inloggen?session_id=${encodeURIComponent(sessionId)}&taal=${l}`} className="btn-primary mt-6 text-lg">
+        <a href={`/api/bestelling/inloggen?bestelling=${encodeURIComponent(intakeId)}&taal=${l}`} className="btn-primary mt-6 text-lg">
           {c.readyButton} <ArrowRight className="size-5" aria-hidden />
         </a>
       </div>
@@ -126,6 +133,19 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
         <Mail className="mx-auto size-12 text-brand-600" aria-hidden />
         <h2 className="heading-md mt-4">{c.unknownTitle}</h2>
         <p className="mt-2 text-muted">{c.unknownText}</p>
+      </div>
+    );
+  }
+
+  if (status.state === "payment_failed") {
+    return (
+      <div className="card p-8 text-center">
+        <TriangleAlert className="mx-auto size-12 text-accent-500" aria-hidden />
+        <h2 className="heading-md mt-4">{c.paymentFailedTitle}</h2>
+        <p className="mt-2 text-muted">{c.paymentFailedText}</p>
+        <Link href={`/start?hervat=${encodeURIComponent(intakeId)}`} className="btn-primary mt-6 text-lg">
+          {c.retry} <ArrowRight className="size-5" aria-hidden />
+        </Link>
       </div>
     );
   }
@@ -165,7 +185,7 @@ export function OrderStatus({ sessionId }: { sessionId: string }) {
       </ol>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
         <p className="text-sm text-muted">{c.spam}</p>
-        <a href={`/api/bestelling/inloggen?session_id=${encodeURIComponent(sessionId)}&taal=${l}`} className="btn-secondary !py-2.5 text-sm">
+        <a href={`/api/bestelling/inloggen?bestelling=${encodeURIComponent(intakeId)}&taal=${l}`} className="btn-secondary !py-2.5 text-sm">
           {c.account} <ArrowRight className="size-4" aria-hidden />
         </a>
       </div>

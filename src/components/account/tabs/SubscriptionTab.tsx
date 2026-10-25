@@ -1,5 +1,5 @@
 import Link from "@/i18n/Link";
-import { cancelSubscription, openBillingPortal, undoCancellation } from "@/app/[lang]/(site)/account/actions";
+import { cancelSubscription, undoCancellation } from "@/app/[lang]/(site)/account/actions";
 import { GuaranteeForm } from "@/app/[lang]/(site)/account/GuaranteeForm";
 import { accountHref } from "@/components/account/AccountShell";
 import { DemoButton } from "@/components/account/DemoButton";
@@ -173,13 +173,10 @@ export function SubscriptionTab({
                 </div>
                 {o.manageable && (o.status === "active" || o.status === "past_due") && (
                   <div className="flex flex-wrap items-start gap-2">
-                    {demo ? (
-                      <DemoButton className="btn-secondary !px-4 !py-2.5 text-sm">{c.billing}</DemoButton>
-                    ) : (
-                      <form action={openBillingPortal}>
-                        <SubmitButton className="btn-secondary !px-4 !py-2.5 text-sm">{c.billing}</SubmitButton>
-                      </form>
-                    )}
+                    {/* Op het tabblad Betalingen staat hoe het werkt (een bevestiging van € 0,01). */}
+                    <Link href={accountHref(base, "betalingen")} className="btn-secondary !px-4 !py-2.5 text-sm">
+                      {c.billing}
+                    </Link>
                     {o.cancelAt ? (
                       demo ? (
                         <DemoButton className="btn-secondary !px-4 !py-2.5 text-sm">{c.undo}</DemoButton>

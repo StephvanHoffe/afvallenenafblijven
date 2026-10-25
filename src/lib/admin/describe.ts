@@ -46,8 +46,3 @@ export function describeIntake(i: Intake): [string, string][] {
 }
 
 export { describeCheckin } from "@/lib/checkin";
-
-export function stripeDashboardUrl(kind: "customers" | "subscriptions", id: string): string {
-  const test = (process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_test");
-  return `https://dashboard.stripe.com/${test ? "test/" : ""}${kind}/${id}`;
-}

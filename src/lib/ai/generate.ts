@@ -21,14 +21,20 @@ import {
 import { dayTotals } from "@/lib/ai/plan-math";
 import { allergenProblems } from "@/lib/allergens";
 import type { Locale } from "@/i18n/config";
+import { loadStoredConfig } from "@/lib/db";
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5-5";
+/** Het model: in te stellen bij Beheer → Koppelingen (of ANTHROPIC_MODEL bij de hosting). */
+export function claudeModel(): string {
+  return process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+}
 
-let client: Anthropic | null = null;
-function anthropic(): Anthropic {
-  // De SDK leest ANTHROPIC_API_KEY uit de omgeving.
-  client ??= new Anthropic({ maxRetries: 3 });
-  return client;
+let client: { key: string; client: Anthropic } | null = null;
+/** De Claude-client. De sleutel kan in het beheer zijn gewijzigd: dan maken we een nieuwe. */
+export async function anthropic(): Promise<Anthropic> {
+  await loadStoredConfig();
+  const key = process.env.ANTHROPIC_API_KEY ?? "";
+  if (client?.key !== key) client = { key, client: new Anthropic({ apiKey: key || undefined, maxRetries: 3 }) };
+  return client.client;
 }
 
 export class PlanGenerationError extends Error {}
@@ -45,8 +51,8 @@ export async function generateStructured<T extends z.ZodType>(
   options: { effort?: "low" | "medium" | "high"; maxTokens?: number } = {},
 ): Promise<z.infer<T>> {
   const [base, ...extra] = typeof system === "string" ? [system] : system;
-  const stream = anthropic().beta.messages.stream({
-    model: MODEL,
+  const stream = (await anthropic()).beta.messages.stream({
+    model: claudeModel(),
     max_tokens: options.maxTokens ?? 64000,
     // Bij een (onterechte) weigering door de veiligheidsfilters probeert de API
     // het verzoek automatisch opnieuw op het aanbevolen fallback-model.

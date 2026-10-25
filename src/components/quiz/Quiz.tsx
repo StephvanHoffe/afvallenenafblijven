@@ -260,8 +260,8 @@ const copy = defineCopy({
       required: "Vink de verplichte vakjes aan om verder te gaan.",
       opening: "Betaalpagina openen…",
       submit: "Doorgaan naar veilig betalen",
-      methodsSubscription: "Eerste maand met iDEAL | Wero, Bancontact of IBAN; daarna automatische SEPA-incasso",
-      methodsOneOff: "Betalen via Stripe met iDEAL | Wero, Bancontact of creditcard",
+      methodsSubscription: "Eerste maand met iDEAL | Wero of Bancontact; daarna automatische SEPA-incasso",
+      methodsOneOff: "Betalen via Mollie met iDEAL | Wero, Bancontact of creditcard",
       guarantee: (days: number) => `Past het toch niet? Binnen ${days} dagen vraag je je eerste betaling terug in Mijn schema's.`,
       codeToggle: "Heb je een kortingscode?",
       codeLabel: "Kortingscode",
@@ -446,8 +446,8 @@ const copy = defineCopy({
       required: "Tick the required boxes to continue.",
       opening: "Opening payment page…",
       submit: "Continue to secure payment",
-      methodsSubscription: "First month with iDEAL | Wero, Bancontact or IBAN; then automatic SEPA Direct Debit",
-      methodsOneOff: "Pay via Stripe with iDEAL | Wero, Bancontact or credit card",
+      methodsSubscription: "First month with iDEAL | Wero or Bancontact; then automatic SEPA Direct Debit",
+      methodsOneOff: "Pay via Mollie with iDEAL | Wero, Bancontact or credit card",
       guarantee: (days: number) => `Not the right fit after all? Within ${days} days, you can request your first payment back in My plans.`,
       codeToggle: "Have a discount code?",
       codeLabel: "Discount code",
@@ -862,11 +862,12 @@ export function Quiz({
   useEffect(() => {
     const code = discount?.code ?? pendingCode.current;
     if (!s.product || !code) return;
-    pendingCode.current = null;
     let stale = false;
     checkDiscountCode(code, s.product, orderState.duration)
       .then((r) => {
+        // Een afgebroken controle (ander plan of andere looptijd) doet de volgende opnieuw, met dezelfde code.
         if (stale) return;
+        pendingCode.current = null;
         if (r.ok) {
           setDiscount({ code: r.code, label: r.label, terms: r.terms });
         } else {

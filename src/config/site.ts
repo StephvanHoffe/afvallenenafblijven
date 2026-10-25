@@ -33,7 +33,7 @@ export const site = {
   },
 
   /** Datum van de laatste wijziging van de juridische teksten. */
-  legalUpdated: "21 oktober 2026",
+  legalUpdated: "25 oktober 2026",
 
   /** Hoe snel reageren we op e-mail (gebruikt in contact- en klachtenteksten). */
   responseTimeDays: 2,
@@ -55,7 +55,7 @@ export const site = {
    * endsAt; lopen er twee tegelijk, dan geldt de eerste in de lijst. Een
    * kortingscode van een klant vervangt de actiekorting. `theme` geeft de
    * landingspagina's en de startknop een eigen uiterlijk zolang de actie loopt.
-   * De Stripe-coupons worden bij het eerste gebruik automatisch aangemaakt.
+   * De website rekent de korting zelf uit in de betalingen bij Mollie.
    * Testen voor de startdatum: zet PROMOTION_OVERRIDE=<id> (nooit in productie).
    */
   promotions: [

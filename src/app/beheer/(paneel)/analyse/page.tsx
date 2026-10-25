@@ -79,8 +79,8 @@ async function Analyse() {
 
       {!r.paymentsTracked && (
         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-          Er zijn nog geen betalingen vastgelegd, dus de omzet is een schatting op basis van de abonnementen. Voeg in Stripe het webhook-event
-          invoice.paid toe (zie README) voor de echte bedragen.
+          Er zijn nog geen betalingen vastgelegd, dus de omzet is een schatting op basis van de abonnementen. Betalingen komen binnen via
+          de Mollie-webhook; die werkt zodra de website op een openbaar adres staat (zie README).
         </p>
       )}
 

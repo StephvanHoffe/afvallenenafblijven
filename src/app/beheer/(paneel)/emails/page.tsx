@@ -10,6 +10,7 @@ import { emailCounts30, emailLog } from "@/lib/admin/insights";
 import { catalogEntry, mailCatalog } from "@/lib/admin/mail-catalog";
 import { allMailOverrides } from "@/lib/email-store";
 import { isEmailConfigured } from "@/lib/email";
+import { loadStoredConfig } from "@/lib/db";
 import { formatDateTime, formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = { title: "E-mails" };
@@ -31,6 +32,7 @@ const STATUS = {
 async function Emails({ searchParams }: Pick<PageProps<"/beheer/emails">, "searchParams">) {
   if (!isDemoMode()) await connection();
   await requireAdmin();
+  if (!isDemoMode()) await loadStoredConfig();
   if (!adminDataAvailable()) return <NeedsDatabase />;
   const sp = await searchParams;
   const view = sp.weergave === "log" ? "log" : "teksten";
@@ -49,7 +51,7 @@ async function Emails({ searchParams }: Pick<PageProps<"/beheer/emails">, "searc
       </PageTitle>
       {!isDemoMode() && !isEmailConfigured() && (
         <p className="mb-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-          SMTP is nog niet ingesteld: mails worden niet echt verstuurd (wel gelogd). Zie Instellingen.
+          E-mail is nog niet ingesteld: mails worden niet echt verstuurd (wel gelogd). Vul je mailbox in bij Koppelingen.
         </p>
       )}
       {view === "log" ? <Log q={str("q")} status={str("status")} kind={str("soort")} /> : <Texts />}

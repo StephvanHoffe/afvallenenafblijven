@@ -6,6 +6,7 @@ import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro } from "@/lib/format";
 import { nextPeriodStart } from "@/lib/schedule";
 import { logMail, mailTextOverride } from "@/lib/email-store";
+import { loadStoredConfig } from "@/lib/db";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -17,24 +18,36 @@ import { logMail, mailTextOverride } from "@/lib/email-store";
  * E-mails aan de beheerder zijn altijd Nederlands.
  */
 
-let transporter: Transporter | null = null;
+let transporter: { signature: string; transporter: Transporter } | null = null;
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST);
 }
 
-function transport(): Transporter {
-  transporter ??= nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT ?? 587) === 465,
-    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-  });
-  return transporter;
+/** De SMTP-verbinding. De gegevens kunnen in het beheer zijn gewijzigd: dan maken we een nieuwe. */
+export function transport(): Transporter {
+  const port = Number(process.env.SMTP_PORT || 587);
+  const signature = [process.env.SMTP_HOST, port, process.env.SMTP_USER, process.env.SMTP_PASS].join("|");
+  if (transporter?.signature !== signature) {
+    transporter = {
+      signature,
+      transporter: nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port,
+        secure: port === 465,
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+        // Niet minutenlang wachten op een mailserver die niet antwoordt.
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 30_000,
+      }),
+    };
+  }
+  return transporter.transporter;
 }
 
-const FROM = () => process.env.EMAIL_FROM ?? `${site.name} <${site.company.email}>`;
-export const adminEmail = () => process.env.ADMIN_EMAIL ?? site.company.email;
+const FROM = () => process.env.EMAIL_FROM || `${site.name} <${site.company.email}>`;
+export const adminEmail = () => process.env.ADMIN_EMAIL || site.company.email;
 
 /**
  * Klantmails waarvan je onderwerp, hoofdtekst en knop in het beheer kunt
@@ -53,6 +66,8 @@ export const MAIL_KINDS = [
   "login",
   "checkout-reminder",
   "cancellation",
+  "payment-failed",
+  "subscription-ended",
   "guarantee",
   "withdrawal",
 ] as const;
@@ -82,7 +97,9 @@ export interface Mail {
 }
 
 export async function sendMail(mail: Mail): Promise<boolean> {
-  let final = mail;
+  // De SMTP-gegevens en het beheeradres kunnen in het beheer (Koppelingen) staan.
+  await loadStoredConfig();
+  let final = mail.kind === "admin" ? { ...mail, to: adminEmail() } : mail;
   // Teksten die in het beheer zijn aangepast, gaan voor op de standaardteksten.
   if (mail.render && mail.kind && mail.kind !== "admin" && mail.locale) {
     const override = await mailTextOverride(mail.kind, mail.locale).catch(() => null);
@@ -653,6 +670,92 @@ ${paragraphs(t.intro)}
   }));
 }
 
+const paymentFailedCopy = defineCopy({
+  nl: {
+    subject: "Je maandelijkse betaling is niet gelukt",
+    line: (product: string, amount: string) =>
+      `De automatische afschrijving van ${amount} voor je abonnement "${product}" is niet gelukt. Dat gebeurt bijvoorbeeld als er op dat moment niet genoeg saldo op je rekening stond.`,
+    retry:
+      "Onze betaalpartner Mollie probeert het de komende dagen automatisch opnieuw. Zorg dat er genoeg saldo op je rekening staat, dan hoef je verder niets te doen. Wil je liever een andere rekening gebruiken? Wijzig dan je betaalmethode in Mijn schema's.",
+    button: "Naar mijn betalingen",
+  },
+  en: {
+    subject: "Your monthly payment didn't go through",
+    line: (product: string, amount: string) =>
+      `The automatic direct debit of ${amount} for your subscription "${product}" didn't go through. This can happen, for example, if there wasn't enough money in your account at the time.`,
+    retry:
+      "Our payment partner Mollie will automatically try again over the next few days. Make sure there's enough money in your account and there's nothing else you need to do. Would you rather use a different account? Then change your payment method in My plans.",
+    button: "Go to my payments",
+  },
+});
+
+/** Een maandelijkse afschrijving is mislukt; Mollie probeert het zelf opnieuw. */
+export function paymentFailedEmail(
+  input: { to: string; name: string; productName: string; amountCents: number; locale?: Locale },
+  l: Locale = input.locale ?? "nl",
+): Mail {
+  const c = paymentFailedCopy[l];
+  const g = common[l];
+  const amount = euro(input.amountCents, l);
+  const defaults: MailTexts = { subject: c.subject, intro: `${c.line("{product}", "{bedrag}")}\n\n${c.retry}`, button: c.button };
+  const vars = { naam: input.name, product: productName(input.productName, l), bedrag: amount };
+  const link = localeUrl(site.url, l, "/account/betalingen");
+  return editableMail("payment-failed", l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${t.button ? button(link, t.button) : ""}
+<p>${g.team(escapeHtml(site.name))}</p>`,
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${link}\n\n${g.team(site.name)}`,
+  }));
+}
+
+const subscriptionEndedCopy = defineCopy({
+  nl: {
+    subject: "Je abonnement is gestopt",
+    line: (product: string) =>
+      `Je abonnement "${product}" is gestopt, omdat de maandelijkse afschrijving ook na een paar nieuwe pogingen niet is gelukt (of omdat de machtiging is ingetrokken). Er wordt niets meer afgeschreven.`,
+    after:
+      "Je houdt toegang tot de schema's die je al hebt ontvangen. Was dit niet de bedoeling? Neem dan contact met ons op, dan zoeken we samen een oplossing.",
+    button: "Naar Mijn schema's",
+  },
+  en: {
+    subject: "Your subscription has stopped",
+    line: (product: string) =>
+      `Your subscription "${product}" has stopped, because the monthly direct debit still didn't go through after several new attempts (or because the mandate was revoked). No further payments will be taken.`,
+    after: "You'll keep access to the plans you've already received. Wasn't this what you intended? Then get in touch and we'll find a solution together.",
+    button: "Go to My plans",
+  },
+});
+
+/** Mollie heeft het abonnement gestopt (herhaald mislukte incasso of ingetrokken machtiging). */
+export function subscriptionEndedEmail(
+  input: { to: string; name: string; productName: string; locale?: Locale },
+  l: Locale = input.locale ?? "nl",
+): Mail {
+  const c = subscriptionEndedCopy[l];
+  const g = common[l];
+  const defaults: MailTexts = { subject: c.subject, intro: `${c.line("{product}")}\n\n${c.after}`, button: c.button };
+  const vars = { naam: input.name, product: productName(input.productName, l) };
+  const link = localeUrl(site.url, l, "/account");
+  return editableMail("subscription-ended", l, input.to, defaults, vars, (t) => ({
+    subject: t.subject,
+    html: layout(
+      t.subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(t.intro)}
+${t.button ? button(link, t.button) : ""}
+<p>${g.team(escapeHtml(site.name))}</p>`,
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${link}\n\n${g.team(site.name)}`,
+  }));
+}
+
 const orderCopy = defineCopy({
   nl: {
     subject: (orderNumber: string) => `Orderbevestiging ${orderNumber}`,
@@ -665,7 +768,7 @@ const orderCopy = defineCopy({
       "Je hebt bij je bestelling uitdrukkelijk ingestemd met directe levering van je schema en verklaard dat je weet dat je herroepingsrecht vervalt zodra de levering is begonnen.",
     thanks: "Bedankt voor je bestelling! We gaan aan de slag met je persoonlijke schema. Binnen 2 uur staat het klaar; je ontvangt dan een aparte e-mail met een persoonlijke link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
-      `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur ontvang je apart van onze betaalpartner Stripe.`,
+      `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur vind je in Mijn schema's, onder Betalingen.`,
     textTerms: "Algemene voorwaarden",
     textCancel: "Opzeggen",
   },
@@ -680,7 +783,7 @@ const orderCopy = defineCopy({
       "When placing your order, you expressly agreed to immediate delivery of your plan and confirmed that you understand your right of withdrawal lapses once delivery has begun.",
     thanks: "Thank you for your order! We're getting to work on your personal plan. It will be ready within 2 hours, and we'll send you a separate email with a personal link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
-      `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll receive your invoice separately from our payment partner Stripe.`,
+      `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll find your invoice in My plans, under Payments.`,
     textTerms: "Terms and conditions",
     textCancel: "Cancel",
   },
