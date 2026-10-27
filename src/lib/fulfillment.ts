@@ -221,6 +221,32 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));
 
+  // Melding aan jou (altijd in het Nederlands).
+  const nl = orderCopy.nl;
+  const dNl = durationFor(duration, "nl");
+  const name = productFor(product, "nl").name;
+  await sendMail(
+    adminNotificationEmail(
+      "nieuwe-bestelling",
+      subscription ? `Nieuw abonnement: ${name}` : `Nieuwe bestelling: ${name} (los schema)`,
+      {
+        Klant: `${customer.name} (${customer.email})`,
+        Product: name,
+        Looptijd: !subscription ? nl.oneOff : dNl.months === 1 ? nl.monthly : nl.minimum(dNl.label),
+        Betaald: euro(order.amount_cents),
+        Daarna: subscription
+          ? `${euro(order.monthly_cents)} per maand` +
+            (!intro ? "" : order.intro_months === 2 ? ` (2e maand: ${euro(order.intro_cents!)})` : ` (maand 2 t/m ${order.intro_months}: ${euro(order.intro_cents!)} per maand)`)
+          : undefined,
+        Korting: discountCode ? `Kortingscode ${discountCode}` : promo ? promo.label : undefined,
+        Bestelnummer: order.id.slice(0, 8).toUpperCase(),
+        Taal: l === "en" ? "Engels" : undefined,
+        Bekijken: `${site.url}/beheer/klanten/${customer.id}`,
+      },
+      { about: customer.email },
+    ),
+  ).catch((err) => console.error("Melding nieuwe bestelling versturen mislukt", err));
+
   return { order, created: true };
 }
 
@@ -254,6 +280,22 @@ async function handleRecurringPayment(payment: MolliePayment): Promise<void> {
     await sendMail(
       paymentFailedEmail({ to: customer.email, name: customer.name, productName: productFor(order.product, l).name, amountCents: toCents(payment.amount), locale: l }),
     ).catch((err) => console.error("Mail over mislukte betaling versturen mislukt", err));
+    await sendMail(
+      adminNotificationEmail(
+        "betaling-mislukt",
+        `Maandelijkse betaling mislukt: ${customer.name}`,
+        {
+          Klant: `${customer.name} (${customer.email})`,
+          Abonnement: productFor(order.product, "nl").name,
+          Bedrag: euro(toCents(payment.amount)),
+          Betaling: payment.id,
+          "Wat gebeurt er":
+            "De klant heeft een mail gekregen. Mollie probeert de incasso zelf opnieuw. Lukt het ook dan niet, dan stopt Mollie het abonnement en krijg je daar een melding van.",
+          Bekijken: `${site.url}/beheer/klanten/${customer.id}`,
+        },
+        { about: customer.email },
+      ),
+    ).catch((err) => console.error("Melding mislukte betaling versturen mislukt", err));
   }
 }
 
@@ -288,7 +330,7 @@ async function handleChargeback(payment: MolliePayment): Promise<void> {
   if (!inserted) return;
   if (order && isSubscription(order.duration) && order.status === "active") await updateOrderStatus(order.id, { status: "past_due" });
   await sendMail(
-    adminNotificationEmail("Terugboeking door de bank", {
+    adminNotificationEmail("terugboeking", "Terugboeking door de bank", {
       Betaling: payment.id,
       Bedrag: euro(cents),
       Bestelling: order ? order.id.slice(0, 8).toUpperCase() : "onbekend",

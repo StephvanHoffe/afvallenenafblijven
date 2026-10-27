@@ -6,8 +6,9 @@ import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro, formatDate } from "@/lib/format";
 import { dayAsDate, withdrawalLastDay } from "@/lib/withdrawal";
 import { nextPeriodStart } from "@/lib/schedule";
-import { logMail, mailTextOverride } from "@/lib/email-store";
+import { isAdminTopicMuted, logMail, mailTextOverride } from "@/lib/email-store";
 import { loadStoredConfig } from "@/lib/db";
+import type { AdminTopic } from "@/lib/admin-topics";
 
 /**
  * E-mail via SMTP. Werkt met elke aanbieder (bijv. je eigen hosting, Brevo,
@@ -89,6 +90,9 @@ export interface Mail {
   replyTo?: string;
   /** Soort mail (voor het log en aangepaste teksten); "admin" = melding aan de beheerder. */
   kind?: MailKind | "admin";
+  /** Bij een melding aan de beheerder: de soort melding, en het e-mailadres van de klant waar het over gaat. */
+  topic?: AdminTopic;
+  about?: string;
   locale?: Locale;
   /** Standaardteksten met {plaatshouders}, en de waarden voor deze mail. */
   defaults?: MailTexts;
@@ -101,6 +105,11 @@ export async function sendMail(mail: Mail): Promise<boolean> {
   // De SMTP-gegevens en het beheeradres kunnen in het beheer (Koppelingen) staan.
   await loadStoredConfig();
   let final = mail.kind === "admin" ? { ...mail, to: adminEmail() } : mail;
+  // Een melding aan jou die je in het beheer hebt uitgezet: alleen vastleggen, niet mailen.
+  if (mail.kind === "admin" && mail.topic && (await isAdminTopicMuted(mail.topic).catch(() => false))) {
+    await logMail(final, "disabled");
+    return false;
+  }
   // Teksten die in het beheer zijn aangepast, gaan voor op de standaardteksten.
   if (mail.render && mail.kind && mail.kind !== "admin" && mail.locale) {
     const override = await mailTextOverride(mail.kind, mail.locale).catch(() => null);
@@ -608,13 +617,23 @@ ${paragraphs(t.intro)}
   }));
 }
 
-/** Melding aan de beheerder (altijd Nederlands). */
-export function adminNotificationEmail(subject: string, lines: Record<string, string | undefined>, replyTo?: string): Mail {
+/**
+ * Melding aan de beheerder (altijd Nederlands). `topic` is de soort melding (zie
+ * src/lib/admin-topics.ts); `about` het e-mailadres van de klant waar het over gaat.
+ */
+export function adminNotificationEmail(
+  topic: AdminTopic,
+  subject: string,
+  lines: Record<string, string | undefined>,
+  { replyTo, about }: { replyTo?: string; about?: string } = {},
+): Mail {
   const entries = Object.entries(lines).filter(([, v]) => v);
   return {
     to: adminEmail(),
     subject: `[${site.shortName}] ${subject}`,
     kind: "admin",
+    topic,
+    about: about ?? replyTo,
     replyTo,
     html: layout(
       subject,

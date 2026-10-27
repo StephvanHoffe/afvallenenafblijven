@@ -29,7 +29,8 @@ import {
   sendMail,
   type MailKind,
 } from "@/lib/email";
-import { resetMailOverride, saveMailOverride } from "@/lib/email-store";
+import { resetMailOverride, saveMailOverride, setAdminTopicMuted } from "@/lib/email-store";
+import { adminTopicInfo, isAdminTopic } from "@/lib/admin-topics";
 import { catalogEntry } from "@/lib/admin/mail-catalog";
 import { describeDiscount, normalizeCode } from "@/lib/discounts";
 import { createDiscountCode, deleteDiscountCode, setDiscountActive } from "@/lib/discounts-server";
@@ -270,7 +271,8 @@ export async function deleteCustomer(formData: FormData): Promise<void> {
   // Koppelingen met gezondheidsapps eerst bij de aanbieder afmelden (Junction bewaart anders zelf data).
   for (const conn of await connectionsForCustomer(customerId)) await disconnect(conn);
   const customer = await getCustomer(customerId);
-  if (customer) await sql`delete from email_log where lower(to_email) = lower(${customer.email})`;
+  // Ook de meldingen aan jou over deze klant (die bevatten naam, e-mailadres en berichten).
+  if (customer) await sql`delete from email_log where lower(to_email) = lower(${customer.email}) or about_email = lower(${customer.email})`;
   await sql`delete from customers where id = ${customerId}`;
   await logAdminAction("Klant verwijderd (AVG)", customer ? customer.name : null);
   redirect("/beheer/klanten?melding=verwijderd");
@@ -292,10 +294,21 @@ export async function markGuaranteeHandled(formData: FormData): Promise<void> {
   back(formData, "garantie-afgehandeld");
 }
 
+/** Zet de mail voor één soort melding aan of uit. De melding blijft altijd zichtbaar in het beheer. */
+export async function setAdminTopic(formData: FormData): Promise<void> {
+  await guard(formData);
+  const topic = String(formData.get("onderwerp") ?? "");
+  if (!isAdminTopic(topic) || adminTopicInfo(topic)?.fixed) back(formData, "niet-gevonden");
+  const on = formData.get("aan") === "1";
+  await setAdminTopicMuted(topic, !on);
+  await logAdminAction(on ? "Melding per mail aangezet" : "Melding per mail uitgezet", adminTopicInfo(topic)!.label);
+  back(formData, on ? "melding-mail-aan" : "melding-mail-uit");
+}
+
 export async function sendTestEmail(formData: FormData): Promise<void> {
   await guard(formData);
   const sent = await sendMail(
-    adminNotificationEmail("Testmail", {
+    adminNotificationEmail("test", "Testmail", {
       Bericht: "Deze testmail laat zien dat het versturen van e-mail vanaf de website werkt.",
     }),
   ).catch(() => false);

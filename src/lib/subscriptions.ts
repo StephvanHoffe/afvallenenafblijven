@@ -337,11 +337,16 @@ export async function runSubscriptionMaintenance({ daily }: { daily: boolean }):
       const l = toLocale(customer.locale);
       await sendMail(subscriptionEndedEmail({ to: customer.email, name: customer.name, productName: productFor(order.product, l).name, locale: l }));
       await sendMail(
-        adminNotificationEmail("Abonnement gestopt door Mollie", {
-          Klant: `${customer.name} (${customer.email})`,
-          Bestelling: order.id.slice(0, 8).toUpperCase(),
-          Reden: "Mollie heeft het abonnement gestopt, meestal na herhaald mislukte incasso's of een ingetrokken machtiging.",
-        }),
+        adminNotificationEmail(
+          "abonnement-gestopt",
+          "Abonnement gestopt door Mollie",
+          {
+            Klant: `${customer.name} (${customer.email})`,
+            Bestelling: order.id.slice(0, 8).toUpperCase(),
+            Reden: "Mollie heeft het abonnement gestopt, meestal na herhaald mislukte incasso's of een ingetrokken machtiging.",
+          },
+          { about: customer.email },
+        ),
       );
       stopped++;
     } catch (err) {

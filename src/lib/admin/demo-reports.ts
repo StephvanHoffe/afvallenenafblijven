@@ -4,7 +4,7 @@ import { demoAdminData } from "@/lib/admin/demo-data";
 import { QUIZ_STEPS, STAGE_DEFS } from "@/lib/admin/funnel-steps";
 import type { AbandonedCheckout, FunnelBreakdownRow, FunnelFilters, FunnelReport } from "@/lib/admin/funnel-report";
 import type { AnalyticsReport, CohortRow, MonthRow } from "@/lib/admin/analytics-report";
-import type { AdminLogRow, CustomerJourney, EmailLogRow, FeedbackReport, NoteRow } from "@/lib/admin/insights";
+import type { AdminLogRow, AdminNotificationRow, CustomerJourney, EmailLogRow, FeedbackReport, NoteRow } from "@/lib/admin/insights";
 import type { DiscountCodeRow } from "@/lib/discounts-server";
 import type { VisitorsReport, VisitorSegmentRow } from "@/lib/admin/visitors-report";
 import type { CheckinData } from "@/lib/checkin";
@@ -379,6 +379,47 @@ export async function demoEmailLog(filters: { q?: string; status?: string; kind?
 export async function demoEmailCounts(): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const e of await allDemoEmails()) if (e.kind) counts[e.kind] = (counts[e.kind] ?? 0) + 7;
+  return counts;
+}
+
+let notificationCache: AdminNotificationRow[] | null = null;
+async function allDemoNotifications(): Promise<AdminNotificationRow[]> {
+  if (notificationCache) return notificationCache;
+  const customers = await demoAdminData.customers();
+  const c = (i: number) => customers[i % customers.length];
+  const who = (i: number) => `${c(i).name} (${c(i).email})`;
+  const link = (i: number) => `https://afvallenenafblijven.nl/beheer/klanten/${c(i).id}`;
+  const items: [string, string, string, number, number, AdminNotificationRow["status"]][] = [
+    ["nieuwe-bestelling", "Nieuw abonnement: Bundel: Voeding + Training", `Klant: ${who(0)}\nProduct: Bundel: Voeding + Training\nLooptijd: Minimaal 3 maanden\nBetaald: € 13,46\nDaarna: € 17,95 per maand (maand 2 t/m 3: € 13,46 per maand)\nKorting: Black Friday\nBestelnummer: 8F3A21C0\nBekijken: ${link(0)}`, 0, 2, "sent"],
+    ["opgezegd", `Abonnement opgezegd: ${c(3).name}`, `Klant: ${who(3)}\nAbonnement: Voeding · 1 maand\nBestelnummer: 4C19E0A2\nLoopt nog tot en met: 3 maart 2027\nReden: Te duur\nToelichting: Ik ga het nu een tijdje zelf proberen.\nBekijken: ${link(3)}`, 3, 5, "sent"],
+    ["schema-goedkeuren", "Schema wacht op je goedkeuring", `Klant: ${who(1)}\nPeriode: 2\nGepland voor de klant: 15 februari 2027 om 11:40\nKlant verwacht het uiterlijk: 15 februari 2027 om 12:05\nWat te doen: Bekijk het schema en klik op "Goedkeuren".`, 1, 7, "sent"],
+    ["nieuwe-bestelling", "Nieuwe bestelling: Voeding (los schema)", `Klant: ${who(5)}\nProduct: Voeding\nLooptijd: Los schema (4 weken)\nBetaald: € 19,95\nBestelnummer: 77AB0C31\nBekijken: ${link(5)}`, 5, 26, "disabled"],
+    ["betaling-mislukt", `Maandelijkse betaling mislukt: ${c(4).name}`, `Klant: ${who(4)}\nAbonnement: Training\nBedrag: € 11,95\nWat gebeurt er: De klant heeft een mail gekregen. Mollie probeert de incasso zelf opnieuw.\nBekijken: ${link(4)}`, 4, 30, "sent"],
+    ["contact", "Contactformulier: Vraag over vegetarisch eten", `Naam: ${c(6).name}\nE-mail: ${c(6).email}\nBericht: Kunnen jullie ook een vegetarisch schema maken zonder vleesvervangers?`, 6, 44, "sent"],
+    ["opzegging-ingetrokken", `Opzegging ingetrokken: ${c(2).name}`, `Klant: ${who(2)}\nAbonnement: Bundel: Voeding + Training · 6 maanden\nWas opgezegd per: 20 maart 2027\nGevolg: Het abonnement loopt gewoon door.\nBekijken: ${link(2)}`, 2, 52, "sent"],
+    ["garantie", "Garantie-aanvraag ontvangen", `Naam: ${c(7).name}\nE-mail: ${c(7).email}\nTerug te betalen: € 17,95 (eerste betaling)\nReden: Het past nu niet in mijn week.`, 7, 70, "sent"],
+  ];
+  notificationCache = items.map(([topic, subject, body, ci, hoursAgo, status], i) => ({
+    id: 5000 - i,
+    topic,
+    subject: `[A&A] ${subject}`,
+    body,
+    status,
+    error: null,
+    createdAt: new Date(TODAY - hoursAgo * HOUR),
+    aboutEmail: c(ci).email,
+    customerId: c(ci).id,
+  }));
+  return notificationCache;
+}
+
+export async function demoAdminNotifications(topic?: string): Promise<AdminNotificationRow[]> {
+  return (await allDemoNotifications()).filter((n) => !topic || n.topic === topic);
+}
+
+export async function demoAdminTopicCounts(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const n of await allDemoNotifications()) if (n.topic) counts[n.topic] = (counts[n.topic] ?? 0) + 3;
   return counts;
 }
 

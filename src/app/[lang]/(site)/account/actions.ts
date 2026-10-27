@@ -28,7 +28,8 @@ import { euro, formatDate } from "@/lib/format";
 import { defineCopy, localePath, type Locale } from "@/i18n/config";
 import { requestLocale } from "@/i18n/server";
 import { goalOptions } from "@/lib/intake";
-import { isCancelReason } from "@/lib/cancel-reasons";
+import { cancelReasonLabel, isCancelReason } from "@/lib/cancel-reasons";
+import { site } from "@/config/site";
 import type { FormState } from "@/components/forms/FormStatus";
 
 const copy = defineCopy({
@@ -92,9 +93,22 @@ async function ownSubscriptionOrder(formData: FormData, l: Locale) {
   return { customer, order };
 }
 
+/** Melding aan jou bij opzeggen of intrekken door de klant zelf. */
+function subscriptionNotice(
+  customer: { id: string; name: string; email: string },
+  order: { id: string; product: Parameters<typeof productFor>[0]; duration: keyof typeof durations },
+): Record<string, string> {
+  return {
+    Klant: `${customer.name} (${customer.email})`,
+    Abonnement: `${productFor(order.product, "nl").name} · ${durations[order.duration].label}`,
+    Bestelnummer: order.id.slice(0, 8).toUpperCase(),
+  };
+}
+
 export async function cancelSubscription(formData: FormData): Promise<void> {
   const l = await requestLocale();
   const { customer, order } = await ownSubscriptionOrder(formData, l);
+  const alreadyCanceled = Boolean(order.cancel_at);
   const endsAt = order.cancel_at ?? (await cancelOrder(order));
   const reason = formData.get("reden");
   const comment = String(formData.get("toelichting") ?? "").trim().slice(0, 1000) || null;
@@ -112,13 +126,50 @@ export async function cancelSubscription(formData: FormData): Promise<void> {
       l,
     ),
   ).catch((err) => console.error("Opzegbevestiging versturen mislukt", err));
+  if (!alreadyCanceled) {
+    await sendMail(
+      adminNotificationEmail(
+        "opgezegd",
+        `Abonnement opgezegd: ${customer.name}`,
+        {
+          ...subscriptionNotice(customer, order),
+          "Loopt nog tot en met": endsAt ? formatDate(endsAt) : undefined,
+          Reden: isCancelReason(reason) ? cancelReasonLabel(reason) : undefined,
+          Toelichting: comment ?? undefined,
+          Bekijken: `${site.url}/beheer/klanten/${customer.id}`,
+        },
+        { about: customer.email },
+      ),
+    ).catch((err) => console.error("Melding opzegging versturen mislukt", err));
+  }
   redirect(localePath(l, "/account/abonnement?opgezegd=1"));
 }
 
 export async function undoCancellation(formData: FormData): Promise<void> {
   const l = await requestLocale();
-  const { order } = await ownSubscriptionOrder(formData, l);
-  await resumeOrder(order).catch((err) => console.error(`Opzegging ${order.id} intrekken mislukt`, err));
+  const { customer, order } = await ownSubscriptionOrder(formData, l);
+  const resumed = await resumeOrder(order).then(
+    () => true,
+    (err) => {
+      console.error(`Opzegging ${order.id} intrekken mislukt`, err);
+      return false;
+    },
+  );
+  if (resumed && order.cancel_at) {
+    await sendMail(
+      adminNotificationEmail(
+        "opzegging-ingetrokken",
+        `Opzegging ingetrokken: ${customer.name}`,
+        {
+          ...subscriptionNotice(customer, order),
+          "Was opgezegd per": formatDate(order.cancel_at),
+          Gevolg: "Het abonnement loopt gewoon door.",
+          Bekijken: `${site.url}/beheer/klanten/${customer.id}`,
+        },
+        { about: customer.email },
+      ),
+    ).catch((err) => console.error("Melding ingetrokken opzegging versturen mislukt", err));
+  }
   redirect(localePath(l, "/account/abonnement"));
 }
 
@@ -307,6 +358,7 @@ export async function requestGuarantee(_prev: FormState, formData: FormData): Pr
     ),
     sendMail(
       adminNotificationEmail(
+        "garantie",
         "Garantie-aanvraag ontvangen",
         {
           Naam: customer.name,
@@ -317,7 +369,7 @@ export async function requestGuarantee(_prev: FormState, formData: FormData): Pr
           Reden: reason,
           Taal: l === "en" ? "Engels" : undefined,
         },
-        customer.email,
+        { replyTo: customer.email },
       ),
     ),
   ]).catch((err) => console.error("Garantie-aanvraag mailen mislukt", err));
