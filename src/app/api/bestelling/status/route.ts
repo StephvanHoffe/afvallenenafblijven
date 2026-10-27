@@ -5,7 +5,8 @@ import { isMollieConfigured } from "@/lib/mollie";
 import { processOrderPlans, releaseAndNotify } from "@/lib/plans";
 import { MAX_PLAN_ATTEMPTS, getIntake, plansForOrder } from "@/lib/repo";
 
-export const maxDuration = 300;
+// Een schema maken met Claude kan meer dan 5 minuten duren; 800 seconden is het maximum op Vercel Pro (Fluid compute).
+export const maxDuration = 800;
 
 /**
  * Status van een bestelling voor de bedankpagina (?bestelling = het nummer van

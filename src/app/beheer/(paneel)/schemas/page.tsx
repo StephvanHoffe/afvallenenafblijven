@@ -11,6 +11,8 @@ import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Schema's" };
+// Voor "Opnieuw maken" en een nieuwe periode starten: het schema wordt direct gemaakt (kan meer dan 5 minuten duren).
+export const maxDuration = 800;
 
 const FILTERS: AdminPlanFilter[] = ["ready", "gepland", "goedkeuren", "generating", "pending", "failed"];
 

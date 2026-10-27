@@ -15,6 +15,8 @@ import { formatDateTime } from "@/lib/format";
 import { intakeLabels } from "@/i18n/options";
 
 export const metadata: Metadata = { title: "Schema" };
+// Voor "Opnieuw maken" en een nieuwe periode starten: het schema wordt direct gemaakt (kan meer dan 5 minuten duren).
+export const maxDuration = 800;
 
 export default function SchemaPage({ params, searchParams }: PageProps<"/beheer/schemas/[id]">) {
   return (
