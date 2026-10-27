@@ -216,6 +216,7 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
         ? c.noRenewal
         : (d.months === 1 ? c.renewalMonthly(monthly) : c.renewalAfter(monthly, d.label)) + (intro ? c.introRenewal(order.intro_months, introAmount) : ""),
       incassoNote: subscription ? c.incasso(monthly) + (intro ? c.introIncasso(promoLabel, order.intro_months, introAmount) : "") : undefined,
+      paidAt: payment.paidAt ? new Date(payment.paidAt) : new Date(),
       locale: l,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));

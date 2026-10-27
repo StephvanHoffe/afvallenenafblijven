@@ -3,7 +3,8 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { site } from "@/config/site";
 import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
-import { euro } from "@/lib/format";
+import { euro, formatDate } from "@/lib/format";
+import { dayAsDate, withdrawalLastDay } from "@/lib/withdrawal";
 import { nextPeriodStart } from "@/lib/schedule";
 import { logMail, mailTextOverride } from "@/lib/email-store";
 import { loadStoredConfig } from "@/lib/db";
@@ -503,7 +504,7 @@ const withdrawalCopy = defineCopy({
     reference: "Kenmerk",
     intro: "We hebben je verklaring van herroeping ontvangen. Hieronder vind je de inhoud en het tijdstip van ontvangst. Bewaar deze e-mail goed.",
     refund: (days: number) =>
-      `Voor zover je herroepingsrecht van toepassing is, betalen we het bedrag binnen 14 dagen terug via dezelfde betaalmethode en stoppen we een eventueel abonnement. Als je herroepingsrecht al was vervallen (bijvoorbeeld omdat je schema al was geleverd nadat je daar uitdrukkelijk mee had ingestemd), laten we je dat binnen ${days} werkdagen weten.`,
+      `Heb je binnen 14 dagen na je betaling herroepen, dan betalen we alle betalingen binnen 14 dagen terug via dezelfde betaalmethode en stoppen we een eventueel abonnement. Was die termijn al voorbij, dan laten we je dat binnen ${days} werkdagen weten.`,
     text: "We hebben je herroeping ontvangen.",
   },
   en: {
@@ -516,7 +517,7 @@ const withdrawalCopy = defineCopy({
     reference: "Reference",
     intro: "We have received your notice of withdrawal. Below you'll find its contents and the time we received it. Please keep this email safe.",
     refund: (days: number) =>
-      `Insofar as your right of withdrawal applies, we will refund the amount within 14 days using the same payment method and stop any subscription. If your right of withdrawal had already lapsed (for example because your plan had already been delivered after you had expressly agreed to this), we will let you know within ${days} working days.`,
+      `If you withdrew within 14 days of your payment, we will refund all payments within 14 days using the same payment method and stop any subscription. If that period had already passed, we will let you know within ${days} working days.`,
     text: "We have received your withdrawal.",
   },
 });
@@ -554,7 +555,7 @@ ${paragraphs(t.intro)}
 <p>${g.team(escapeHtml(site.name))}</p>`,
       l,
     ),
-    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${details}\n\n${g.team(site.name)}`,
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${details}\n\n${c.refund(site.responseTimeDays)}\n\n${g.team(site.name)}`,
   }));
 }
 
@@ -764,8 +765,8 @@ const orderCopy = defineCopy({
     duration: "Looptijd",
     paid: "Betaald",
     renewal: "Verlenging",
-    consent:
-      "Je hebt bij je bestelling uitdrukkelijk ingestemd met directe levering van je schema en verklaard dat je weet dat je herroepingsrecht vervalt zodra de levering is begonnen.",
+    consent: (until: string) =>
+      `Je bent bij je bestelling akkoord gegaan met het direct maken van je schema. Je herroepingsrecht van 14 dagen is vanzelf ingegaan op de dag van je betaling en loopt tot en met ${until}. Herroepen kan via de herroepingsfunctie op onze website.`,
     thanks: "Bedankt voor je bestelling! We gaan aan de slag met je persoonlijke schema. Binnen 2 uur staat het klaar; je ontvangt dan een aparte e-mail met een persoonlijke link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur vind je in Mijn schema's, onder Betalingen.`,
@@ -779,8 +780,8 @@ const orderCopy = defineCopy({
     duration: "Term",
     paid: "Paid",
     renewal: "Renewal",
-    consent:
-      "When placing your order, you expressly agreed to immediate delivery of your plan and confirmed that you understand your right of withdrawal lapses once delivery has begun.",
+    consent: (until: string) =>
+      `When placing your order, you agreed to us creating your plan immediately. Your 14-day right of withdrawal started automatically on the day of your payment and runs until ${until} inclusive. You can withdraw via the withdrawal function on our website.`,
     thanks: "Thank you for your order! We're getting to work on your personal plan. It will be ready within 2 hours, and we'll send you a separate email with a personal link.",
     terms: (termsHref: string, cancelHref: string, cancelLabel: string) =>
       `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll find your invoice in My plans, under Payments.`,
@@ -799,11 +800,14 @@ export function orderConfirmationEmail(
     amountPaid: string;
     renewal: string;
     incassoNote?: string;
+    /** Moment van de betaling: daarmee gaat het herroepingsrecht in. */
+    paidAt?: Date;
     locale?: Locale;
   },
   l: Locale = input.locale ?? "nl",
 ): Mail {
   const c = orderCopy[l];
+  const consent = c.consent(formatDate(dayAsDate(withdrawalLastDay(input.paidAt ?? new Date())), l));
   const g = common[l];
   const rows: [string, string][] = [
     [c.orderNumber, input.orderNumber],
@@ -826,12 +830,12 @@ ${paragraphs(t.intro)}
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5b6b62;">${escapeHtml(k)}</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${escapeHtml(v)}</td></tr>`).join("")}
 </table>
 ${input.incassoNote ? `<p style="font-size:14px;color:#5b6b62;">${escapeHtml(input.incassoNote)}</p>` : ""}
-<p style="font-size:14px;color:#5b6b62;">${escapeHtml(c.consent)}</p>
+<p style="font-size:14px;color:#5b6b62;">${escapeHtml(consent)}</p>
 <p style="font-size:14px;color:#5b6b62;">${c.terms(termsHref, cancelHref, cancelHref.replace(/^https?:\/\//, ""))}</p>
 <p>${g.team(escapeHtml(site.name))}</p>`,
     l,
     ),
-    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${c.consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`,
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`,
   }));
 }
 

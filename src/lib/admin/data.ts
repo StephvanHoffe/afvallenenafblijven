@@ -123,6 +123,9 @@ export interface AdminWithdrawalRow {
   message: string | null;
   createdAt: Date;
   handledAt: Date | null;
+  /** De bestelling die bij het kenmerk of e-mailadres hoort (null als die niet te vinden is). */
+  orderPaidAt: Date | null;
+  customerId: string | null;
 }
 
 /** Een aanvraag onder de tevredenheidsgarantie (eerste betaling terug). */
@@ -517,8 +520,29 @@ const dbAdminData: AdminData = {
   async withdrawals() {
     const sql = await db();
     const rows = await sql<
-      { id: string; name: string; email: string; order_reference: string; message: string | null; created_at: Date; handled_at: Date | null }[]
-    >`select * from withdrawals order by created_at desc limit 200`;
+      {
+        id: string;
+        name: string;
+        email: string;
+        order_reference: string;
+        message: string | null;
+        created_at: Date;
+        handled_at: Date | null;
+        order_paid_at: Date | null;
+        customer_id: string | null;
+      }[]
+    >`
+      select w.*, o.created_at as order_paid_at, o.customer_id
+      from withdrawals w
+      -- Het bestelnummer (eerste 8 tekens) gaat voor; anders de laatste bestelling met hetzelfde e-mailadres.
+      left join lateral (
+        select o.created_at, o.customer_id, upper(left(o.id::text, 8)) = upper(trim(w.order_reference)) as exact
+        from orders o join customers c on c.id = o.customer_id
+        where upper(left(o.id::text, 8)) = upper(trim(w.order_reference)) or lower(c.email) = lower(trim(w.email))
+        order by exact desc, o.created_at desc
+        limit 1
+      ) o on true
+      order by w.created_at desc limit 200`;
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -527,6 +551,8 @@ const dbAdminData: AdminData = {
       message: r.message,
       createdAt: r.created_at,
       handledAt: r.handled_at,
+      orderPaidAt: r.order_paid_at,
+      customerId: r.customer_id,
     }));
   },
 
