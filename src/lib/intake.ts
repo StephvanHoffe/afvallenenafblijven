@@ -102,7 +102,7 @@ const messages = defineCopy({
     email: "Vul een geldig e-mailadres in",
     healthData: "Geef toestemming voor het verwerken van je gezondheidsgegevens",
     terms: "Bevestig dat je de vragen naar waarheid hebt ingevuld en ga akkoord met de algemene voorwaarden",
-    immediateDelivery: "Geef aan dat we direct met je schema mogen beginnen",
+    immediateDelivery: "Bevestig dat je je herroepingsrecht kent en akkoord gaat met de directe start van je schema",
   },
   en: {
     maxLength: (max: number) => `Maximum ${max} characters`,
@@ -114,7 +114,7 @@ const messages = defineCopy({
     email: "Please enter a valid email address",
     healthData: "Please give consent for us to process your health data",
     terms: "Please confirm that your answers are truthful and accept the terms and conditions",
-    immediateDelivery: "Please confirm that we may start on your plan straight away",
+    immediateDelivery: "Please confirm that you know your right of withdrawal and agree to us starting on your plan straight away",
   },
 });
 const m = messages.nl;
