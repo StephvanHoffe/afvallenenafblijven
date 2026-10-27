@@ -11,6 +11,7 @@ import type { ProgressContext } from "@/lib/ai/prompts";
 import type { PlanContent } from "@/lib/ai/schemas";
 import {
   MAX_PLAN_ATTEMPTS,
+  abandonStalePlans,
   checkinsForOrder,
   claimPlan,
   completePlan,
@@ -70,6 +71,19 @@ async function measuredActivity(customerId: string, since: Date, intake: Intake,
  * Maakt één schema met Claude. Veilig om vaker aan te roepen: alleen het
  * proces dat het schema "claimt" voert de generatie uit.
  */
+/** Ruwe bovengrens voor het maken van één schema, inclusief een tweede ronde na de controle. */
+const PLAN_WORST_CASE_MS = 10 * 60 * 1000;
+
+function planFailedNotification(plan: { id: string; order_id: string; type: string }, message: string) {
+  return adminNotificationEmail("schema-mislukt", "Schema kon niet worden gemaakt", {
+    Schema: plan.id,
+    Bestelling: plan.order_id,
+    Type: plan.type,
+    Fout: message,
+    "Wat te doen": `Controleer de oorzaak (meestal de API-sleutel of het tegoed bij Anthropic; zie de fout hierboven). Open daarna het schema in het beheer en klik op "Opnieuw maken": ${site.url}/beheer/schemas/${plan.id}`,
+  });
+}
+
 export async function processPlan(planId: string): Promise<void> {
   const plan = await claimPlan(planId);
   if (!plan) return;
@@ -209,13 +223,7 @@ export async function processPlan(planId: string): Promise<void> {
     const failed = await failPlan(plan.id, message);
     if (failed && failed.attempts >= MAX_PLAN_ATTEMPTS) {
       await sendMail(
-        adminNotificationEmail("schema-mislukt", "Schema kon niet worden gemaakt", {
-          Schema: plan.id,
-          Bestelling: plan.order_id,
-          Type: plan.type,
-          Fout: message,
-          "Wat te doen": `Controleer de oorzaak (meestal de API-sleutel of het tegoed bij Anthropic; zie de fout hierboven). Open daarna het schema in het beheer en klik op "Opnieuw maken": ${site.url}/beheer/schemas/${plan.id}`,
-        }),
+        planFailedNotification(plan, message),
       ).catch(() => {});
     }
   }
@@ -462,12 +470,18 @@ export async function runScheduledWork(
     await processWeeklyLog(id);
   }
 
+  // Afgebroken pogingen waarna geen poging meer over is: op mislukt zetten en melden.
+  for (const plan of await abandonStalePlans().catch(() => [])) {
+    console.error(`Schema ${plan.id} afgebroken na ${plan.attempts} pogingen`);
+    await sendMail(planFailedNotification(plan, plan.error ?? "Afgebroken")).catch(() => {});
+  }
+
   let processed = 0;
   const queue = await pendingPlanIds(20);
-  // Ruwe schatting: een schema kost enkele minuten; begin geen nieuwe batch
-  // als de resterende tijd daar niet meer voor genoeg is. Wat blijft liggen,
-  // pakt de volgende run op.
-  while (queue.length > 0 && Date.now() - started < budgetMs - 200_000) {
+  // Een schema kan tot ongeveer 10 minuten kosten; begin geen nieuwe batch als
+  // de resterende tijd daar niet meer voor genoeg is. Wat blijft liggen, pakt
+  // de volgende run op.
+  while (queue.length > 0 && Date.now() - started < budgetMs - PLAN_WORST_CASE_MS) {
     const batch = queue.splice(0, 2);
     await Promise.all(batch.map((id) => processPlan(id)));
     processed += batch.length;

@@ -6,7 +6,8 @@ import { deleteJunctionUser } from "@/lib/health/junction";
 import { isMollieConfigured } from "@/lib/mollie";
 import { runSubscriptionMaintenance } from "@/lib/subscriptions";
 
-export const maxDuration = 300;
+// Een schema maken met Claude kan meer dan 5 minuten duren; 800 seconden is het maximum op Vercel Pro (Fluid compute).
+export const maxDuration = 800;
 
 /** Vanaf dit uur (Nederlandse tijd) draait het dagelijkse deel: herinneringen gaan 's ochtends de deur uit. */
 const DAILY_FROM_HOUR = 8;

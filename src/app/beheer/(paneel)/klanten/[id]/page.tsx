@@ -30,6 +30,8 @@ import { startsLater } from "@/lib/schedule";
 import { adminNow } from "@/lib/admin/clock";
 
 export const metadata: Metadata = { title: "Klant" };
+// Voor "Opnieuw maken" en een nieuwe periode starten: het schema wordt direct gemaakt (kan meer dan 5 minuten duren).
+export const maxDuration = 800;
 
 export default function KlantPage({ params, searchParams }: PageProps<"/beheer/klanten/[id]">) {
   return (

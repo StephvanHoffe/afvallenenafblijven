@@ -361,6 +361,21 @@ export async function claimPlan(planId: string): Promise<Plan | null> {
   return row ?? null;
 }
 
+/**
+ * Schema's die op "wordt gemaakt" zijn blijven staan omdat de server de poging
+ * afbrak (bijv. door de tijdslimiet), terwijl alle pogingen op zijn: die
+ * zetten we op mislukt, zodat de beheerder een melding krijgt en ze opnieuw
+ * kan laten maken. Met pogingen over pakt claimPlan ze vanzelf weer op.
+ */
+export async function abandonStalePlans(): Promise<Plan[]> {
+  const sql = await db();
+  return sql<Plan[]>`
+    update plans set status = 'failed',
+      error = 'De laatste poging is afgebroken voordat het schema klaar was (waarschijnlijk duurde het langer dan de tijdslimiet van de server).'
+    where status = 'generating' and started_at < now() - interval '15 minutes' and attempts >= ${MAX_PLAN_ATTEMPTS}
+    returning *`;
+}
+
 export async function completePlan(planId: string, content: PlanContent): Promise<void> {
   const sql = await db();
   await sql`

@@ -5,7 +5,8 @@ import { notifyReleased, processPlan, releaseForCustomer } from "@/lib/plans";
 import { processWeeklyLog } from "@/lib/weekly-server";
 import { MAX_PLAN_ATTEMPTS, plansForCustomer, weeklyLogsForCustomer } from "@/lib/repo";
 
-export const maxDuration = 300;
+// Een schema maken met Claude kan meer dan 5 minuten duren; 800 seconden is het maximum op Vercel Pro (Fluid compute).
+export const maxDuration = 800;
 
 /**
  * Status van de schema's van de ingelogde klant, voor Mijn schema's terwijl

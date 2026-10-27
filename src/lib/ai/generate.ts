@@ -51,6 +51,7 @@ export async function generateStructured<T extends z.ZodType>(
   options: { effort?: "low" | "medium" | "high"; maxTokens?: number } = {},
 ): Promise<z.infer<T>> {
   const [base, ...extra] = typeof system === "string" ? [system] : system;
+  const startedAt = Date.now();
   const stream = (await anthropic()).beta.messages.stream({
     model: claudeModel(),
     max_tokens: options.maxTokens ?? 64000,
@@ -68,6 +69,10 @@ export async function generateStructured<T extends z.ZodType>(
   });
 
   const message = await stream.finalMessage();
+  // In de serverlog (bij Vercel: Logs) zie je zo hoe lang het maken van een schema duurt.
+  console.info(
+    `Claude ${message.model}: ${Math.round((Date.now() - startedAt) / 1000)} s, ${message.usage.output_tokens} tokens uit, stop: ${message.stop_reason}`,
+  );
 
   if (message.stop_reason === "refusal") {
     throw new PlanGenerationError(
