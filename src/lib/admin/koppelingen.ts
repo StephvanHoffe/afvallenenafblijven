@@ -1,4 +1,5 @@
 import "server-only";
+import { lookup } from "node:dns/promises";
 import { site } from "@/config/site";
 import { STORED_CONFIG_KEYS, STORED_CONFIG_SETTING, type StoredConfigKey } from "@/lib/config-keys";
 import { db, hostingValue, loadStoredConfig } from "@/lib/db";
@@ -179,6 +180,37 @@ export async function saveGroup(groupId: ConfigGroupId, input: (name: string) =>
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err)).replace(/\s+/g, " ").slice(0, 220);
 
+/** Adressen van Vercel: wijst de mailserver hierheen, dan staat de DNS van je domein (ook voor mail) bij Vercel. */
+const VERCEL_IP = /^(76\.76\.21\.|216\.150\.|216\.198\.79\.)/;
+
+/** Wat er mis is met de mailserver, in gewone taal, met de technische melding erachter. */
+async function smtpProblem(err: unknown): Promise<string> {
+  const host = process.env.SMTP_HOST ?? "";
+  const e = err as { code?: string; message?: string };
+  const raw = errorText(err);
+  const address = await lookup(host).then((r) => r.address).catch(() => null);
+  let advice: string;
+  if (address && VERCEL_IP.test(address)) {
+    advice = `${host} wijst naar Vercel (${address}) in plaats van naar je mailserver. Waarschijnlijk staan de nameservers van je domein bij Vercel, waardoor ook de mailrecords (MX, SPF, DKIM) weg zijn. Zet de nameservers terug naar je domeinprovider en wijs daar alleen de website naar Vercel.`;
+  } else if (!address || e.code === "EDNS" || /ENOTFOUND|EAI_AGAIN/.test(raw)) {
+    advice = `De mailserver ${host || "(leeg)"} bestaat niet. Controleer de naam; bij Vimexx is dat mail. plus je domeinnaam.`;
+  } else if (e.code === "EAUTH") {
+    advice = "De mailserver weigert het inloggen. Controleer de gebruikersnaam (het volledige e-mailadres) en het wachtwoord van de mailbox.";
+  } else if (/certificate|altnames|self.signed|CERT_/i.test(raw)) {
+    advice = "Het beveiligingscertificaat van de mailserver past niet bij deze naam. Gebruik de mailservernaam uit de mailinstellingen van je provider.";
+  } else if (/wrong version number|ssl3_get_record|packet length/i.test(raw)) {
+    advice = "Poort en beveiliging passen niet bij elkaar. Gebruik 465 (beveiligd) of 587.";
+  } else if (/ECONNREFUSED/.test(raw)) {
+    advice = "De mailserver weigert verbindingen op deze poort. Probeer 465 of 587.";
+  } else if (e.code === "ETIMEDOUT" || /Greeting never received|timeout/i.test(raw)) {
+    advice =
+      "De mailserver antwoordt niet. Probeer de andere poort (465 of 587). Lukt het met beide niet, dan laat de mailserver de servers van Vercel waarschijnlijk niet toe: vraag het je provider of gebruik een maildienst zoals Brevo.";
+  } else {
+    advice = "Verbinden lukt niet.";
+  }
+  return `${advice} (Melding: ${raw})`;
+}
+
 /** Controleert de verbinding van een onderdeel en bewaart de uitkomst (voor de status op de pagina). */
 export async function testGroup(groupId: ConfigGroupId): Promise<TestResult> {
   await loadStoredConfig({ force: true });
@@ -204,11 +236,15 @@ export async function testGroup(groupId: ConfigGroupId): Promise<TestResult> {
         await (await anthropic()).models.list({ limit: 1 });
         result = { ok: true, detail: `Verbonden. Schema's worden gemaakt met ${claudeModel()}.` };
       } else {
-        await transport().verify();
+        try {
+          await transport().verify();
+        } catch (err) {
+          throw new Error(await smtpProblem(err));
+        }
         result = { ok: true, detail: `Verbonden met ${process.env.SMTP_HOST}. Stuur bij Instellingen een testmail om het helemaal te controleren.` };
       }
     } catch (err) {
-      result = { ok: false, detail: `Verbinden lukt niet: ${errorText(err)}` };
+      result = { ok: false, detail: groupId === "email" ? (err instanceof Error ? err.message : String(err)) : `Verbinden lukt niet: ${errorText(err)}` };
     }
   }
   const at = new Date().toISOString();
