@@ -133,6 +133,11 @@ create table if not exists withdrawals (
 -- Latere uitbreidingen (veilig om vaker uit te voeren)
 alter table orders add column if not exists monthly_cents integer not null default 0;
 alter table withdrawals add column if not exists handled_at timestamptz;
+-- Meldingen aan de beheerder: soort, inhoud en over wie (zie Beheer → E-mails → Meldingen aan jou).
+alter table email_log add column if not exists topic text;
+alter table email_log add column if not exists body text;
+alter table email_log add column if not exists about_email text;
+create index if not exists email_log_kind_idx on email_log(kind, created_at);
 create index if not exists orders_status_idx on orders(status);
 -- Check-in per abonnement en periode (verplicht voor elk vervolgschema)
 alter table checkins add column if not exists order_id uuid references orders(id) on delete cascade;

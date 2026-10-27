@@ -52,9 +52,10 @@ export async function sendContact(_prev: FormState, formData: FormData): Promise
   try {
     await sendMail(
       adminNotificationEmail(
+        "contact",
         `Contactformulier: ${subject ?? "nieuw bericht"}`,
         { Naam: name, "E-mail": email, Taal: l === "en" ? "Engels" : undefined, Bericht: message },
-        email,
+        { replyTo: email },
       ),
     );
   } catch (err) {

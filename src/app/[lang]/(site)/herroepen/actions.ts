@@ -63,6 +63,7 @@ export async function submitWithdrawal(_prev: WithdrawalState, formData: FormDat
     await sendMail(withdrawalConfirmationEmail({ to: input.email, ...input, receivedAt, id }, l));
     await sendMail(
       adminNotificationEmail(
+        "herroeping",
         "Herroeping ontvangen",
         {
           Naam: input.name,
@@ -72,7 +73,7 @@ export async function submitWithdrawal(_prev: WithdrawalState, formData: FormDat
           Kenmerk: id,
           Taal: l === "en" ? "Engels" : undefined,
         },
-        input.email,
+        { replyTo: input.email },
       ),
     );
   } catch (err) {

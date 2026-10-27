@@ -209,7 +209,7 @@ export async function processPlan(planId: string): Promise<void> {
     const failed = await failPlan(plan.id, message);
     if (failed && failed.attempts >= MAX_PLAN_ATTEMPTS) {
       await sendMail(
-        adminNotificationEmail("Schema kon niet worden gemaakt", {
+        adminNotificationEmail("schema-mislukt", "Schema kon niet worden gemaakt", {
           Schema: plan.id,
           Bestelling: plan.order_id,
           Type: plan.type,
@@ -240,15 +240,20 @@ async function askForReview(orderId: string, seq: number): Promise<void> {
   const created = plans.reduce((min, p) => (p.created_at < min ? p.created_at : min), plans[0].created_at);
   const planned = plans.reduce((max, p) => (p.release_after > max ? p.release_after : max), plans[0].release_after);
   await sendMail(
-    adminNotificationEmail("Schema wacht op je goedkeuring", {
-      Klant: customer ? `${customer.name} (${customer.email})` : undefined,
-      Periode: String(seq),
-      "Gepland voor de klant": formatDateTime(planned),
-      "Klant verwacht het uiterlijk": formatDateTime(deliveryDeadline(created)),
-      "Schema's": plans.map((p) => `${site.url}/beheer/schemas/${p.id}`).join("  "),
-      "Wat te doen":
-        'Bekijk het schema en klik op "Goedkeuren". Het gaat dan op het geplande moment naar de klant, of direct als dat moment al voorbij is. Niet goed? Klik op "Opnieuw maken".',
-    }),
+    adminNotificationEmail(
+      "schema-goedkeuren",
+      "Schema wacht op je goedkeuring",
+      {
+        Klant: customer ? `${customer.name} (${customer.email})` : undefined,
+        Periode: String(seq),
+        "Gepland voor de klant": formatDateTime(planned),
+        "Klant verwacht het uiterlijk": formatDateTime(deliveryDeadline(created)),
+        "Schema's": plans.map((p) => `${site.url}/beheer/schemas/${p.id}`).join("  "),
+        "Wat te doen":
+          'Bekijk het schema en klik op "Goedkeuren". Het gaat dan op het geplande moment naar de klant, of direct als dat moment al voorbij is. Niet goed? Klik op "Opnieuw maken".',
+      },
+      { about: customer?.email },
+    ),
   ).catch((err) => console.error("Goedkeuringsmail versturen mislukt", err));
 }
 

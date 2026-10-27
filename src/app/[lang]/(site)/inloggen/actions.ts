@@ -56,11 +56,16 @@ export async function requestLoginLink(_prev: FormState, formData: FormData): Pr
     if (purpose === "opzeggen") {
       // Vangnet: de beheerder krijgt elk opzegverzoek ook binnen.
       await sendMail(
-        adminNotificationEmail("Opzegverzoek via de website", {
-          "E-mail": email.data,
-          "Bekende klant": customer ? "ja" : "nee (geen klant gevonden met dit adres)",
-          Reden: reason || undefined,
-        }),
+        adminNotificationEmail(
+          "opzegverzoek",
+          "Opzegverzoek via de website",
+          {
+            "E-mail": email.data,
+            "Bekende klant": customer ? "ja" : "nee (geen klant gevonden met dit adres)",
+            Reden: reason || undefined,
+          },
+          { replyTo: email.data },
+        ),
       );
     }
   } catch (err) {

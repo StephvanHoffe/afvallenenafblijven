@@ -10,6 +10,8 @@ import {
   demoEmailCounts,
   demoEmailLog,
   demoFeedbackReport,
+  demoAdminNotifications,
+  demoAdminTopicCounts,
 } from "@/lib/admin/demo-reports";
 import { listDiscountCodes, type DiscountCodeRow } from "@/lib/discounts-server";
 import type { CheckinData } from "@/lib/checkin";
@@ -106,7 +108,7 @@ export interface EmailLogRow {
   to: string;
   kind: string | null;
   subject: string;
-  status: "sent" | "skipped" | "failed";
+  status: "sent" | "skipped" | "failed" | "disabled";
   error: string | null;
   createdAt: Date;
   customerId: string | null;
@@ -133,6 +135,62 @@ export async function emailLog(filters: { q?: string; status?: string; kind?: st
     createdAt: r.created_at,
     customerId: r.customer_id,
   }));
+}
+
+/** Een melding aan de beheerder, met de inhoud (zie Beheer → E-mails → Meldingen aan jou). */
+export interface AdminNotificationRow {
+  id: number;
+  topic: string | null;
+  subject: string;
+  body: string | null;
+  status: EmailLogRow["status"];
+  error: string | null;
+  createdAt: Date;
+  aboutEmail: string | null;
+  customerId: string | null;
+}
+
+export async function adminNotifications({ topic, limit = 150 }: { topic?: string; limit?: number } = {}): Promise<AdminNotificationRow[]> {
+  if (isDemoMode()) return demoAdminNotifications(topic);
+  const sql = await db();
+  const rows = await sql<
+    {
+      id: number;
+      topic: string | null;
+      subject: string;
+      body: string | null;
+      status: EmailLogRow["status"];
+      error: string | null;
+      created_at: Date;
+      about_email: string | null;
+      customer_id: string | null;
+    }[]
+  >`
+    select l.id, l.topic, l.subject, l.body, l.status, l.error, l.created_at, l.about_email, c.id as customer_id
+    from email_log l left join customers c on lower(c.email) = l.about_email
+    where l.kind = 'admin' ${topic ? sql`and l.topic = ${topic}` : sql``}
+    order by l.created_at desc limit ${limit}`;
+  return rows.map((r) => ({
+    id: r.id,
+    topic: r.topic,
+    subject: r.subject,
+    body: r.body,
+    status: r.status,
+    error: r.error,
+    createdAt: r.created_at,
+    aboutEmail: r.about_email,
+    customerId: r.customer_id,
+  }));
+}
+
+/** Aantal meldingen aan de beheerder per soort in de laatste 30 dagen (ook die waarvan de mail uitstaat). */
+export async function adminTopicCounts30(): Promise<Record<string, number>> {
+  if (isDemoMode()) return demoAdminTopicCounts();
+  const sql = await db();
+  const rows = await sql<{ topic: string; n: number }[]>`
+    select topic, count(*)::int as n from email_log
+    where kind = 'admin' and topic is not null and created_at > now() - interval '30 days' group by 1`;
+  return Object.fromEntries(rows.map((r) => [r.topic, r.n]));
 }
 
 /** Aantal verstuurde mails per soort in de laatste 30 dagen. */
