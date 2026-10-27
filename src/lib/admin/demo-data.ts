@@ -154,6 +154,8 @@ const withdrawals: AdminWithdrawalRow[] = [
     message: "Ik heb per ongeluk het jaarabonnement gekozen.",
     createdAt: new Date(TODAY - 1 * DAY),
     handledAt: null,
+    orderPaidAt: new Date(TODAY - 4 * DAY),
+    customerId: null,
   },
   {
     id: id("w", 2),
@@ -163,6 +165,8 @@ const withdrawals: AdminWithdrawalRow[] = [
     message: null,
     createdAt: new Date(TODAY - 12 * DAY),
     handledAt: new Date(TODAY - 11 * DAY),
+    orderPaidAt: new Date(TODAY - 40 * DAY),
+    customerId: null,
   },
 ];
 

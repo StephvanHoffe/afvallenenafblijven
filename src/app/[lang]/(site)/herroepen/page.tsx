@@ -50,15 +50,15 @@ function Nl() {
   return (
     <>
       <p>
-        Als consument heb je bij een aankoop op afstand in principe 14 dagen bedenktijd. Binnen die termijn kun je de
-        overeenkomst zonder opgaaf van redenen herroepen via de knop op deze pagina.
+        Je hebt 14 dagen bedenktijd. Die gaan vanzelf in op de dag van je betaling en eindigen 14 dagen later. Binnen
+        die termijn kun je de overeenkomst zonder opgaaf van redenen herroepen via de knop op deze pagina. De einddatum
+        staat in je orderbevestiging.
       </p>
-      <h2>Belangrijk bij digitale schema&apos;s</h2>
+      <h2>Ook als je schema al klaarstaat</h2>
       <p>
-        Onze schema&apos;s zijn digitale inhoud die we direct na je betaling voor je maken. Bij het bestellen geef je
-        uitdrukkelijk toestemming om direct te beginnen en verklaar je dat je weet dat je herroepingsrecht vervalt
-        zodra het schema aan je is geleverd. Is je schema al geleverd, dan kun je de overeenkomst daarom in de regel
-        niet meer herroepen. Wel kun je je abonnement altijd <Link href="/abonnement-opzeggen">opzeggen</Link>
+        We maken je schema direct na je betaling; daar ga je bij het bestellen mee akkoord. Je herroepingsrecht blijft
+        gewoon gelden, ook als je schema binnen die 14 dagen al is geleverd. Na de 14 dagen kun je niet meer herroepen.
+        Wel kun je je abonnement altijd <Link href="/abonnement-opzeggen">opzeggen</Link>
         {site.guarantee.enabled ? (
           <>
             {" "}
@@ -75,8 +75,8 @@ function Nl() {
         <li>Je ontvangt direct per e-mail een ontvangstbevestiging met de inhoud, datum en tijd van je herroeping.</li>
       </ol>
       <p>
-        Voor zover het herroepingsrecht van toepassing is, betalen we alle betalingen binnen 14 dagen terug via dezelfde
-        betaalmethode. Liever per post of e-mail? Gebruik dan het{" "}
+        Herroep je binnen de 14 dagen, dan betalen we alle betalingen binnen 14 dagen terug via dezelfde betaalmethode
+        en stoppen we je abonnement. Liever per post of e-mail? Gebruik dan het{" "}
         <Link href="/algemene-voorwaarden#modelformulier">modelformulier voor herroeping</Link> en stuur het naar{" "}
         <a href={`mailto:${c.email}`}>{c.email}</a> of per post naar het adres in{" "}
         <Link href="/algemene-voorwaarden#artikel-2">artikel 2 van de algemene voorwaarden</Link>.
@@ -90,15 +90,15 @@ function En() {
   return (
     <>
       <p>
-        As a consumer, you generally have a 14-day cooling-off period when you buy something at a distance. Within that
-        period, you can withdraw from the contract without giving any reason, using the button on this page.
+        You have a 14-day cooling-off period. It starts automatically on the day of your payment and ends 14 days
+        later. Within that period, you can withdraw from the contract without giving any reason, using the button on
+        this page. The end date is in your order confirmation.
       </p>
-      <h2>Important for digital plans</h2>
+      <h2>Even if your plan is already ready</h2>
       <p>
-        Our plans are digital content that we create for you immediately after your payment. When you order, you
-        expressly consent to us starting immediately and declare that you are aware that your right of withdrawal lapses
-        as soon as the plan has been delivered to you. If your plan has already been delivered, you can therefore
-        generally no longer withdraw from the contract. You can, however, always{" "}
+        We create your plan immediately after your payment; you agree to this when you order. Your right of withdrawal
+        still applies, even if your plan has already been delivered within those 14 days. After the 14 days, you can no
+        longer withdraw. You can, however, always{" "}
         <Link href="/abonnement-opzeggen">cancel</Link> your subscription
         {site.guarantee.enabled ? (
           <>
@@ -120,8 +120,8 @@ function En() {
         </li>
       </ol>
       <p>
-        Insofar as the right of withdrawal applies, we will refund all payments within 14 days using the same payment
-        method. Prefer to use post or email? Then use the{" "}
+        If you withdraw within the 14 days, we will refund all payments within 14 days using the same payment method and
+        stop your subscription. Prefer to use post or email? Then use the{" "}
         <Link href="/algemene-voorwaarden#modelformulier">model withdrawal form</Link> and send it to{" "}
         <a href={`mailto:${c.email}`}>{c.email}</a> or by post to the address in{" "}
         <Link href="/algemene-voorwaarden#artikel-2">article 2 of the terms and conditions</Link>.

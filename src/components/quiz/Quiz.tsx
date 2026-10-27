@@ -255,7 +255,9 @@ const copy = defineCopy({
       terms: "Ik heb de vragen naar waarheid en volledig ingevuld, ook over mijn gezondheid en allergieën, en ik ga akkoord met de",
       termsLink: "algemene voorwaarden",
       immediateDelivery:
-        "Ik wil dat jullie direct na mijn betaling beginnen met het maken van mijn schema. Ik weet dat ik daardoor mijn herroepingsrecht verlies zodra het schema aan mij is geleverd.",
+        "Ik ga ermee akkoord dat jullie direct na mijn betaling beginnen met het maken van mijn schema. Ik ga er ook mee akkoord dat mijn",
+      withdrawalLink: "herroepingsrecht",
+      immediateDeliveryAfter: "van 14 dagen vanzelf ingaat op de dag van mijn betaling en 14 dagen later eindigt.",
       marketing: "Stuur mij af en toe tips en aanbiedingen per e-mail (optioneel, afmelden kan altijd).",
       required: "Vink de verplichte vakjes aan om verder te gaan.",
       opening: "Betaalpagina openen…",
@@ -440,8 +442,9 @@ const copy = defineCopy({
       privacy: "privacy policy",
       terms: "I have answered the questions truthfully and completely, including about my health and allergies, and I agree to the",
       termsLink: "terms and conditions",
-      immediateDelivery:
-        "I want you to start creating my plan immediately after my payment. I understand that I will therefore lose my right of withdrawal as soon as the plan has been delivered to me.",
+      immediateDelivery: "I agree that you will start creating my plan immediately after my payment. I also agree that my 14-day",
+      withdrawalLink: "right of withdrawal",
+      immediateDeliveryAfter: "starts automatically on the day of my payment and ends 14 days later.",
       marketing: "Send me occasional tips and offers by email (optional, you can unsubscribe at any time).",
       required: "Tick the required boxes to continue.",
       opening: "Opening payment page…",
@@ -1576,7 +1579,16 @@ function CheckoutBox({
           checked={c.immediateDelivery}
           onChange={(v) => setConsents({ immediateDelivery: v })}
           invalid={touched && !c.immediateDelivery}
-          label={t.immediateDelivery}
+          label={
+            <>
+              {t.immediateDelivery}{" "}
+              <Link href="/herroepen" target="_blank" className="font-semibold underline">
+                {t.withdrawalLink}
+              </Link>
+{" "}
+              {t.immediateDeliveryAfter}
+            </>
+          }
         />
         <Checkbox
           checked={c.marketing}

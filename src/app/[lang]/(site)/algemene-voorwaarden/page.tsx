@@ -172,26 +172,28 @@ function Nl() {
       <h2 id="artikel-7">Artikel 7 – Herroepingsrecht</h2>
       <ol>
         <li>
-          Je kunt een overeenkomst op afstand in principe binnen 14 dagen na het sluiten ervan zonder opgave van redenen
-          herroepen (ontbinden).
+          Je kunt de overeenkomst binnen 14 dagen zonder opgave van redenen herroepen (ontbinden). Die termijn gaat
+          vanzelf in op de dag waarop de overeenkomst tot stand komt, de dag van je betaling (artikel 5), en eindigt 14
+          dagen daarna. Een herroeping die we uiterlijk op die 14e dag ontvangen of die je uiterlijk op die dag verstuurt,
+          is op tijd.
         </li>
         <li>
-          <strong>Uitzondering voor digitale inhoud.</strong> Een schema is digitale inhoud die niet op een materiële
-          drager wordt geleverd. Bij het bestellen vragen we je uitdrukkelijke toestemming om direct na de betaling met
-          de levering te beginnen, en verklaar je dat je weet dat je daardoor je herroepingsrecht verliest. Je
-          herroepingsrecht vervalt zodra we met de levering zijn begonnen (artikel 6:230p onder g Burgerlijk Wetboek).
-          We bevestigen je toestemming in de orderbevestiging.
+          <strong>Direct beginnen.</strong> Bij het bestellen ga je ermee akkoord dat we direct na je betaling beginnen
+          met het maken van je schema, en dat je herroepingsrecht op de dag van je betaling ingaat en 14 dagen later
+          eindigt. Je herroepingsrecht blijft gelden als je schema binnen die 14 dagen al is geleverd. We bevestigen dit
+          met de einddatum in de orderbevestiging.
         </li>
         <li>
-          Voor zover het herroepingsrecht nog van toepassing is (bijvoorbeeld als de levering nog niet is begonnen), kun je
-          herroepen via de <Link href="/herroepen">herroepingsfunctie op onze website</Link>, met het
-          modelformulier hieronder of met een andere ondubbelzinnige verklaring per e-mail of post. We sturen je direct
-          een ontvangstbevestiging op een duurzame gegevensdrager.
+          Je herroept via de <Link href="/herroepen">herroepingsfunctie op onze website</Link>, met het modelformulier
+          hieronder of met een andere ondubbelzinnige verklaring per e-mail of post. We sturen je direct een
+          ontvangstbevestiging op een duurzame gegevensdrager.
         </li>
         <li>
-          Na een geldige herroeping betalen we alle betalingen binnen 14 dagen terug, via dezelfde betaalmethode die je
-          hebt gebruikt, tenzij je uitdrukkelijk met een andere methode instemt. Je betaalt hiervoor geen kosten.
+          Na een herroeping binnen de termijn betalen we alle betalingen binnen 14 dagen terug, via dezelfde betaalmethode
+          die je hebt gebruikt, tenzij je uitdrukkelijk met een andere methode instemt, en stoppen we het abonnement. Je
+          betaalt hiervoor geen kosten.
         </li>
+        <li>Na afloop van de 14 dagen kun je de overeenkomst niet meer herroepen.</li>
         <li>
           Los van het herroepingsrecht kun je een abonnement altijd opzeggen volgens artikel 9
           {g.enabled ? " en geldt de tevredenheidsgarantie uit artikel 10" : ""}.
@@ -547,26 +549,27 @@ function En() {
       <h2 id="artikel-7">Article 7 – Right of withdrawal</h2>
       <ol>
         <li>
-          In principle, you can withdraw from (dissolve) a distance contract within 14 days of concluding it, without
-          giving any reason.
+          You can withdraw from (dissolve) the contract within 14 days without giving any reason. That period starts
+          automatically on the day the contract is concluded, the day of your payment (article 5), and ends 14 days
+          later. A withdrawal that we receive, or that you send, no later than that 14th day is on time.
         </li>
         <li>
-          <strong>Exception for digital content.</strong> A plan is digital content that is not supplied on a tangible
-          medium. When you order, we ask for your express consent to start delivery immediately after payment, and you
-          declare that you are aware that you will thereby lose your right of withdrawal. Your right of withdrawal lapses
-          as soon as we have started delivery (Article 6:230p(g) of the Dutch Civil Code). We confirm your consent in the
-          order confirmation.
+          <strong>Starting immediately.</strong> When you order, you agree that we will start creating your plan
+          immediately after your payment, and that your right of withdrawal starts on the day of your payment and ends 14
+          days later. Your right of withdrawal still applies if your plan has already been delivered within those 14
+          days. We confirm this, including the end date, in the order confirmation.
         </li>
         <li>
-          Insofar as the right of withdrawal still applies (for example if delivery has not yet started), you can
-          withdraw via the <Link href="/herroepen">withdrawal function on our website</Link>, using the model form below
-          or by means of any other unequivocal statement by email or post. We will immediately send you an
+          You withdraw via the <Link href="/herroepen">withdrawal function on our website</Link>, using the model form
+          below or by means of any other unequivocal statement by email or post. We will immediately send you an
           acknowledgement of receipt on a durable medium.
         </li>
         <li>
-          After a valid withdrawal, we will refund all payments within 14 days, using the same payment method you used,
-          unless you expressly agree to a different method. You will not incur any costs for this.
+          After a withdrawal within the period, we will refund all payments within 14 days, using the same payment method
+          you used, unless you expressly agree to a different method, and stop the subscription. You will not incur any
+          costs for this.
         </li>
+        <li>Once the 14 days have passed, you can no longer withdraw from the contract.</li>
         <li>
           Separately from the right of withdrawal, you can always cancel a subscription in accordance with article 9
           {g.enabled ? " and the satisfaction guarantee in article 10 applies" : ""}.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "@/i18n/Link";
 import { connection } from "next/server";
 import { markGuaranteeHandled, markWithdrawalHandled, refundOrder } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -10,6 +11,7 @@ import { site } from "@/config/site";
 import { mollieDashboardUrl } from "@/lib/mollie";
 import { guaranteeDeadline } from "@/lib/guarantee";
 import { euro, formatDate } from "@/lib/format";
+import { dayAsDate, withdrawalLastDay, withinWithdrawalPeriod } from "@/lib/withdrawal";
 
 export const metadata: Metadata = { title: "Herroepingen en garantie" };
 
@@ -32,7 +34,7 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
         title="Herroepingen en garantie"
-        intro="Verklaringen via de herroepingsfunctie op de website. De klant heeft direct een ontvangstbevestiging gekregen. Beoordeel of het herroepingsrecht nog gold, betaal zo nodig terug via de klantpagina (Terugbetalen) en laat het de klant weten."
+        intro="Verklaringen via de herroepingsfunctie op de website. De klant heeft direct een ontvangstbevestiging gekregen. Kwam de herroeping binnen 14 dagen na de betaling, dan geldt het herroepingsrecht, ook als het schema al is geleverd: betaal alle betalingen terug via de klantpagina (Terugbetalen; dat stopt ook het abonnement) en laat het de klant weten."
       />
       <Panel title="Herroepingen">
         <div className={table.wrap}>
@@ -55,7 +57,29 @@ async function Withdrawals({ searchParams }: Pick<PageProps<"/beheer/herroepinge
                     <span className="font-semibold">{w.name}</span>
                     <span className="block text-xs text-muted">{w.email}</span>
                   </td>
-                  <td className={table.td}>{w.orderReference}</td>
+                  <td className={table.td}>
+                    {w.customerId ? (
+                      <Link href={`/beheer/klanten/${w.customerId}`} className="font-semibold text-brand-700 underline">
+                        {w.orderReference}
+                      </Link>
+                    ) : (
+                      w.orderReference
+                    )}
+                    {w.orderPaidAt ? (
+                      <span className="mt-1 block">
+                        {withinWithdrawalPeriod(w.orderPaidAt, w.createdAt) ? (
+                          <Badge tone="warn">Binnen 14 dagen: terugbetalen</Badge>
+                        ) : (
+                          <Badge tone="muted">Na 14 dagen</Badge>
+                        )}
+                        <span className="mt-0.5 block text-xs text-muted">
+                          Betaald {formatDate(w.orderPaidAt)}, termijn t/m {formatDate(dayAsDate(withdrawalLastDay(w.orderPaidAt)))}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="mt-1 block text-xs text-muted">Bestelling niet gevonden: zoek de klant op e-mailadres</span>
+                    )}
+                  </td>
                   <td className={`${table.td} max-w-xs text-muted`}>{w.message ?? "–"}</td>
                   <td className={table.td}>
                     {w.handledAt ? (
