@@ -9,7 +9,7 @@ import { currentCustomer } from "@/lib/auth";
 import { getPlan, weeklyLogsForOrder } from "@/lib/repo";
 import { adjustmentsFor } from "@/lib/weekly";
 import { formatDayDate } from "@/lib/format";
-import { startsLater } from "@/lib/schedule";
+import { firstWeekEnd, inLongFirstWeek, startsLater } from "@/lib/schedule";
 import { CalendarCheck } from "lucide-react";
 
 const copy = defineCopy({
@@ -19,7 +19,11 @@ const copy = defineCopy({
     generatingText: "Binnen 2 uur staat het voor je klaar. Je ontvangt dan een e-mail.",
     back: "Terug naar Mijn schema's",
     upcoming: (start: string) => `Dit schema start op ${start}. Tot die tijd volg je je huidige schema.`,
+    upcomingFirst: (start: string) => `Je schema start op ${start}.`,
     upcomingShopping: "Doe alvast je boodschappen met de boodschappenlijst van dit schema.",
+    firstWeek: (from: string, to: string) => `Je eerste week loopt van ${from} t/m ${to}; daarna loopt elke week van maandag t/m zondag.`,
+    firstWeekMenu: (weekday: string) =>
+      `Begin met het menu van ${weekday}. De boodschappenlijst is voor een hele week; voor de eerste dagen heb je minder nodig.`,
   },
   en: {
     title: "My plan",
@@ -27,7 +31,10 @@ const copy = defineCopy({
     generatingText: "It will be ready for you within 2 hours. We'll send you an email when it is.",
     back: "Back to My plans",
     upcoming: (start: string) => `This plan starts on ${start}. Until then, keep following your current plan.`,
+    upcomingFirst: (start: string) => `Your plan starts on ${start}.`,
     upcomingShopping: "You can already do your shopping with this plan's shopping list.",
+    firstWeek: (from: string, to: string) => `Your first week runs from ${from} to ${to}; after that, every week runs from Monday to Sunday.`,
+    firstWeekMenu: (weekday: string) => `Start with the menu for ${weekday}. The shopping list covers a whole week; you'll need less for the first few days.`,
   },
 });
 
@@ -76,14 +83,20 @@ async function PlanContent({ params }: Pick<PageProps<"/[lang]/schema/[id]">, "p
   const weekly = (await weeklyLogsForOrder(plan.order_id)).map((w) => ({ ...w, date: w.created_at }));
   // Staat het schema al klaar voor de volgende periode, dan zeggen we wanneer het start.
   const upcoming = startsLater(plan.starts_at);
+  // Start de periode niet op maandag, dan duurt de eerste week langer: dat zeggen we zolang die loopt.
+  const longWeek = inLongFirstWeek(plan.starts_at);
+  const nutrition = plan.content.type === "voeding";
+  const weekday = new Intl.DateTimeFormat(l === "en" ? "en-GB" : "nl-NL", { weekday: "long", timeZone: "Europe/Amsterdam" }).format(plan.starts_at);
   return (
     <>
-      {upcoming && (
+      {(upcoming || longWeek) && (
         <p role="note" className="mb-6 flex gap-3 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-4 text-[0.9375rem] sm:p-5">
           <CalendarCheck className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
           <span>
-            <strong>{c.upcoming(formatDayDate(plan.starts_at, l))}</strong>
-            {plan.content.type === "voeding" ? ` ${c.upcomingShopping}` : ""}
+            {upcoming && <strong>{plan.seq === 1 ? c.upcomingFirst(formatDayDate(plan.starts_at, l)) : c.upcoming(formatDayDate(plan.starts_at, l))}</strong>}
+            {upcoming && nutrition ? ` ${c.upcomingShopping}` : ""}
+            {longWeek ? `${upcoming ? " " : ""}${c.firstWeek(formatDayDate(plan.starts_at, l), formatDayDate(firstWeekEnd(plan.starts_at), l))}` : ""}
+            {longWeek && nutrition ? ` ${c.firstWeekMenu(weekday)}` : ""}
           </span>
         </p>
       )}

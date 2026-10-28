@@ -15,6 +15,7 @@ import { isMollieConfigured } from "@/lib/mollie";
 import { describeDiscount, normalizeCode, type DiscountTerms } from "@/lib/discounts";
 import { checkCode, getDiscountCode, type DiscountProblem } from "@/lib/discounts-server";
 import { recordFunnelEvent } from "@/lib/funnel";
+import { startDayOptions } from "@/lib/schedule";
 
 export interface CheckoutState {
   error?: string;
@@ -68,6 +69,8 @@ const payloadSchema = z.object({
   visitId: z.string().max(64).nullish().catch(null),
   device: z.enum(["mobiel", "tablet", "desktop"]).nullish().catch(null),
   discountCode: z.string().max(40).nullish().catch(null),
+  /** Gekozen startdatum (JJJJ-MM-DD); ontbreekt of ongeldig = vandaag. */
+  startDay: z.string().max(10).nullish().catch(null),
 });
 
 export type DiscountCheck = { ok: true; code: string; label: string; terms: DiscountTerms } | { ok: false; error: string };
@@ -141,7 +144,9 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
       discountCode: discount?.code ?? null,
       duration,
     });
-    url = await createCheckout({ intakeId, product, duration, email: customer.email, name: customer.name, locale, discount });
+    // Alleen vandaag t/m 7 dagen later; anders beginnen we vandaag.
+    const startDay = payload.data.startDay && startDayOptions().includes(payload.data.startDay) ? payload.data.startDay : null;
+    url = await createCheckout({ intakeId, product, duration, email: customer.email, name: customer.name, locale, discount, startDay });
     await recordFunnelEvent({
       visitId: payload.data.visitId,
       event: "checkout_start",

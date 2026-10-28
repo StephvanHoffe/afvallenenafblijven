@@ -1,5 +1,5 @@
 import Link from "@/i18n/Link";
-import { ArrowRight, Download, Scale, SlidersHorizontal, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarCheck, Download, Scale, SlidersHorizontal, Sparkles } from "lucide-react";
 import { accountHref } from "@/components/account/AccountShell";
 import { PlanStatusRefresher } from "@/components/account/PlanStatusRefresher";
 import { HealthOverviewCard } from "@/components/account/health/HealthOverviewCard";
@@ -14,6 +14,7 @@ import type { AccountNotice, AccountView } from "@/lib/account-types";
 import { formatDate, formatDayDate, formatNumber } from "@/lib/format";
 import { buildProgress, type Progress } from "@/lib/progress";
 import type { TrainingDirection } from "@/lib/weekly";
+import { firstWeekEnd, inLongFirstWeek } from "@/lib/schedule";
 
 const copy = defineCopy({
   nl: {
@@ -22,6 +23,9 @@ const copy = defineCopy({
     target: "Streefgewicht",
     chartDescription: (start: string, now: string, target: string | null) =>
       `Je gewicht: van ${start} kg bij de start naar ${now} kg nu${target !== null ? `, streefgewicht ${target} kg` : ""}.`,
+    startsOn: (date: string) => `Je schema start op ${date}`,
+    startsOnText: "Bekijk het alvast en doe op tijd je boodschappen.",
+    firstWeek: (from: string, to: string) => `Je eerste week loopt van ${from} t/m ${to}; daarna loopt elke week van maandag t/m zondag.`,
     checkinDoneTitle: "Dank je, je check-in is binnen!",
     checkinDoneText:
       "We gaan aan de slag met je nieuwe schema, afgestemd op je antwoorden. Binnen 2 uur staat het klaar; je krijgt dan een e-mail.",
@@ -72,6 +76,9 @@ const copy = defineCopy({
     target: "Target weight",
     chartDescription: (start: string, now: string, target: string | null) =>
       `Your weight: from ${start} kg at the start to ${now} kg now${target !== null ? `, target weight ${target} kg` : ""}.`,
+    startsOn: (date: string) => `Your plan starts on ${date}`,
+    startsOnText: "Have a look now and do your shopping in time.",
+    firstWeek: (from: string, to: string) => `Your first week runs from ${from} to ${to}; after that, every week runs from Monday to Sunday.`,
     checkinDoneTitle: "Thank you, your check-in is in!",
     checkinDoneText:
       "We're getting to work on your new plan, tailored to your answers. It will be ready within 2 hours, and we'll send you an email.",
@@ -156,6 +163,10 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
   const openCheckin = activeSubs.find((o) => o.checkin?.status === "open" || o.checkin?.status === "overdue")?.checkin ?? null;
   const { latestSeq, current, upcoming } = currentPeriod(view.plans, view.now);
   const busy = [...current, ...(upcoming?.plans ?? [])].some((p) => p.status !== "ready" && !p.failed);
+  // De lopende (of eerste, nog niet begonnen) periode: wanneer start hij, en loopt de langere eerste week nog?
+  const periodStart = current.length > 0 ? new Date(Math.min(...current.map((p) => new Date(p.startsAt).getTime()))) : null;
+  const startsInFuture = Boolean(periodStart && periodStart.getTime() > view.now.getTime());
+  const longWeek = Boolean(periodStart && inLongFirstWeek(periodStart, view.now.getTime()));
   const next = nextPlanText(mainSub?.checkin ?? null, l, upcoming?.startsAt ?? null);
   const allPdfHref = localePath(l, demo ? "/voorbeeld/pdf/alles" : `/account/pdf?periode=${latestSeq}`);
   const weekly = weeklyOrder(view)?.weekly ?? null;
@@ -175,6 +186,19 @@ export function OverviewTab({ view, base, demo, notice, l }: { view: AccountView
       )}
 
       {upcoming && <UpcomingPlans upcoming={upcoming} l={l} />}
+
+      {!upcoming && periodStart && (startsInFuture || longWeek) && (
+        <div role="note" className="flex gap-3 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-5 sm:p-6">
+          <CalendarCheck className="mt-0.5 size-6 shrink-0 text-brand-600" aria-hidden />
+          <div>
+            {startsInFuture && <h2 className="text-lg font-extrabold">{c.startsOn(formatDayDate(periodStart, l))}</h2>}
+            <p className={`text-[0.9375rem] ${startsInFuture ? "mt-1" : ""}`}>
+              {startsInFuture ? `${c.startsOnText} ` : ""}
+              {longWeek ? c.firstWeek(formatDayDate(periodStart, l), formatDayDate(firstWeekEnd(periodStart), l)) : ""}
+            </p>
+          </div>
+        </div>
+      )}
 
       {openCheckin && notice !== "checkin" && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border-2 border-lime-glow bg-[#f6fbe8] p-5 sm:p-6">

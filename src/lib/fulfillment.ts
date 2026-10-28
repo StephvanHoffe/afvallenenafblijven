@@ -3,12 +3,13 @@ import { durationFor, isDurationId, isProductId, isSubscription, monthlyPrice, p
 import { site } from "@/config/site";
 import { chargeDay } from "@/lib/billing";
 import { addDaysToDay, amsterdamStartOfDay } from "@/lib/dates";
+import { firstPeriodStart } from "@/lib/schedule";
 import { scheduledDelivery } from "@/lib/settings";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { createInvoice } from "@/lib/invoices";
 import { isPaymentRecorded, paidPaymentCount, recordPayment } from "@/lib/payments";
 import { adminNotificationEmail, orderConfirmationEmail, paymentFailedEmail, sendMail } from "@/lib/email";
-import { euro } from "@/lib/format";
+import { euro, formatDayDate } from "@/lib/format";
 import { createRefund, getPayment, toCents, type MolliePayment } from "@/lib/mollie";
 import {
   createOrder,
@@ -187,7 +188,9 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
   await recordPaidPayment(order, payment, 1).catch((err) => console.error("Betaling en factuur vastleggen mislukt", err));
 
   // Het schema wordt direct gemaakt en staat op een willekeurig moment binnen 2 uur voor de klant klaar.
-  await createPlans(order.id, customer.id, products[product].includes, 1, new Date(), await scheduledDelivery("purchase"));
+  // De eerste periode begint op de startdatum die de klant koos (of nu).
+  const startsAt = firstPeriodStart(metaString(payment, "start_day"));
+  await createPlans(order.id, customer.id, products[product].includes, 1, startsAt, await scheduledDelivery("purchase"));
 
   if (subscription) {
     // Lukt dit nu niet, dan maakt de geplande taak het abonnement alsnog aan.
@@ -217,6 +220,7 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
         : (d.months === 1 ? c.renewalMonthly(monthly) : c.renewalAfter(monthly, d.label)) + (intro ? c.introRenewal(order.intro_months, introAmount) : ""),
       incassoNote: subscription ? c.incasso(monthly) + (intro ? c.introIncasso(promoLabel, order.intro_months, introAmount) : "") : undefined,
       paidAt: payment.paidAt ? new Date(payment.paidAt) : new Date(),
+      startsAt,
       locale: l,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));
@@ -233,6 +237,7 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
         Klant: `${customer.name} (${customer.email})`,
         Product: name,
         Looptijd: !subscription ? nl.oneOff : dNl.months === 1 ? nl.monthly : nl.minimum(dNl.label),
+        Start: formatDayDate(startsAt),
         Betaald: euro(order.amount_cents),
         Daarna: subscription
           ? `${euro(order.monthly_cents)} per maand` +

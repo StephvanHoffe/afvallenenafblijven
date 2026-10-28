@@ -51,7 +51,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   nl: {
     snel: {
       q: "Hoe snel ontvang ik mijn schema?",
-      a: "Direct na je betaling gaan we aan de slag. Binnen 2 uur staat je schema voor je klaar in Mijn schema's en ontvang je een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
+      a: "Direct na je betaling gaan we aan de slag. Binnen 2 uur staat je schema voor je klaar in Mijn schema's, ook als je een latere startdatum kiest, en ontvang je een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
     },
     persoonlijk: {
       q: "Hoe persoonlijk is het schema?",
@@ -91,7 +91,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     periode: {
       q: "Hoe lang duurt een periode, en krijg ik elke week een nieuw schema?",
-      a: "Een periode duurt 4 weken en start op maandag. Je krijgt per periode één voedingsschema en/of trainingsschema. Het voedingsschema is een weekmenu van maandag tot en met zondag dat je 4 weken volgt, met een boodschappenlijst per week. Het trainingsschema bouwt in 4 weken op, met per week een duidelijke stap. Elke week, het liefst in het weekend, vul je een weegmoment in; wijkt je voortgang af, dan sturen we het lopende schema meteen bij, op tijd voor je boodschappen. Vanaf de donderdag voor een nieuwe periode vul je de check-in in. Doe je dat uiterlijk zaterdag, dan staat je nieuwe schema met boodschappenlijst klaar voordat de nieuwe week begint. Je eerste periode start direct na je bestelling en loopt tot de maandag die het dichtst bij 4 weken later ligt.",
+      a: "Een periode duurt 4 weken en elke week loopt van maandag tot en met zondag. Je krijgt per periode één voedingsschema en/of trainingsschema. Het voedingsschema is een weekmenu van maandag tot en met zondag dat je 4 weken volgt, met een boodschappenlijst per week. Het trainingsschema bouwt in 4 weken op, met per week een duidelijke stap. Elke week, het liefst in het weekend, vul je een weegmoment in; wijkt je voortgang af, dan sturen we het lopende schema meteen bij, op tijd voor je boodschappen. Vanaf de donderdag voor een nieuwe periode vul je de check-in in. Doe je dat uiterlijk zaterdag, dan staat je nieuwe schema met boodschappenlijst klaar voordat de nieuwe week begint. Bij het afrekenen kies je zelf je startdatum: vandaag of een van de 7 dagen daarna. Begin je niet op maandag, dan loopt je eerste week door tot en met de zondag van de week erna; start je bijvoorbeeld op donderdag, dan duurt je eerste week anderhalve week.",
     },
     weegmoment: {
       q: "Wat gebeurt er met mijn wekelijkse weegmoment?",
@@ -117,7 +117,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   en: {
     snel: {
       q: "How quickly will I get my plan?",
-      a: "We get started the moment you've paid. Within 2 hours, your plan is ready for you in My plans and you'll receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
+      a: "We get started the moment you've paid. Within 2 hours, your plan is ready for you in My plans, even if you choose a later start date, and you'll receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
     },
     persoonlijk: {
       q: "How personal is the plan?",
@@ -157,7 +157,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
     },
     periode: {
       q: "How long is a period, and do I get a new plan every week?",
-      a: "A period lasts 4 weeks and starts on a Monday. Each period you receive one nutrition plan and/or workout plan. The nutrition plan is a Monday-to-Sunday meal plan that you follow for 4 weeks, with a shopping list for each week. The workout plan builds up over 4 weeks, with a clear step forward each week. Every week, ideally at the weekend, you log your weekly weigh-in; if your progress is off track, we adjust your current plan straight away, in time for your shopping. From the Thursday before a new period, you can complete the check-in. Do it by Saturday, and your new plan with shopping list will be ready before the new week begins. Your first period starts straight after your order and runs until the Monday closest to 4 weeks later.",
+      a: "A period lasts 4 weeks and every week runs from Monday to Sunday. Each period you receive one nutrition plan and/or workout plan. The nutrition plan is a Monday-to-Sunday meal plan that you follow for 4 weeks, with a shopping list for each week. The workout plan builds up over 4 weeks, with a clear step forward each week. Every week, ideally at the weekend, you log your weekly weigh-in; if your progress is off track, we adjust your current plan straight away, in time for your shopping. From the Thursday before a new period, you can complete the check-in. Do it by Saturday, and your new plan with shopping list will be ready before the new week begins. At checkout, you choose your own start date: today or one of the 7 days after. If you don't start on a Monday, your first week runs until the Sunday of the following week; start on a Thursday, for example, and your first week lasts a week and a half.",
     },
     weegmoment: {
       q: "What happens with my weekly weigh-in?",

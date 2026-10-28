@@ -1,29 +1,74 @@
 import { site } from "@/config/site";
-import { amsterdamMidnight, amsterdamWeekday } from "@/lib/dates";
+import { addDaysToDay, amsterdamDay, amsterdamMidnight, amsterdamStartOfDay, amsterdamWeekday } from "@/lib/dates";
 
 /**
  * Het ritme van de schema's.
  *
- * - Elke periode start op een vaste weekdag (maandag, Nederlandse tijd) en
- *   duurt 4 weken. De eerste periode start direct na de aankoop en loopt tot
- *   de maandag die het dichtst bij 4 weken later ligt (25 tot 31 dagen).
+ * - Elke week loopt van maandag tot en met zondag (Nederlandse tijd) en een
+ *   periode duurt 4 weken. De eerste periode start op de dag die de klant bij
+ *   het afrekenen kiest (vandaag of binnen 7 dagen). Is dat geen maandag, dan
+ *   duurt de eerste week langer: van de startdag tot en met de zondag van de
+ *   week erna (8 tot 13 dagen). De periode duurt dan 28 tot 34 dagen.
  * - De check-in voor de volgende periode opent op de donderdag ervoor. Vul je
  *   hem uiterlijk zaterdag in, dan staat het nieuwe schema met
  *   boodschappenlijst op tijd klaar voor de boodschappen in het weekend.
  *   Eerder maken we het niet: dan sluit het niet meer aan op je voortgang.
  * - Een nieuw schema is direct zichtbaar, met de startdatum erbij, en wordt
  *   op die maandag vanzelf het huidige schema. Is de check-in te laat, dan
- *   start het nieuwe schema meteen en sluit de periode daarna weer aan op
- *   maandag.
+ *   start het nieuwe schema meteen; net als bij de eerste periode loopt de
+ *   eerste week dan door tot de zondag van de week erna.
  * - De weegmomenten openen op zaterdag, zodat een bijsturing op tijd is voor
  *   de boodschappen van de week erna.
  */
 
-/** Start van de volgende periode: de maandag die het dichtst bij 4 weken na `start` ligt. */
+/** De eerste maandag op of na `start` (middernacht, Nederlandse tijd). */
+export function firstMondayFrom(start: Date): Date {
+  const day = amsterdamMidnight(start);
+  return amsterdamMidnight(day, (site.periodStartWeekday - amsterdamWeekday(day) + 7) % 7);
+}
+
+/** Start van de volgende periode: 4 weken na de eerste maandag van de periode die op `start` begon. */
 export function nextPeriodStart(start: Date): Date {
-  const target = amsterdamMidnight(start, site.planIntervalDays);
-  const forward = (site.periodStartWeekday - amsterdamWeekday(target) + 7) % 7;
-  return amsterdamMidnight(target, forward <= 3 ? forward : forward - 7);
+  return amsterdamMidnight(firstMondayFrom(start), site.planIntervalDays);
+}
+
+/** Begin van week 2: start de periode niet op maandag, dan loopt week 1 t/m de zondag van de week erna. */
+export function secondWeekStart(start: Date): Date {
+  return amsterdamMidnight(firstMondayFrom(start), 7);
+}
+
+/** Start de periode op een andere dag dan maandag (en is de eerste week dus langer)? */
+export function hasLongFirstWeek(start: Date): boolean {
+  return amsterdamWeekday(start) !== site.periodStartWeekday;
+}
+
+/** Is week 1 van deze periode langer dan een week en nog niet voorbij (of nog niet begonnen)? */
+export function inLongFirstWeek(start: Date, now: number = Date.now()): boolean {
+  return hasLongFirstWeek(start) && now < secondWeekStart(start).getTime();
+}
+
+/** De zondag waarop week 1 eindigt. */
+export function firstWeekEnd(start: Date): Date {
+  return amsterdamMidnight(secondWeekStart(start), -1);
+}
+
+/** De dagen (JJJJ-MM-DD) waaruit de klant de startdatum kiest: vandaag t/m `site.startChoiceDays` dagen later. */
+export function startDayOptions(now: number = Date.now()): string[] {
+  const today = amsterdamDay(new Date(now));
+  return Array.from({ length: site.startChoiceDays + 1 }, (_, i) => addDaysToDay(today, i));
+}
+
+/**
+ * Begin van de eerste periode bij een gekozen startdag: die dag om
+ * middernacht. Vandaag, een ongeldige dag of een dag die al voorbij is
+ * (bijvoorbeeld door een late betaling): nu.
+ */
+export function firstPeriodStart(day: string | null | undefined, now: number = Date.now()): Date {
+  const today = amsterdamDay(new Date(now));
+  // Eén dag speling: wie op de laatste dag kiest en na middernacht betaalt, houdt zijn keuze.
+  const latest = addDaysToDay(today, site.startChoiceDays + 1);
+  if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day) || day <= today || day > latest) return new Date(now);
+  return amsterdamStartOfDay(day);
 }
 
 /** Dag (middernacht) een aantal kalenderdagen voor of na `date`. */
