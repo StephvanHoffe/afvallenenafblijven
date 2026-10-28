@@ -16,6 +16,8 @@ export interface CheckoutInput {
   locale?: Locale;
   /** Een geldige kortingscode; vervangt de actiekorting. */
   discount?: DiscountCodeRow | null;
+  /** De gekozen startdatum (JJJJ-MM-DD); de eerste periode begint dan. */
+  startDay?: string | null;
 }
 
 /**
@@ -62,6 +64,7 @@ export async function createCheckout(input: CheckoutInput): Promise<string> {
         monthly_cents: plan.monthlyCents,
         intro_cents: plan.introCents,
         intro_months: plan.introMonths,
+        start_day: input.startDay ?? null,
       },
     },
     `betaling-${input.intakeId}`,

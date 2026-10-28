@@ -6,8 +6,8 @@ import { checkinLabel, intakeLabels } from "@/i18n/options";
 import { checkinAdvisedBy, checkinOpensAt, nextPeriodStart } from "@/lib/schedule";
 
 /**
- * De check-in is verplicht voor elk vervolgschema. Elke periode start op een
- * maandag; de check-in opent op de donderdag ervoor (zie src/lib/schedule.ts).
+ * De check-in is verplicht voor elk vervolgschema. Elke vervolgperiode start op
+ * een maandag; de check-in opent op de donderdag ervoor (zie src/lib/schedule.ts).
  * Pas als de klant hem invult, maken we het schema voor de volgende periode,
  * afgestemd op de antwoorden. Dat schema start op de maandag (of meteen, als
  * de check-in te laat is).

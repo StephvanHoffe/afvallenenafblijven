@@ -5,7 +5,7 @@ import { PRODUCT_IDS, productFor, products } from "@/config/pricing";
 import { defineCopy, intlLocale, localeUrl, type Locale } from "@/i18n/config";
 import { euro, formatDate } from "@/lib/format";
 import { dayAsDate, withdrawalLastDay } from "@/lib/withdrawal";
-import { nextPeriodStart } from "@/lib/schedule";
+import { firstWeekEnd, hasLongFirstWeek, nextPeriodStart } from "@/lib/schedule";
 import { isAdminTopicMuted, logMail, mailTextOverride } from "@/lib/email-store";
 import { loadStoredConfig } from "@/lib/db";
 import type { AdminTopic } from "@/lib/admin-topics";
@@ -229,6 +229,10 @@ const plansReadyCopy = defineCopy({
     subjectFirst: (name: string) => `Je persoonlijke schema staat klaar, ${name}!`,
     button: "Bekijk mijn schema",
     tipsTitle: "Zo haal je er het meeste uit:",
+    startTip: (start: string | null, weekEnd: string | null) =>
+      [start ? `Je begint op ${start}.` : "", weekEnd ? `Je eerste week loopt t/m ${weekEnd}; daarna loopt elke week van maandag t/m zondag.` : ""]
+        .filter(Boolean)
+        .join(" "),
     tips: (next: string | null) => [
       "Lees eerst de introductie en de kernafspraken.",
       "Doe je boodschappen met de boodschappenlijst (handig: download het schema als PDF).",
@@ -254,6 +258,10 @@ const plansReadyCopy = defineCopy({
     subjectFirst: (name: string) => `Your personal plan is ready, ${name}!`,
     button: "View my plan",
     tipsTitle: "How to get the most out of it:",
+    startTip: (start: string | null, weekEnd: string | null) =>
+      [start ? `You start on ${start}.` : "", weekEnd ? `Your first week runs until ${weekEnd}; after that, every week runs from Monday to Sunday.` : ""]
+        .filter(Boolean)
+        .join(" "),
     tips: (next: string | null) => [
       "Start by reading the introduction and the key principles.",
       "Do your shopping with the shopping list (handy tip: download the plan as a PDF).",
@@ -296,7 +304,10 @@ export function plansReadyEmail(
     button: c.button,
   };
   const vars = { naam: input.name, schemas: c.what(input.types), startdatum: weekdayDate(start, l), periode: String(input.seq) };
-  const tips = c.tips(weekdayDate(nextPeriodStart(start), l));
+  // Eerste schema: de gekozen startdag (als die nog komt) en een langere eerste week bovenaan de tips.
+  const startTip =
+    input.seq === 1 ? c.startTip(start.getTime() > Date.now() + 60 * 60 * 1000 ? weekdayDate(start, l) : null, hasLongFirstWeek(start) ? weekdayDate(firstWeekEnd(start), l) : null) : "";
+  const tips = [...(startTip ? [startTip] : []), ...c.tips(weekdayDate(nextPeriodStart(start), l))];
   const loginHref = localeUrl(site.url, l, "/inloggen");
   return editableMail(kind, l, input.to, defaults, vars, (t) => ({
     subject: t.subject,
@@ -314,7 +325,7 @@ ${tips.map((tip) => `<li>${tip}</li>`).join("\n")}
 <p>${g.team(escapeHtml(site.name))}</p>`,
       l,
     ),
-    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${c.textLink(input.link)}\n\n${c.textPersonal(loginHref)}\n\n${g.team(site.name)}`,
+    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${startTip ? `${startTip}\n\n` : ""}${c.textLink(input.link)}\n\n${c.textPersonal(loginHref)}\n\n${g.team(site.name)}`,
   }));
 }
 
@@ -782,6 +793,7 @@ const orderCopy = defineCopy({
     orderNumber: "Bestelnummer",
     product: "Product",
     duration: "Looptijd",
+    start: "Start",
     paid: "Betaald",
     renewal: "Verlenging",
     consent: (until: string) =>
@@ -797,6 +809,7 @@ const orderCopy = defineCopy({
     orderNumber: "Order number",
     product: "Product",
     duration: "Term",
+    start: "Start",
     paid: "Paid",
     renewal: "Renewal",
     consent: (until: string) =>
@@ -821,6 +834,8 @@ export function orderConfirmationEmail(
     incassoNote?: string;
     /** Moment van de betaling: daarmee gaat het herroepingsrecht in. */
     paidAt?: Date;
+    /** Begin van de eerste periode (de gekozen startdatum). */
+    startsAt?: Date;
     locale?: Locale;
   },
   l: Locale = input.locale ?? "nl",
@@ -832,6 +847,7 @@ export function orderConfirmationEmail(
     [c.orderNumber, input.orderNumber],
     [c.product, productName(input.productName, l)],
     [c.duration, input.durationLabel],
+    [c.start, weekdayDate(input.startsAt ?? new Date(), l)],
     [c.paid, input.amountPaid],
     [c.renewal, input.renewal],
   ];

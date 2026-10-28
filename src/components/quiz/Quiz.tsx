@@ -42,6 +42,8 @@ import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 import { intakeLabels } from "@/i18n/options";
+import { amsterdamMidnight, amsterdamStartOfDay } from "@/lib/dates";
+import { hasLongFirstWeek, secondWeekStart, startDayOptions } from "@/lib/schedule";
 
 type StepId =
   | "doel"
@@ -271,6 +273,13 @@ const copy = defineCopy({
       codeChecking: "Controleren…",
       codeRemove: "Verwijderen",
       codeLine: (code: string) => `Kortingscode ${code}`,
+      startTitle: "Wanneer wil je beginnen?",
+      startToday: "Vandaag",
+      startTomorrow: "Morgen",
+      startNow: "Je schema staat binnen 2 uur klaar en je begint vandaag.",
+      startLater: (date: string) => `Je schema staat binnen 2 uur klaar, zodat je alvast je boodschappen kunt doen. Je begint op ${date}.`,
+      startFirstWeek: (from: string, to: string) => `Je eerste week loopt van ${from} t/m ${to}; daarna loopt elke week van maandag t/m zondag.`,
+      startMonday: "Je weken lopen van maandag t/m zondag.",
       codeReplacesLaunch: "Je kortingscode vervangt de actiekorting.",
       codeRepeating: (n: number, amount: string) => `Met je kortingscode betaal je de eerste ${n} maanden ${amount} per maand.`,
       promoRepeating: (label: string, n: number, amount: string) =>
@@ -458,6 +467,13 @@ const copy = defineCopy({
       codeChecking: "Checking…",
       codeRemove: "Remove",
       codeLine: (code: string) => `Discount code ${code}`,
+      startTitle: "When would you like to start?",
+      startToday: "Today",
+      startTomorrow: "Tomorrow",
+      startNow: "Your plan will be ready within 2 hours and you start today.",
+      startLater: (date: string) => `Your plan will be ready within 2 hours, so you can do your shopping in advance. You start on ${date}.`,
+      startFirstWeek: (from: string, to: string) => `Your first week runs from ${from} to ${to}; after that, every week runs from Monday to Sunday.`,
+      startMonday: "Your weeks run from Monday to Sunday.",
       codeReplacesLaunch: "Your discount code replaces the promotional discount.",
       codeRepeating: (n: number, amount: string) => `With your discount code, you pay ${amount} a month for the first ${n} months.`,
       promoRepeating: (label: string, n: number, amount: string) =>
@@ -1430,6 +1446,15 @@ function CheckoutBox({
   const ready = c.healthData && c.terms && c.immediateDelivery;
   const [touched, setTouched] = useState(false);
   const [codeOpen, setCodeOpen] = useState(code.initiallyOpen);
+  // Startdatum: vandaag t/m 7 dagen later (Nederlandse kalenderdagen).
+  const startOptions = useMemo(() => startDayOptions(), []);
+  const [startDay, setStartDay] = useState(startOptions[0]);
+  const startDate = amsterdamStartOfDay(startDay);
+  const dayLabel = (opts: Intl.DateTimeFormatOptions) => (day: string) =>
+    new Intl.DateTimeFormat(intlLocale(l), { ...opts, timeZone: "Europe/Amsterdam" }).format(amsterdamStartOfDay(day));
+  const longDate = (date: Date) => new Intl.DateTimeFormat(intlLocale(l), { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(date);
+  const shortWeekday = dayLabel({ weekday: "short" });
+  const dayMonth = dayLabel({ day: "numeric", month: "short" });
 
   return (
     <form
@@ -1447,7 +1472,7 @@ function CheckoutBox({
         // Bezoeknummer en apparaat (funnel) en de kortingscode gaan mee met de bestelling.
         try {
           const p = JSON.parse(String(data.get("payload")));
-          data.set("payload", JSON.stringify({ ...p, visitId: visitId(), device: deviceType(), discountCode: discount?.code ?? null }));
+          data.set("payload", JSON.stringify({ ...p, visitId: visitId(), device: deviceType(), discountCode: discount?.code ?? null, startDay }));
         } catch {
           /* dan zonder */
         }
@@ -1545,6 +1570,31 @@ function CheckoutBox({
           </div>
         )}
       </div>
+
+      <fieldset className="mt-6">
+        <legend className="font-semibold">{t.startTitle}</legend>
+        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {startOptions.map((day, i) => {
+            const selected = day === startDay;
+            return (
+              <label
+                key={day}
+                className={`cursor-pointer rounded-2xl border-2 px-1 py-2 text-center text-sm leading-tight transition-colors has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-100 ${
+                  selected ? "border-brand-600 bg-brand-50 font-bold text-brand-900" : "border-line bg-white hover:border-brand-300"
+                }`}
+              >
+                <input type="radio" name="startdag" value={day} checked={selected} onChange={() => setStartDay(day)} className="sr-only" />
+                <span className="block">{i === 0 ? t.startToday : i === 1 ? t.startTomorrow : shortWeekday(day)}</span>
+                <span className={`block text-xs ${selected ? "text-brand-800" : "text-muted"}`}>{dayMonth(day)}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-sm text-muted" aria-live="polite">
+          {startDay === startOptions[0] ? t.startNow : t.startLater(longDate(startDate))}{" "}
+          {hasLongFirstWeek(startDate) ? t.startFirstWeek(longDate(startDate), longDate(amsterdamMidnight(secondWeekStart(startDate), -1))) : t.startMonday}
+        </p>
+      </fieldset>
 
       <div className="mt-6 space-y-3">
         <Checkbox

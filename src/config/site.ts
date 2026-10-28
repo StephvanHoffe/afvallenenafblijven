@@ -96,6 +96,8 @@ export const site = {
   planIntervalDays: 28,
   /** Weekdag waarop elke periode start: 1 = maandag (0 = zondag … 6 = zaterdag). */
   periodStartWeekday: 1,
+  /** Bij het afrekenen kiest de klant de startdatum: vandaag of tot zoveel dagen later. */
+  startChoiceDays: 7,
 
   checkin: {
     /** Zoveel dagen voor de start van de nieuwe periode opent de check-in (4 = donderdag). */

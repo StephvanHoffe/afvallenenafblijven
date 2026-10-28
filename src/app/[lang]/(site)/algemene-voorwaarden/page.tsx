@@ -147,9 +147,11 @@ function Nl() {
           Levering vindt plaats via je persoonlijke omgeving &quot;Mijn schema&apos;s&quot; en een e-mail met een link.
         </li>
         <li>
-          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Elke periode start op
-          een maandag en duurt 4 weken; de eerste periode start direct na je bestelling en loopt tot de maandag die het
-          dichtst bij 4 weken later ligt (25 tot 31 dagen). Elk vervolgschema maken we op basis van een check-in, waarin je
+          Bij een abonnement ontvang je elke 4 weken een nieuw schema, zolang het abonnement loopt. Een periode duurt 4 weken
+          en elke week loopt van maandag tot en met zondag. De eerste periode start op de startdatum die je bij je bestelling
+          kiest: de dag van je bestelling of een van de 7 dagen daarna. Is dat geen maandag, dan loopt je eerste week door
+          tot en met de zondag van de week erna en duurt de eerste periode 29 tot 34 dagen. Elke volgende periode start op
+          een maandag. Elk vervolgschema maken we op basis van een check-in, waarin je
           je voortgang doorgeeft. De check-in opent op de donderdag voor de nieuwe periode; je ontvangt dan een uitnodiging
           per e-mail en zo nodig herinneringen. Het nieuwe schema maken we zodra je de check-in hebt ingevuld; het staat
           binnen 2 uur voor je klaar en start op de maandag van de nieuwe periode, of meteen als die al is begonnen. Zolang je de
@@ -524,9 +526,11 @@ function En() {
           takes place via your personal environment &quot;My plans&quot; and an email with a link.
         </li>
         <li>
-          With a subscription, you receive a new plan every 4 weeks for as long as the subscription runs. Each period
-          starts on a Monday and lasts 4 weeks; the first period starts straight after your order and runs until the
-          Monday closest to 4 weeks later (25 to 31 days). We create each follow-up plan on the basis of a check-in, in
+          With a subscription, you receive a new plan every 4 weeks for as long as the subscription runs. A period lasts 4
+          weeks and every week runs from Monday to Sunday. The first period starts on the start date you choose when you
+          order: the day of your order or one of the 7 days after it. If that is not a Monday, your first week runs until
+          the Sunday of the following week and the first period lasts 29 to 34 days. Every following period starts on a
+          Monday. We create each follow-up plan on the basis of a check-in, in
           which you tell us about your progress. The check-in opens on the Thursday before the new period; you will then
           receive an invitation by email and, if necessary, reminders. We create the new plan as soon as you have
           completed the check-in; it will be ready for you within 2 hours and starts on the Monday of the new period, or

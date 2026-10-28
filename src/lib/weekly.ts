@@ -68,7 +68,8 @@ export interface WeeklyWindow {
 
 /**
  * Weegmoment `week` (1-3) rond de maandag 3, 2 of 1 week voor het einde van
- * de periode. Null als die maandag te dicht op de start ligt (een korte eerste periode).
+ * de periode. Null als die maandag te dicht op de start ligt (vangnet: een periode duurt
+ * minstens 4 weken, dus elk weegmoment valt na de start).
  */
 function momentBounds(start: number, week: number) {
   const end = nextPeriodStart(new Date(start));
