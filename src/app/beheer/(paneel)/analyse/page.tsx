@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { ArrowRight } from "lucide-react";
+import Link from "@/i18n/Link";
 import { ColumnChart } from "@/components/beheer/Charts";
-import { EmptyRow, Meter, NeedsDatabase, PageTitle, Panel, StatTile, pct, table } from "@/components/beheer/ui";
+import { EmptyRow, Meter, NeedsDatabase, PageTitle, Panel, StatTile, duration, pct, table } from "@/components/beheer/ui";
 import { durations, products } from "@/config/pricing";
 import { adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { analyticsReport } from "@/lib/admin/analytics-report";
+import { CHANNEL_LABELS } from "@/lib/admin/channels";
+import { cityName, countryName, regionName } from "@/lib/admin/places";
+import { visitorsReport, type VisitorsReport } from "@/lib/admin/visitors-report";
 import { catalogEntry } from "@/lib/admin/mail-catalog";
 import { cancelReasonLabel } from "@/lib/cancel-reasons";
 import { euro, formatNumber } from "@/lib/format";
@@ -24,6 +29,90 @@ export default function AnalysePage() {
 const monthLabel = (key: string, long = false) =>
   new Intl.DateTimeFormat("nl-NL", long ? { month: "long", year: "numeric" } : { month: "short" }).format(new Date(`${key}-15T12:00:00`));
 
+/** Een korte lijst met balkjes: label links, aantal en aandeel rechts. */
+function ShareList({ rows, empty }: { rows: { key: string; label: string; value: number; note?: string }[]; empty: string }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  if (!rows.length || total === 0) return <p className="px-5 py-6 text-center text-sm text-muted">{empty}</p>;
+  return (
+    <ul className="divide-y divide-line">
+      {rows.map((r) => (
+        <li key={r.key} className="px-5 py-2.5">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 font-semibold break-words">{r.label}</span>
+            <span className="shrink-0 tabular-nums">
+              <span className="font-bold">{formatNumber(r.value)}</span> <span className="text-muted">({pct(r.value, total)})</span>
+            </span>
+          </div>
+          <div className="mt-1">
+            <Meter value={r.value} max={max} />
+          </div>
+          {r.note && <p className="mt-1 text-xs text-muted">{r.note}</p>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Samenvatting van de bezoekers (30 dagen); de details staan bij Bezoekers. */
+function VisitorSummary({ v }: { v: VisitorsReport }) {
+  const channels = v.channels
+    .filter((c) => c.visits > 0)
+    .sort((a, b) => b.visits - a.visits)
+    .map((c) => ({ key: c.key, label: CHANNEL_LABELS[c.key], value: c.visits }));
+  const places = v.cities.length
+    ? v.cities.slice(0, 6).map((c) => {
+        const [city, country] = c.key.split("|");
+        return { key: c.key, label: cityName(city, country || null), value: c.visits };
+      })
+    : v.regions.length
+      ? v.regions.slice(0, 6).map((r) => {
+          const [country, region] = r.key.split("-");
+          return { key: r.key, label: regionName(country, region), value: r.visits };
+        })
+      : v.countries.filter((c) => c.key).map((c) => ({ key: c.key, label: countryName(c.key), value: c.visits }));
+  const timed = v.durations.reduce((s, d) => s + d.visits, 0);
+  return (
+    <div className="mt-8">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="text-xl font-extrabold tracking-tight">Bezoekers in de laatste 30 dagen</h2>
+        <Link href="/beheer/bezoekers" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+          Alles over bezoekers <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Panel title="Waar komen ze vandaan?">
+          <ShareList rows={channels} empty="Nog geen bezoeken." />
+          <p className="border-t border-line bg-sand/40 px-5 py-2 text-xs font-bold tracking-wide text-muted uppercase">Plaatsen</p>
+          <ShareList rows={places} empty="Nog geen bezoeken met een bekende plaats." />
+        </Panel>
+        <Panel title="Waar zitten ze op de website?">
+          <ShareList
+            rows={v.pages.slice(0, 7).map((p) => ({
+              key: p.path,
+              label: p.path,
+              value: p.views,
+              note: `Gem. ${duration(p.avgSeconds)}${p.scroll === null ? "" : ` · ${formatNumber(p.scroll)}% gescrold`} · ${pct(p.exits, p.views)} verlaat de site hier`,
+            }))}
+            empty="Nog geen paginaweergaven."
+          />
+        </Panel>
+        <Panel title="Hoe lang blijven ze?">
+          <div className="grid grid-cols-2 gap-4 border-b border-line p-5">
+            <Fact label="Gemiddelde bezoekduur" value={duration(v.kpis.avgSeconds)} />
+            <Fact label="Pagina's per bezoek" value={v.kpis.pagesPerVisit === null ? "–" : formatNumber(v.kpis.pagesPerVisit, 1)} />
+          </div>
+          {timed === 0 ? (
+            <p className="px-5 py-6 text-center text-sm text-muted">Nog geen bezoeken met een tijdmeting.</p>
+          ) : (
+            <ShareList rows={v.durations.map((d) => ({ key: d.label, label: d.label, value: d.visits }))} empty="" />
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 function Fact({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div>
@@ -38,7 +127,7 @@ async function Analyse() {
   if (!isDemoMode()) await connection();
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
-  const r = await analyticsReport();
+  const [r, visitors] = await Promise.all([analyticsReport(), visitorsReport({ days: 30 })]);
   const k = r.kpis;
   const mixMax = Math.max(1, ...r.mix.map((m) => m.count));
   const reasonsTotal = r.cancelReasons.reduce((s, c) => s + c.count, 0);
@@ -47,7 +136,7 @@ async function Analyse() {
 
   return (
     <>
-      <PageTitle title="Analyse" intro="Omzet, abonnementen, behoud en hoe klanten hun schema gebruiken." />
+      <PageTitle title="Analyse" intro="Omzet, abonnementen, behoud, waar bezoekers vandaan komen en hoe klanten hun schema gebruiken." />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Terugkerende omzet (MRR)" value={euro(k.mrrCents)} hint={`${formatNumber(k.activeSubs)} actieve abonnementen, incl. btw`} />
@@ -76,6 +165,8 @@ async function Analyse() {
           hint={`Bestellingen per bezoek · ${formatNumber(k.visits30)} bezoeken`}
         />
       </div>
+
+      <VisitorSummary v={visitors} />
 
       {!r.paymentsTracked && (
         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">

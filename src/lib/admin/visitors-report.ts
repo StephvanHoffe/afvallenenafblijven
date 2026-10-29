@@ -7,8 +7,9 @@ import { amsterdamDay, amsterdamHour, amsterdamWeekday } from "@/lib/dates";
 
 /**
  * Cijfers voor /beheer/bezoekers: hoeveel mensen de website bezoeken, wat ze
- * bekijken, hoe lang, waar ze vandaan komen en waar ze de site verlaten. Uit de
- * eigen anonieme meting (zie src/lib/track.ts); zonder cookies, bots tellen niet mee.
+ * bekijken, hoe lang en hoe ver ze scrollen, welke route ze nemen, waar ze
+ * vandaan komen (kanaal, website, campagne, plaats) en waar ze de site verlaten.
+ * Uit de eigen anonieme meting (zie src/lib/track.ts); zonder cookies, bots tellen niet mee.
  */
 
 export interface VisitorKpis {
@@ -41,8 +42,59 @@ export interface VisitorPageRow {
   visits: number;
   /** Gemiddelde tijd op deze pagina per bezoek, in seconden. */
   avgSeconds: number | null;
+  /** Gemiddeld hoe ver bezoekers op deze pagina scrolden (0-100%). */
+  scroll: number | null;
+  /** Aandeel bezoeken met een scrollmeting dat (bijna) onderaan kwam (90% of meer). */
+  bottomShare: number | null;
   entries: number;
   exits: number;
+}
+
+export interface VisitorPathRow {
+  /** De eerste pagina's van het bezoek, zonder herhalingen direct na elkaar. */
+  steps: string[];
+  /** Het bezoek ging daarna nog verder. */
+  more: boolean;
+  visits: number;
+  toStart: number;
+  purchases: number;
+}
+
+export interface VisitorDurationRow {
+  label: string;
+  visits: number;
+  toStart: number;
+  purchases: number;
+}
+
+export interface VisitorCampaignRow {
+  campaign: string;
+  source: string | null;
+  medium: string | null;
+  /** utm_content: meestal de advertentie of variant. */
+  content: string | null;
+  visits: number;
+  toStart: number;
+  purchases: number;
+  avgSeconds: number | null;
+}
+
+export interface RecentVisit {
+  startedAt: Date;
+  channel: Channel;
+  referrer: string | null;
+  source: string | null;
+  campaign: string | null;
+  device: string | null;
+  locale: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  /** Totale tijd dat de site zichtbaar openstond (null zonder meting). */
+  seconds: number | null;
+  reachedStart: boolean;
+  purchase: boolean;
+  pages: { path: string; seconds: number | null; scroll: number | null }[];
 }
 
 export interface VisitorsReport {
@@ -54,7 +106,15 @@ export interface VisitorsReport {
   entries: VisitorSegmentRow[];
   channels: (VisitorSegmentRow & { key: Channel })[];
   referrers: { host: string; visits: number; purchases: number }[];
-  campaigns: { campaign: string; source: string | null; visits: number; purchases: number }[];
+  campaigns: VisitorCampaignRow[];
+  /** Per land (ISO-code, "" = onbekend), per regio ("NL-NH") en per stad ("Amsterdam|NL"). */
+  countries: VisitorSegmentRow[];
+  regions: VisitorSegmentRow[];
+  cities: VisitorSegmentRow[];
+  /** Hoe lang bezoeken duurden (alleen bezoeken met een tijdmeting). */
+  durations: VisitorDurationRow[];
+  paths: VisitorPathRow[];
+  recent: RecentVisit[];
   devices: VisitorSegmentRow[];
   languages: VisitorSegmentRow[];
   /** Weekdag (0 = zondag) × uur in Nederlandse tijd; "orders" = bezoeken die betaalden. */
@@ -76,9 +136,27 @@ interface VisitRow {
   utm: string | null;
   referrer: string | null;
   campaign: string | null;
+  medium: string | null;
+  content: string | null;
   device: string | null;
   locale: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  page_seq: string[] | null;
 }
+
+const DURATION_BUCKETS: { label: string; below: number }[] = [
+  { label: "Minder dan 10 seconden", below: 10 },
+  { label: "10 tot 30 seconden", below: 30 },
+  { label: "30 seconden tot 1 minuut", below: 60 },
+  { label: "1 tot 3 minuten", below: 180 },
+  { label: "3 tot 10 minuten", below: 600 },
+  { label: "Langer dan 10 minuten", below: Infinity },
+];
+
+/** Zoveel pagina's van een route tonen we; daarna "…". */
+const PATH_STEPS = 4;
 
 const DAY = 24 * 60 * 60 * 1000;
 const ratio = (n: number, d: number) => (d > 0 ? n / d : null);
@@ -147,14 +225,20 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
       (array_agg(source order by created_at) filter (where source is not null))[1] as utm,
       (array_agg(referrer order by created_at) filter (where referrer is not null))[1] as referrer,
       (array_agg(campaign order by created_at) filter (where campaign is not null))[1] as campaign,
+      (array_agg(medium order by created_at) filter (where medium is not null))[1] as medium,
+      (array_agg(content order by created_at) filter (where content is not null))[1] as content,
       (array_agg(device order by created_at) filter (where device is not null))[1] as device,
-      (array_agg(locale order by created_at) filter (where locale is not null))[1] as locale
+      (array_agg(locale order by created_at) filter (where locale is not null))[1] as locale,
+      (array_agg(country order by created_at) filter (where country is not null))[1] as country,
+      (array_agg(region order by created_at) filter (where region is not null))[1] as region,
+      (array_agg(city order by created_at) filter (where city is not null))[1] as city,
+      array_agg(path order by created_at) filter (where event = 'page_view') as page_seq
     from funnel_events
     where created_at >= ${start} and created_at < ${end} and visit_id is not null
     group by visit_id
     having count(*) filter (where event = 'page_view') > 0`;
 
-  const [rows, prevRows, pageRows, live, livePages] = await Promise.all([
+  const [rows, prevRows, pageRows, scrollRows, recentEvents, live, livePages] = await Promise.all([
     visitRows(from, now),
     visitRows(prevFrom, from),
     sql<{ path: string; views: number; visits: number; seconds: number | null; timed: number }[]>`
@@ -166,6 +250,25 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
       from funnel_events
       where created_at >= ${from} and event in ('page_view', 'page_leave') and path is not null
       group by path order by views desc limit 40`,
+    // Per bezoek en pagina de verste scrollpositie, daarna het gemiddelde per pagina.
+    sql<{ path: string; scroll: number; measured: number; bottom: number }[]>`
+      select path, avg(s)::float as scroll, count(*)::int as measured, count(*) filter (where s >= 90)::int as bottom
+      from (
+        select visit_id, path, max(scroll) as s from funnel_events
+        where created_at >= ${from} and event = 'page_leave' and scroll is not null and path is not null
+        group by visit_id, path
+      ) t group by path`,
+    // De pagina's (met tijd en scroll) van de 30 laatste bezoeken.
+    sql<{ visit_id: string; event: string; path: string | null; seconds: number | null; scroll: number | null }[]>`
+      with latest as (
+        select visit_id, min(created_at) as first_at from funnel_events
+        where created_at >= ${from} and visit_id is not null
+        group by visit_id having count(*) filter (where event = 'page_view') > 0
+        order by first_at desc limit 30
+      )
+      select e.visit_id, e.event, e.path, e.seconds, e.scroll from funnel_events e join latest l on l.visit_id = e.visit_id
+      where e.event in ('page_view', 'page_leave') and e.created_at >= ${from}
+      order by e.created_at, e.id`,
     sql<{ n: number }[]>`select count(distinct visit_id)::int as n from funnel_events where created_at > now() - interval '30 minutes'`,
     sql<{ path: string; n: number }[]>`
       select path, count(*)::int as n from (
@@ -210,32 +313,122 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
     const cur = referrers.get(v.referrer!) ?? { visits: 0, purchases: 0 };
     referrers.set(v.referrer!, { visits: cur.visits + 1, purchases: cur.purchases + (v.purchase ? 1 : 0) });
   }
-  const campaigns = new Map<string, { source: string | null; visits: number; purchases: number }>();
+  const campaigns = new Map<string, VisitRow[]>();
   for (const v of rows.filter((r) => r.campaign || r.utm)) {
-    const key = v.campaign ?? "(zonder naam)";
-    const cur = campaigns.get(key) ?? { source: v.utm, visits: 0, purchases: 0 };
-    campaigns.set(key, { source: cur.source ?? v.utm, visits: cur.visits + 1, purchases: cur.purchases + (v.purchase ? 1 : 0) });
+    const key = JSON.stringify([v.campaign, v.utm, v.medium, v.content]);
+    campaigns.set(key, [...(campaigns.get(key) ?? []), v]);
   }
+  const campaignRows: VisitorCampaignRow[] = [...campaigns.values()]
+    .map((list) => {
+      const timed = list.filter((v) => v.timed);
+      return {
+        campaign: list[0].campaign ?? "(zonder naam)",
+        source: list[0].utm,
+        medium: list[0].medium,
+        content: list[0].content,
+        visits: list.length,
+        toStart: list.filter((v) => v.reached_start).length,
+        purchases: list.filter((v) => v.purchase).length,
+        avgSeconds: timed.length ? timed.reduce((s, v) => s + v.engaged, 0) / timed.length : null,
+      };
+    })
+    .sort((a, b) => b.visits - a.visits)
+    .slice(0, 20);
+
+  const timedRows = rows.filter((v) => v.timed);
+  const durations: VisitorDurationRow[] = DURATION_BUCKETS.map((b, i) => {
+    const list = timedRows.filter((v) => v.engaged < b.below && (i === 0 || v.engaged >= DURATION_BUCKETS[i - 1].below));
+    return { label: b.label, visits: list.length, toStart: list.filter((v) => v.reached_start).length, purchases: list.filter((v) => v.purchase).length };
+  });
+
+  const pathMap = new Map<string, VisitorPathRow>();
+  for (const v of rows) {
+    const steps = (v.page_seq ?? []).filter((p, i, all) => p !== all[i - 1]);
+    if (!steps.length) continue;
+    const row = { steps: steps.slice(0, PATH_STEPS), more: steps.length > PATH_STEPS };
+    const key = JSON.stringify(row);
+    const cur = pathMap.get(key) ?? { ...row, visits: 0, toStart: 0, purchases: 0 };
+    pathMap.set(key, { ...cur, visits: cur.visits + 1, toStart: cur.toStart + (v.reached_start ? 1 : 0), purchases: cur.purchases + (v.purchase ? 1 : 0) });
+  }
+
+  const scrollBy = new Map(scrollRows.map((s) => [s.path, s]));
+  const visitBy = new Map(rows.map((v) => [v.visit_id, v]));
+  const recentPages = new Map<string, RecentVisit["pages"]>();
+  for (const e of recentEvents) {
+    const pages = recentPages.get(e.visit_id) ?? [];
+    if (e.event === "page_view" && e.path) pages.push({ path: e.path, seconds: null, scroll: null });
+    else if (e.event === "page_leave") {
+      // Bij de laatste weergave van dezelfde pagina (een tabblad kan meer keren verborgen worden).
+      const view = [...pages].reverse().find((p) => p.path === e.path);
+      if (view) {
+        view.seconds = (view.seconds ?? 0) + (e.seconds ?? 0);
+        view.scroll = e.scroll === null ? view.scroll : Math.max(view.scroll ?? 0, e.scroll);
+      }
+    }
+    recentPages.set(e.visit_id, pages);
+  }
+  const recent: RecentVisit[] = [...recentPages.entries()]
+    .flatMap(([id, pages]) => {
+      const v = visitBy.get(id);
+      return v
+        ? [
+            {
+              startedAt: v.first_at,
+              channel: channelFor(v.utm, v.referrer),
+              referrer: v.referrer,
+              source: v.utm,
+              campaign: v.campaign,
+              device: v.device,
+              locale: v.locale,
+              country: v.country,
+              region: v.region,
+              city: v.city,
+              seconds: v.timed ? v.engaged : null,
+              reachedStart: v.reached_start,
+              purchase: v.purchase,
+              pages,
+            },
+          ]
+        : [];
+    })
+    .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
 
   return {
     days,
     kpis: kpisOf(rows),
     previous: kpisOf(prevRows),
     perDay,
-    pages: pageRows.map((p) => ({
-      path: p.path,
-      views: p.views,
-      visits: p.visits,
-      avgSeconds: p.timed > 0 && p.seconds !== null ? p.seconds / p.timed : null,
-      entries: entries.get(p.path) ?? 0,
-      exits: exits.get(p.path) ?? 0,
-    })),
+    pages: pageRows.map((p) => {
+      const s = scrollBy.get(p.path);
+      return {
+        path: p.path,
+        views: p.views,
+        visits: p.visits,
+        avgSeconds: p.timed > 0 && p.seconds !== null ? p.seconds / p.timed : null,
+        scroll: s ? s.scroll : null,
+        bottomShare: s && s.measured > 0 ? s.bottom / s.measured : null,
+        entries: entries.get(p.path) ?? 0,
+        exits: exits.get(p.path) ?? 0,
+      };
+    }),
     entries: segment(rows, (v) => v.landing ?? "(onbekend)", 15),
     channels: CHANNELS.map(
       (key) => channelRows.find((c) => c.key === key) ?? { key, visits: 0, bounces: 0, toStart: 0, purchases: 0, avgSeconds: null },
     ).map((c) => ({ ...c, key: c.key as Channel })),
     referrers: [...referrers.entries()].map(([host, v]) => ({ host, ...v })).sort((a, b) => b.visits - a.visits).slice(0, 15),
-    campaigns: [...campaigns.entries()].map(([campaign, v]) => ({ campaign, ...v })).sort((a, b) => b.visits - a.visits).slice(0, 15),
+    campaigns: campaignRows,
+    countries: segment(rows, (v) => v.country ?? ""),
+    regions: segment(
+      rows.filter((v) => v.country && v.region),
+      (v) => `${v.country}-${v.region}`,
+    ),
+    cities: segment(
+      rows.filter((v) => v.city),
+      (v) => `${v.city}|${v.country ?? ""}`,
+    ),
+    durations,
+    paths: [...pathMap.values()].sort((a, b) => b.visits - a.visits).slice(0, 12),
+    recent,
     devices: segment(rows, (v) => v.device ?? "onbekend"),
     languages: segment(rows, (v) => (v.locale === "en" ? "en" : "nl")),
     heatmap,

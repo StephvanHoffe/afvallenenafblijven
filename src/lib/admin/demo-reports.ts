@@ -518,6 +518,23 @@ function seg(key: string, visits: number, bounce: number, start: number, buy: nu
   };
 }
 
+/** Een handvol fictieve recente bezoeken voor de demo. */
+function demoRecentVisits(): VisitorsReport["recent"] {
+  const at = (minutes: number) => new Date(TODAY - minutes * 60 * 1000);
+  const page = (path: string, seconds: number | null, scroll: number | null) => ({ path, seconds, scroll });
+  const base = { source: null, campaign: null, locale: "nl", country: "NL", reachedStart: false, purchase: false };
+  return [
+    { ...base, startedAt: at(4), channel: "campagne", referrer: "instagram.com", source: "meta", campaign: "lancering-januari", device: "mobiel", region: "ZH", city: "Rotterdam", seconds: 412, reachedStart: true, purchase: true, pages: [page("/lp", 74, 82), page("/start", 318, 100), page("/bedankt", 20, 100)] },
+    { ...base, startedAt: at(11), channel: "zoekmachine", referrer: "google.com", device: "desktop", region: "UT", city: "Utrecht", seconds: 196, reachedStart: true, pages: [page("/voedingsschema", 61, 74), page("/prijzen", 48, 91), page("/start", 87, 40)] },
+    { ...base, startedAt: at(19), channel: "campagne", referrer: "tiktok.com", source: "tiktok", campaign: "thuis-trainen", device: "mobiel", region: "NB", city: "Eindhoven", seconds: 7, pages: [page("/lp/training", 7, 18)] },
+    { ...base, startedAt: at(26), channel: "direct", referrer: null, device: "mobiel", country: "BE", region: "VAN", city: "Antwerpen", seconds: 143, pages: [page("/", 39, 55), page("/hoe-werkt-het", 72, 88), page("/prijzen", 32, 63)] },
+    { ...base, startedAt: at(41), channel: "social", referrer: "facebook.com", device: "tablet", region: "GE", city: "Arnhem", seconds: 58, pages: [page("/", 21, 34), page("/voorbeeld", 37, 47)] },
+    { ...base, startedAt: at(57), channel: "email", referrer: "mail.google.com", source: "nieuwsbrief", campaign: "nieuwsbrief-februari", device: "desktop", region: "NH", city: "Amsterdam", seconds: 265, reachedStart: true, pages: [page("/prijzen", 51, 79), page("/start", 214, 92)] },
+    { ...base, startedAt: at(73), channel: "campagne", referrer: "instagram.com", source: "meta", campaign: "lancering-januari", device: "mobiel", region: "FR", city: "Leeuwarden", seconds: 33, pages: [page("/lp", 33, 41)] },
+    { ...base, startedAt: at(95), channel: "zoekmachine", referrer: "bing.com", device: "desktop", locale: "en", region: "NH", city: "Haarlem", seconds: 88, pages: [page("/en", 29, 46), page("/en/prijzen", 59, 70)] },
+  ];
+}
+
 export function demoVisitorsReport(days: number): VisitorsReport {
   const scale = days / 30;
   const n = (v: number) => Math.round(v * scale);
@@ -568,19 +585,19 @@ export function demoVisitorsReport(days: number): VisitorsReport {
     },
     perDay,
     pages: [
-      { path: "/lp", views: n(980), visits: n(790), avgSeconds: 71, entries: n(760), exits: n(330) },
-      { path: "/start", views: n(890), visits: n(742), avgSeconds: 248, entries: n(40), exits: n(520) },
-      { path: "/", views: n(610), visits: n(470), avgSeconds: 46, entries: n(390), exits: n(150) },
-      { path: "/prijzen", views: n(540), visits: n(455), avgSeconds: 58, entries: n(105), exits: n(160) },
-      { path: "/lp/voeding", views: n(470), visits: n(430), avgSeconds: 64, entries: n(420), exits: n(190) },
-      { path: "/voorbeeld", views: n(310), visits: n(260), avgSeconds: 95, entries: n(20), exits: n(70) },
-      { path: "/lp/training", views: n(260), visits: n(235), avgSeconds: 52, entries: n(230), exits: n(120) },
-      { path: "/hoe-werkt-het", views: n(220), visits: n(198), avgSeconds: 61, entries: n(15), exits: n(45) },
-      { path: "/voedingsschema", views: n(190), visits: n(160), avgSeconds: 49, entries: n(140), exits: n(70) },
-      { path: "/contact", views: n(120), visits: n(104), avgSeconds: 38, entries: n(10), exits: n(55) },
-      { path: "/bundel", views: n(95), visits: n(80), avgSeconds: 44, entries: n(60), exits: n(30) },
-      { path: "/bedankt", views: n(36), visits: n(34), avgSeconds: 22, entries: 0, exits: n(30) },
-      { path: "/en/lp", views: n(52), visits: n(45), avgSeconds: 33, entries: n(45), exits: n(31) },
+      { path: "/lp", views: n(980), visits: n(790), scroll: 64, bottomShare: 0.31, avgSeconds: 71, entries: n(760), exits: n(330) },
+      { path: "/start", views: n(890), visits: n(742), scroll: 88, bottomShare: 0.71, avgSeconds: 248, entries: n(40), exits: n(520) },
+      { path: "/", views: n(610), visits: n(470), scroll: 52, bottomShare: 0.18, avgSeconds: 46, entries: n(390), exits: n(150) },
+      { path: "/prijzen", views: n(540), visits: n(455), scroll: 77, bottomShare: 0.46, avgSeconds: 58, entries: n(105), exits: n(160) },
+      { path: "/lp/voeding", views: n(470), visits: n(430), scroll: 61, bottomShare: 0.27, avgSeconds: 64, entries: n(420), exits: n(190) },
+      { path: "/voorbeeld", views: n(310), visits: n(260), scroll: 58, bottomShare: 0.22, avgSeconds: 95, entries: n(20), exits: n(70) },
+      { path: "/lp/training", views: n(260), visits: n(235), scroll: 55, bottomShare: 0.24, avgSeconds: 52, entries: n(230), exits: n(120) },
+      { path: "/hoe-werkt-het", views: n(220), visits: n(198), scroll: 69, bottomShare: 0.35, avgSeconds: 61, entries: n(15), exits: n(45) },
+      { path: "/voedingsschema", views: n(190), visits: n(160), scroll: 57, bottomShare: 0.21, avgSeconds: 49, entries: n(140), exits: n(70) },
+      { path: "/contact", views: n(120), visits: n(104), scroll: 81, bottomShare: 0.62, avgSeconds: 38, entries: n(10), exits: n(55) },
+      { path: "/bundel", views: n(95), visits: n(80), scroll: 63, bottomShare: 0.29, avgSeconds: 44, entries: n(60), exits: n(30) },
+      { path: "/bedankt", views: n(36), visits: n(34), scroll: 100, bottomShare: 1.0, avgSeconds: 22, entries: 0, exits: n(30) },
+      { path: "/en/lp", views: n(52), visits: n(45), scroll: 41, bottomShare: 0.12, avgSeconds: 33, entries: n(45), exits: n(31) },
     ],
     entries: [
       seg("/lp", n(760), 0.38, 0.42, 0.0197, 142),
@@ -610,11 +627,61 @@ export function demoVisitorsReport(days: number): VisitorsReport {
       { host: "voedingscentrum-forum.nl", visits: n(9), purchases: 0 },
     ],
     campaigns: [
-      { campaign: "lancering-januari", source: "meta", visits: n(980), purchases: n(17) },
-      { campaign: "voedingsschema-zoekwoorden", source: "google", visits: n(220), purchases: n(4) },
-      { campaign: "thuis-trainen", source: "tiktok", visits: n(310), purchases: n(3) },
-      { campaign: "nieuwsbrief-februari", source: "nieuwsbrief", visits: n(35), purchases: n(2) },
+      { campaign: "lancering-januari", source: "meta", medium: "paid_social", content: "video-sanne", visits: n(610), toStart: n(240), purchases: n(12), avgSeconds: 141 },
+      { campaign: "lancering-januari", source: "meta", medium: "paid_social", content: "foto-weekmenu", visits: n(370), toStart: n(118), purchases: n(5), avgSeconds: 112 },
+      { campaign: "thuis-trainen", source: "tiktok", medium: "paid_social", content: null, visits: n(310), toStart: n(81), purchases: n(3), avgSeconds: 87 },
+      { campaign: "voedingsschema-zoekwoorden", source: "google", medium: "cpc", content: "voedingsschema-op-maat", visits: n(220), toStart: n(92), purchases: n(4), avgSeconds: 166 },
+      { campaign: "(zonder naam)", source: "google-ads", medium: "cpc", content: null, visits: n(64), toStart: n(21), purchases: n(1), avgSeconds: 133 },
+      { campaign: "nieuwsbrief-februari", source: "nieuwsbrief", medium: "email", content: null, visits: n(35), toStart: n(18), purchases: n(2), avgSeconds: 210 },
     ],
+    countries: [seg("NL", n(1890), 0.45, 0.36, 0.0169, 138), seg("BE", n(196), 0.49, 0.29, 0.0102, 121), seg("DE", n(21), 0.71, 0.1, 0, 52), seg("", n(43), 0.6, 0.2, 0, 70)],
+    regions: [
+      seg("NL-ZH", n(452), 0.44, 0.37, 0.0177, 141),
+      seg("NL-NH", n(398), 0.43, 0.38, 0.0176, 146),
+      seg("NL-NB", n(281), 0.46, 0.35, 0.016, 133),
+      seg("NL-GE", n(214), 0.47, 0.33, 0.014, 129),
+      seg("NL-UT", n(166), 0.41, 0.39, 0.0181, 152),
+      seg("BE-VAN", n(88), 0.5, 0.28, 0.0114, 118),
+      seg("NL-OV", n(84), 0.48, 0.32, 0.0119, 124),
+      seg("NL-LI", n(77), 0.49, 0.31, 0.013, 119),
+      seg("BE-VOV", n(61), 0.47, 0.3, 0.0164, 126),
+      seg("NL-GR", n(52), 0.5, 0.33, 0.0192, 131),
+    ],
+    cities: [
+      seg("Amsterdam|NL", n(176), 0.42, 0.39, 0.017, 149),
+      seg("Rotterdam|NL", n(151), 0.45, 0.36, 0.0199, 137),
+      seg("Den Haag|NL", n(109), 0.44, 0.37, 0.0183, 140),
+      seg("Utrecht|NL", n(98), 0.4, 0.4, 0.0204, 155),
+      seg("Eindhoven|NL", n(64), 0.47, 0.34, 0.0156, 128),
+      seg("Antwerpen|BE", n(52), 0.5, 0.27, 0.0192, 116),
+      seg("Groningen|NL", n(41), 0.49, 0.34, 0.0244, 133),
+      seg("Tilburg|NL", n(38), 0.47, 0.32, 0, 121),
+      seg("Almere|NL", n(35), 0.46, 0.34, 0.0286, 127),
+      seg("Breda|NL", n(31), 0.48, 0.32, 0, 119),
+      seg("Gent|BE", n(29), 0.45, 0.31, 0.0345, 125),
+      seg("'s-Hertogenbosch|NL", n(24), 0.5, 0.29, 0, 114),
+    ],
+    durations: [
+      { label: "Minder dan 10 seconden", visits: n(388), toStart: n(6), purchases: 0 },
+      { label: "10 tot 30 seconden", visits: n(352), toStart: n(41), purchases: 0 },
+      { label: "30 seconden tot 1 minuut", visits: n(301), toStart: n(98), purchases: n(1) },
+      { label: "1 tot 3 minuten", visits: n(497), toStart: n(248), purchases: n(6) },
+      { label: "3 tot 10 minuten", visits: n(402), toStart: n(301), purchases: n(19) },
+      { label: "Langer dan 10 minuten", visits: n(112), toStart: n(94), purchases: n(8) },
+    ],
+    paths: [
+      { steps: ["/lp"], more: false, visits: n(290), toStart: 0, purchases: 0 },
+      { steps: ["/lp", "/start"], more: false, visits: n(214), toStart: n(214), purchases: n(9) },
+      { steps: ["/lp/voeding"], more: false, visits: n(171), toStart: 0, purchases: 0 },
+      { steps: ["/"], more: false, visits: n(160), toStart: 0, purchases: 0 },
+      { steps: ["/", "/prijzen", "/start"], more: false, visits: n(74), toStart: n(74), purchases: n(4) },
+      { steps: ["/lp/voeding", "/start"], more: false, visits: n(69), toStart: n(69), purchases: n(3) },
+      { steps: ["/", "/prijzen"], more: false, visits: n(58), toStart: 0, purchases: 0 },
+      { steps: ["/lp", "/voorbeeld", "/start"], more: false, visits: n(47), toStart: n(47), purchases: n(3) },
+      { steps: ["/", "/voedingsschema", "/prijzen", "/start"], more: true, visits: n(33), toStart: n(33), purchases: n(2) },
+      { steps: ["/lp", "/start", "/bedankt"], more: false, visits: n(18), toStart: n(18), purchases: n(18) },
+    ],
+    recent: demoRecentVisits(),
     devices: [seg("mobiel", n(1520), 0.5, 0.34, 0.0132, 118), seg("desktop", n(510), 0.35, 0.37, 0.0235, 171), seg("tablet", n(120), 0.43, 0.27, 0.0167, 140)],
     languages: [seg("nl", n(2080), 0.45, 0.35, 0.0163, 136), seg("en", n(70), 0.66, 0.11, 0, 72)],
     heatmap,

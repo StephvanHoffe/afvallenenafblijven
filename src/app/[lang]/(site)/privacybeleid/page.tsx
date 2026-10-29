@@ -84,8 +84,10 @@ function Nl() {
         </li>
         <li>
           <strong>Websitegebruik (zonder cookies):</strong> welke pagina&apos;s en stappen van de vragenlijst een bezoek
-          bekijkt en hoe lang een pagina openstaat, het soort apparaat (mobiel, tablet of computer), de taal, de
-          campagnegegevens uit de link en de website waarvandaan je kwam (alleen de naam, bijv. google.com). We gebruiken
+          bekijkt, hoe lang een pagina openstaat en hoe ver je erop scrolt, het soort apparaat (mobiel, tablet of computer), de
+          taal, de campagnegegevens uit de link (of dat je via een advertentie kwam) en de website waarvandaan je kwam (alleen de
+          naam, bijv. google.com). Ook het land, de provincie en de stad van waaruit je de website bezoekt; die leidt onze
+          hostingpartij Vercel af uit je IP-adres op het moment van het bezoek. We gebruiken
           hiervoor een willekeurig bezoeknummer dat alleen in het tabblad van je browser staat (sessionStorage) en verdwijnt als
           je het tabblad sluit. We slaan geen IP-adres op en volgen je niet op andere websites. Staat &quot;Do Not Track&quot; of
           &quot;Global Privacy Control&quot; aan in je browser, dan meten we niets. Bestel je, dan koppelen we de meting van dat
@@ -424,9 +426,11 @@ function En() {
           only with your consent, analytics and marketing data via cookies.
         </li>
         <li>
-          <strong>Website usage (without cookies):</strong> which pages and questionnaire steps a visit views and how long a
-          page is open, the type of device (mobile, tablet or computer), the language, the campaign details from the link
-          and the website you came from (only its name, e.g. google.com). For this we use a random
+          <strong>Website usage (without cookies):</strong> which pages and questionnaire steps a visit views, how long a
+          page is open and how far you scroll down it, the type of device (mobile, tablet or computer), the language, the
+          campaign details from the link (or whether you came via an ad) and the website you came from (only its name, e.g.
+          google.com). Also the country, province or region and city you visit the website from; our hosting provider Vercel
+          derives these from your IP address at the time of the visit. For this we use a random
           visit number that is only stored in your browser tab (sessionStorage) and disappears when you close the tab. We do
           not store your IP address and do not track you on other websites. If &quot;Do Not Track&quot; or &quot;Global Privacy
           Control&quot; is switched on in your browser, we do not measure anything. If you place an order, we link the
