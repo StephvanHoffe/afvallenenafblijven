@@ -289,6 +289,13 @@ export function Meter({ value, max, tone = "brand" }: { value: number; max: numb
   );
 }
 
+/** Een duur als tekst: "2 min 14 s" of "48 s" ("–" zonder meting). */
+export function duration(seconds: number | null): string {
+  if (seconds === null) return "–";
+  const s = Math.round(seconds);
+  return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
+}
+
 /** Percentage als tekst ("12%", of "–" zonder noemer). */
 export function pct(n: number, d: number, digits = 0): string {
   if (!d) return "–";

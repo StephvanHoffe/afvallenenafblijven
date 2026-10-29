@@ -222,6 +222,12 @@ create table if not exists funnel_events (
 );
 alter table funnel_events add column if not exists referrer text;
 alter table funnel_events add column if not exists seconds integer;
+alter table funnel_events add column if not exists scroll smallint;
+alter table funnel_events add column if not exists medium text;
+alter table funnel_events add column if not exists content text;
+alter table funnel_events add column if not exists country text;
+alter table funnel_events add column if not exists region text;
+alter table funnel_events add column if not exists city text;
 create index if not exists funnel_events_created_idx on funnel_events(created_at);
 create index if not exists funnel_events_visit_idx on funnel_events(visit_id);
 alter table intakes add column if not exists visit_id text;

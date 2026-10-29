@@ -20,12 +20,16 @@ export const funnelEventSchema = z.object({
   l: short(5),
   d: z.enum(["mobiel", "tablet", "desktop"]).optional().nullable(),
   s: short(120),
+  m: short(120),
   c: short(120),
+  ct: short(120),
   lp: short(60),
   /** Website waarvandaan het bezoek kwam: alleen de domeinnaam. */
   r: short(100),
   /** Bij page_leave: hoeveel seconden de pagina zichtbaar openstond. */
   sec: z.number().int().min(0).max(1800).optional().nullable(),
+  /** Bij page_leave: hoe ver er op de pagina is gescrold (0-100%). */
+  sc: z.number().int().min(0).max(100).optional().nullable(),
 });
 
 export interface FunnelEventInput {
@@ -42,10 +46,23 @@ export interface FunnelEventInput {
   landing?: string | null;
   referrer?: string | null;
   seconds?: number | null;
+  scroll?: number | null;
+  medium?: string | null;
+  content?: string | null;
+  /** Land (ISO-code), provincie of regio (code) en stad, afgeleid door Vercel. */
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
 }
 
 /** Alleen een domeinnaam, zonder "www.". */
 const host = (v: string | null | undefined) => (v ? v.toLowerCase().replace(/^www\./, "").replace(/[^a-z0-9.-]/g, "").slice(0, 100) || null : null);
+
+/** Een land- of regiocode (hoofdletters en cijfers). */
+const code = (v: string | null | undefined, max: number) => (v && /^[A-Za-z0-9]+$/.test(v) && v.length <= max ? v.toUpperCase() : null);
+
+/** Een plaatsnaam: letters, cijfers, spaties, punten, apostroffen en streepjes ('s-Hertogenbosch). */
+const city = (v: string | null | undefined) => (v ? v.trim().replace(/[^\p{L}\p{N} .'\-]/gu, "").slice(0, 80) || null : null);
 
 const clean = (v: string | null | undefined, max = 120) => (v ? v.trim().replace(/[^\p{L}\p{N} ._\-+/|:]/gu, "").slice(0, max) || null : null);
 
@@ -54,10 +71,12 @@ export async function recordFunnelEvent(e: FunnelEventInput): Promise<void> {
   try {
     const sql = await db();
     await sql`
-      insert into funnel_events (visit_id, event, step, path, product, duration, locale, device, source, campaign, landing, referrer, seconds)
+      insert into funnel_events (visit_id, event, step, path, product, duration, locale, device, source, campaign, landing, referrer, seconds,
+                                 scroll, medium, content, country, region, city)
       values (${clean(e.visitId, 64)}, ${e.event}, ${clean(e.step, 40)}, ${clean(e.path, 200)}, ${clean(e.product, 20)},
               ${clean(e.duration, 20)}, ${clean(e.locale, 5)}, ${clean(e.device, 10)}, ${clean(e.source)}, ${clean(e.campaign)},
-              ${clean(e.landing, 60)}, ${host(e.referrer)}, ${e.seconds ?? null})`;
+              ${clean(e.landing, 60)}, ${host(e.referrer)}, ${e.seconds ?? null}, ${e.scroll ?? null}, ${clean(e.medium)},
+              ${clean(e.content)}, ${code(e.country, 2)}, ${code(e.region, 3)}, ${city(e.city)})`;
   } catch (err) {
     // Meten mag een bestelling nooit tegenhouden.
     console.error("Funnelstap opslaan mislukt", err);
