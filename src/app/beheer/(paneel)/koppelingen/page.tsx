@@ -23,6 +23,7 @@ import {
 import type { StoredConfigKey } from "@/lib/config-keys";
 import { isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
+import { tokenState } from "@/lib/instagram/posts";
 import { webhookUrl } from "@/lib/mollie";
 import Link from "@/i18n/Link";
 
@@ -47,8 +48,8 @@ function demoStates(): Record<StoredConfigKey, FieldState> {
   return out;
 }
 
-function groupStatus(complete: boolean, test: TestResult | undefined): { tone: "ok" | "warn" | "bad" | "muted"; label: string } {
-  if (!complete) return { tone: "warn", label: "Nog invullen" };
+function groupStatus(group: ConfigGroup, complete: boolean, test: TestResult | undefined): { tone: "ok" | "warn" | "bad" | "muted"; label: string } {
+  if (!complete) return group.optional ? { tone: "muted", label: "Optioneel" } : { tone: "warn", label: "Nog invullen" };
   if (!test) return { tone: "muted", label: "Nog niet getest" };
   return test.ok ? { tone: "ok", label: "Werkt" } : { tone: "bad", label: "Werkt niet" };
 }
@@ -74,11 +75,12 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
   }
 
   if (!demo) await loadStoredConfig({ force: true });
-  const [states, tests, cronRun] = demo
-    ? [demoStates(), {} as Partial<Record<ConfigGroupId, TestResult>>, null]
-    : await Promise.all([fieldStates(), lastTests(), lastCronRun()]);
+  const [states, tests, cronRun, igToken] = demo
+    ? [demoStates(), {} as Partial<Record<ConfigGroupId, TestResult>>, null, null]
+    : await Promise.all([fieldStates(), lastTests(), lastCronRun(), tokenState()]);
   const complete = (g: ConfigGroup) => !demo && groupComplete(g);
-  const working = CONFIG_GROUPS.filter((g) => complete(g) && tests[g.id]?.ok).length;
+  const essential = CONFIG_GROUPS.filter((g) => !g.optional);
+  const working = essential.filter((g) => complete(g) && tests[g.id]?.ok).length;
   const cronSecret = demo || Boolean(process.env.CRON_SECRET);
   const cronStale = !cronRun || adminNow() - cronRun.getTime() > 30 * 60 * 1000;
   const webhook = webhookUrl();
@@ -101,11 +103,11 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
       )}
       <PageTitle
         title="Koppelingen"
-        intro="De gegevens waarmee de website betaalt, schema's maakt en mailt. Je vult ze hier in; bij Vercel hoeft alleen de database gekoppeld te zijn."
+        intro="De gegevens waarmee de website betaalt, schema's maakt, mailt en op Instagram plaatst. Je vult ze hier in; bij Vercel hoeft alleen de database gekoppeld te zijn."
       >
         {!demo && (
           <p className="text-sm font-semibold text-muted">
-            {working} van {CONFIG_GROUPS.length} werken
+            {working} van {essential.length} werken
           </p>
         )}
       </PageTitle>
@@ -114,7 +116,7 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
         <div className="space-y-6">
           {CONFIG_GROUPS.map((group) => {
             const test = tests[group.id];
-            const status = groupStatus(complete(group), test);
+            const status = groupStatus(group, complete(group), test);
             return (
               <div key={group.id} id={group.id} className="scroll-mt-6">
                 <Panel title={group.title} action={<Badge tone={status.tone}>{status.label}</Badge>}>
@@ -122,6 +124,11 @@ async function Koppelingen({ searchParams }: Pick<PageProps<"/beheer/koppelingen
                     <input type="hidden" name="groep" value={group.id} />
                     <input type="hidden" name="terug" value={HERE} />
                     <p className="text-sm text-muted">{group.intro}</p>
+                    {group.id === "instagram" && igToken && process.env.INSTAGRAM_ACCESS_TOKEN?.trim().endsWith(igToken.tail) && (
+                      <p className="text-xs text-muted">
+                        Token automatisch verlengd op {formatDateTime(igToken.refreshedAt)}; geldig tot {formatDateTime(igToken.expiresAt)}.
+                      </p>
+                    )}
                     <div className={`grid grid-cols-1 gap-4 ${group.fields.length > 2 ? "sm:grid-cols-2" : ""}`}>
                       {group.fields.map((f) => {
                         const state = states[f.key];

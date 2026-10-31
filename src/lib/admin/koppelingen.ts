@@ -6,15 +6,16 @@ import { db, hostingValue, loadStoredConfig } from "@/lib/db";
 import { anthropic, claudeModel } from "@/lib/ai/generate";
 import { transport } from "@/lib/email";
 import { listMethods, mollieMode } from "@/lib/mollie";
+import { instagramAccount, publishingLimit } from "@/lib/instagram/api";
 
 /**
  * Beheer → Koppelingen: de gegevens waarmee de website betaalt (Mollie), schema's
- * maakt (Claude) en mailt (SMTP). Ze staan in de database (tabel settings) en
- * gaan voor op dezelfde variabelen bij de hosting. Geheime waarden worden na het
- * opslaan nooit meer volledig getoond.
+ * maakt (Claude), mailt (SMTP) en op Instagram plaatst. Ze staan in de database
+ * (tabel settings) en gaan voor op dezelfde variabelen bij de hosting. Geheime
+ * waarden worden na het opslaan nooit meer volledig getoond.
  */
 
-export type ConfigGroupId = "mollie" | "claude" | "email";
+export type ConfigGroupId = "mollie" | "claude" | "email" | "instagram";
 
 export interface ConfigField {
   key: StoredConfigKey;
@@ -35,6 +36,8 @@ export interface ConfigGroup {
   fields: ConfigField[];
   /** Zonder deze velden werkt het onderdeel niet. */
   required: StoredConfigKey[];
+  /** Niet nodig voor de webwinkel zelf (telt niet mee in "x van y werken"). */
+  optional?: boolean;
 }
 
 const domain = site.domain;
@@ -95,6 +98,29 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
       { key: "ADMIN_EMAIL", label: "Meldingen naar", hint: "Hier krijg jij meldingen (nieuwe garantie-aanvraag, fouten, opzegverzoeken).", suggestion: `info@${domain}`, inputMode: "email" },
     ],
   },
+  {
+    id: "instagram",
+    title: "Instagram: posts plaatsen",
+    intro:
+      "Optioneel. Nodig om de posts die Claude maakt (Beheer → Instagram) automatisch op je Instagram te zetten. Je account moet een zakelijk of creator-account zijn; het stappenplan staat in de README.",
+    required: ["INSTAGRAM_ACCESS_TOKEN"],
+    optional: true,
+    fields: [
+      {
+        key: "INSTAGRAM_ACCESS_TOKEN",
+        label: "Toegangstoken",
+        hint: "In je Meta-app: Instagram → API-instellingen met Instagram-login → Toegangstokens genereren. Begint met IG. De website verlengt het token zelf.",
+        placeholder: "IGAA…",
+        secret: true,
+      },
+      {
+        key: "INSTAGRAM_ACCOUNT_ID",
+        label: "Instagram-account-ID (mag leeg blijven)",
+        hint: "Alleen nodig bij een token via Facebook (begint met EAA). Leeg laten = automatisch.",
+        inputMode: "numeric",
+      },
+    ],
+  },
 ];
 
 export interface FieldState {
@@ -119,8 +145,8 @@ export async function storedConfig(): Promise<Partial<Record<StoredConfigKey, st
   return row?.value ?? {};
 }
 
-/** Van een API-sleutel de laatste vier tekens (herkenbaar), van een wachtwoord niets. */
-const mask = (value: string, key: StoredConfigKey) => (key.endsWith("_API_KEY") ? `••••${value.slice(-4)}` : "••••••••");
+/** Van een API-sleutel of token de laatste vier tekens (herkenbaar), van een wachtwoord niets. */
+const mask = (value: string, key: StoredConfigKey) => (/_(API_KEY|TOKEN)$/.test(key) ? `••••${value.slice(-4)}` : "••••••••");
 
 /** Hoe elk veld er nu voor staat (uit het beheer, van de hosting, of nog niet ingevuld). */
 export async function fieldStates(): Promise<Record<StoredConfigKey, FieldState>> {
@@ -147,7 +173,7 @@ export function groupComplete(group: ConfigGroup): boolean {
   return group.required.every((k) => Boolean(process.env[k]));
 }
 
-export type SaveProblem = "mollie-sleutel" | "poort" | "e-mail";
+export type SaveProblem = "mollie-sleutel" | "poort" | "e-mail" | "instagram-account";
 
 /**
  * Slaat de velden van één onderdeel op. Een leeg geheim veld betekent "niet
@@ -169,6 +195,7 @@ export async function saveGroup(groupId: ConfigGroupId, input: (name: string) =>
   if (next.MOLLIE_API_KEY && !/^(test|live)_[A-Za-z0-9]+$/.test(next.MOLLIE_API_KEY)) return "mollie-sleutel";
   if (next.SMTP_PORT && !/^\d{2,5}$/.test(next.SMTP_PORT)) return "poort";
   if (next.ADMIN_EMAIL && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next.ADMIN_EMAIL)) return "e-mail";
+  if (next.INSTAGRAM_ACCOUNT_ID && !/^\d{5,25}$/.test(next.INSTAGRAM_ACCOUNT_ID)) return "instagram-account";
   const clean = Object.fromEntries(Object.entries(next).filter(([k]) => (STORED_CONFIG_KEYS as readonly string[]).includes(k)));
   const sql = await db();
   await sql`
@@ -176,6 +203,15 @@ export async function saveGroup(groupId: ConfigGroupId, input: (name: string) =>
     on conflict (key) do update set value = excluded.value, updated_at = now()`;
   await loadStoredConfig({ force: true });
   return null;
+}
+
+/** Zet één waarde in de instellingen uit het beheer (bijv. een automatisch verlengd token) en laadt ze opnieuw. */
+export async function storeConfigValue(key: StoredConfigKey, value: string): Promise<void> {
+  const sql = await db();
+  await sql`
+    insert into settings (key, value) values (${STORED_CONFIG_SETTING}, ${sql.json({ [key]: value })}::jsonb)
+    on conflict (key) do update set value = settings.value || excluded.value, updated_at = now()`;
+  await loadStoredConfig({ force: true });
 }
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err)).replace(/\s+/g, " ").slice(0, 220);
@@ -235,6 +271,16 @@ export async function testGroup(groupId: ConfigGroupId): Promise<TestResult> {
       } else if (groupId === "claude") {
         await (await anthropic()).models.list({ limit: 1 });
         result = { ok: true, detail: `Verbonden. Schema's worden gemaakt met ${claudeModel()}.` };
+      } else if (groupId === "instagram") {
+        const account = await instagramAccount();
+        const limit = await publishingLimit(account.id).catch(() => null);
+        result = {
+          ok: true,
+          detail:
+            `Verbonden met ${account.username ? `@${account.username}` : `account ${account.id}`}.` +
+            (limit ? ` Afgelopen 24 uur via de website geplaatst: ${limit.used} van maximaal ${limit.total}.` : "") +
+            (process.env.INSTAGRAM_ACCESS_TOKEN?.startsWith("EAA") ? "" : " Het token wordt automatisch verlengd."),
+        };
       } else {
         try {
           await transport().verify();
@@ -244,7 +290,10 @@ export async function testGroup(groupId: ConfigGroupId): Promise<TestResult> {
         result = { ok: true, detail: `Verbonden met ${process.env.SMTP_HOST}. Stuur bij Instellingen een testmail om het helemaal te controleren.` };
       }
     } catch (err) {
-      result = { ok: false, detail: groupId === "email" ? (err instanceof Error ? err.message : String(err)) : `Verbinden lukt niet: ${errorText(err)}` };
+      result = {
+        ok: false,
+        detail: groupId === "email" || groupId === "instagram" ? (err instanceof Error ? err.message : String(err)) : `Verbinden lukt niet: ${errorText(err)}`,
+      };
     }
   }
   const at = new Date().toISOString();

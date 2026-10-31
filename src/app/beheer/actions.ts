@@ -47,6 +47,20 @@ import { logAdminAction } from "@/lib/admin/log";
 import { CONFIG_GROUPS, saveGroup, testGroup, type ConfigGroupId } from "@/lib/admin/koppelingen";
 import { cancelReasonLabel, isCancelReason } from "@/lib/cancel-reasons";
 import { aiAdvice, generateAiAdvice, hideOpportunity as hideOpportunityInDb, showAllOpportunities as showAllOpportunitiesInDb } from "@/lib/admin/opportunities";
+import { amsterdamLocalToDate } from "@/lib/dates";
+import { instagramConfigured } from "@/lib/instagram/api";
+import { SLIDE_KINDS, cleanHashtag, formatLabels, isPostFormat, postContentSchema, type Slide } from "@/lib/instagram/content";
+import {
+  createInstagramPost,
+  deletePost,
+  generateInstagramPost,
+  publishInstagramPost,
+  regeneratePost,
+  schedulePost,
+  unschedulePost,
+  updatePostContent,
+  type PublishChoice,
+} from "@/lib/instagram/posts";
 
 export interface LoginState {
   error?: string;
@@ -655,4 +669,129 @@ export async function requestAiAdvice(formData: FormData): Promise<void> {
   }
   await logAdminAction("Advies gevraagd aan Claude", "Kansen");
   back(formData, "ai-klaar");
+}
+
+// ---------- Instagram ----------
+
+/** Een moment uit een datum-tijdveld (Nederlandse tijd); alleen in de toekomst (een minuut speling). */
+function futureMoment(formData: FormData): Date | null {
+  const at = amsterdamLocalToDate(String(formData.get("moment") ?? ""));
+  return at && at.getTime() > Date.now() - 60_000 ? at : null;
+}
+
+/** Een nieuwe post: Claude maakt hem op de achtergrond; daarna (direct, op het gekozen moment of pas na jouw klik) naar Instagram. */
+export async function requestInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  const prompt = String(formData.get("opdracht") ?? "").trim().slice(0, 4000);
+  if (prompt.length < 5) back(formData, "instagram-opdracht-leeg");
+  const vorm = formData.get("vorm");
+  const format = isPostFormat(vorm) ? vorm : "auto";
+  const when = String(formData.get("wanneer") ?? "concept");
+  let publish: PublishChoice = { mode: "draft" };
+  if (when === "nu") publish = { mode: "now" };
+  if (when === "moment") {
+    const at = futureMoment(formData);
+    if (!at) back(formData, "instagram-moment-ongeldig");
+    publish = { mode: "at", at };
+  }
+  await loadStoredConfig();
+  if (!process.env.ANTHROPIC_API_KEY) back(formData, "ai-geen-sleutel");
+  if (publish.mode !== "draft" && !instagramConfigured()) back(formData, "instagram-niet-gekoppeld");
+  const id = await createInstagramPost({ prompt, format, publish });
+  await logAdminAction(
+    "Instagram-post aangevraagd",
+    `${formatLabels[format]}, ${publish.mode === "now" ? "direct plaatsen" : publish.mode === "at" ? `plaatsen op ${publish.at.toISOString()}` : "concept"}: ${prompt}`,
+  );
+  after(() => generateInstagramPost(id));
+  redirect(`/beheer/instagram/${id}?melding=instagram-wordt-gemaakt`);
+}
+
+/** Leest de slides uit het bewerkformulier; een aangevinkte slide valt weg. */
+function slidesFromForm(formData: FormData): Slide[] {
+  const count = Math.min(Number(formData.get("slides") ?? 0) || 0, 20);
+  const slides: Slide[] = [];
+  for (let i = 0; i < count; i++) {
+    if (formData.get(`slide-${i}-weg`) === "1") continue;
+    const field = (name: string) => String(formData.get(`slide-${i}-${name}`) ?? "");
+    const kind = field("soort") as Slide["kind"];
+    slides.push({
+      kind: (SLIDE_KINDS as readonly string[]).includes(kind) ? kind : "tip",
+      kicker: field("label"),
+      title: field("kop"),
+      body: field("tekst"),
+      bullets: field("punten").split(/\r?\n/),
+      photo: field("foto") as Slide["photo"],
+    });
+  }
+  return slides;
+}
+
+/** Je eigen aanpassingen aan de tekst op de slides, het bijschrift en de hashtags. */
+export async function saveInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  const id = String(formData.get("post") ?? "");
+  const parsed = postContentSchema.safeParse({
+    slides: slidesFromForm(formData),
+    caption: String(formData.get("bijschrift") ?? ""),
+    hashtags: String(formData.get("hashtags") ?? "").split(/[\s,]+/).map(cleanHashtag).filter(Boolean),
+    altText: String(formData.get("alt") ?? ""),
+  });
+  if (!parsed.success || parsed.data.slides.length === 0 || parsed.data.slides.some((s) => !s.title.trim())) back(formData, "instagram-ongeldig");
+  const row = await updatePostContent(id, parsed.data);
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post aangepast", row.prompt.slice(0, 200));
+  back(formData, "instagram-opgeslagen");
+}
+
+/** Nu op Instagram zetten (ook om een mislukte poging opnieuw te doen). */
+export async function publishInstagramPostNow(formData: FormData): Promise<void> {
+  await guard(formData);
+  await loadStoredConfig();
+  if (!instagramConfigured()) back(formData, "instagram-niet-gekoppeld");
+  const row = await schedulePost(String(formData.get("post") ?? ""), null);
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post nu geplaatst", row.prompt.slice(0, 200));
+  after(() => publishInstagramPost(row.id));
+  back(formData, "instagram-wordt-geplaatst");
+}
+
+export async function scheduleInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  const at = futureMoment(formData);
+  if (!at) back(formData, "instagram-moment-ongeldig");
+  await loadStoredConfig();
+  if (!instagramConfigured()) back(formData, "instagram-niet-gekoppeld");
+  const row = await schedulePost(String(formData.get("post") ?? ""), at);
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post ingepland", `${at.toISOString()}: ${row.prompt.slice(0, 200)}`);
+  back(formData, "instagram-ingepland");
+}
+
+export async function unscheduleInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  const row = await unschedulePost(String(formData.get("post") ?? ""));
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post teruggezet naar concept", row.prompt.slice(0, 200));
+  back(formData, "instagram-concept");
+}
+
+/** Opnieuw laten maken, eventueel met een aanwijzing (bijv. "korter" of "meer over eiwit"). */
+export async function regenerateInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  await loadStoredConfig();
+  if (!process.env.ANTHROPIC_API_KEY) back(formData, "ai-geen-sleutel");
+  const instruction = String(formData.get("aanwijzing") ?? "").trim().slice(0, 1000) || null;
+  const row = await regeneratePost(String(formData.get("post") ?? ""), instruction);
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post opnieuw gemaakt", instruction ? `Aanwijzing: ${instruction}` : row.prompt.slice(0, 200));
+  after(() => generateInstagramPost(row.id));
+  back(formData, "instagram-opnieuw");
+}
+
+export async function deleteInstagramPost(formData: FormData): Promise<void> {
+  await guard(formData);
+  const row = await deletePost(String(formData.get("post") ?? ""));
+  if (!row) back(formData, "niet-gevonden");
+  await logAdminAction("Instagram-post verwijderd", row.prompt.slice(0, 200));
+  redirect("/beheer/instagram?melding=instagram-verwijderd");
 }

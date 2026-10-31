@@ -74,3 +74,22 @@ export function amsterdamStartOfDay(day: string): Date {
   const [y, m, d] = day.split("-").map(Number);
   return amsterdamMidnight(new Date(Date.UTC(y, m - 1, d, 12)));
 }
+
+/**
+ * "2026-11-02T09:30" (Nederlandse tijd, zoals een datum-tijdveld het geeft) →
+ * het moment; null als het geen geldige waarde is.
+ */
+export function amsterdamLocalToDate(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const [y, mo, d, h, mi] = m.slice(1).map(Number);
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  if (Number.isNaN(asUtc)) return null;
+  // In twee stappen, zodat ook de dagen van de overgang naar zomer- of wintertijd kloppen.
+  return new Date(asUtc - amsterdamOffsetMs(asUtc - amsterdamOffsetMs(asUtc)));
+}
+
+/** Een moment als waarde voor een datum-tijdveld, in Nederlandse tijd ("2026-11-02T09:30"). */
+export function toAmsterdamLocalInput(date: Date): string {
+  return new Date(date.getTime() + amsterdamOffsetMs(date.getTime())).toISOString().slice(0, 16);
+}

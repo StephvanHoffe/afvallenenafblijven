@@ -2,7 +2,7 @@
 
 import Link from "@/i18n/Link";
 import { usePathname } from "next/navigation";
-import { ChartColumn, FileText, Filter, History, LayoutDashboard, Lightbulb, Mail, MessageSquareText, MousePointerClick, PlugZap, Receipt, Settings, TicketPercent, Undo2, Users } from "lucide-react";
+import { Camera, ChartColumn, FileText, Filter, History, LayoutDashboard, Lightbulb, Mail, MessageSquareText, MousePointerClick, PlugZap, Receipt, Settings, TicketPercent, Undo2, Users } from "lucide-react";
 
 export const adminNav = [
   { href: "/beheer", label: "Overzicht", icon: LayoutDashboard },
@@ -16,6 +16,7 @@ export const adminNav = [
   { href: "/beheer/feedback", label: "Feedback", icon: MessageSquareText },
   { href: "/beheer/kortingscodes", label: "Kortingscodes", icon: TicketPercent },
   { href: "/beheer/emails", label: "E-mails", icon: Mail },
+  { href: "/beheer/instagram", label: "Instagram", icon: Camera },
   { href: "/beheer/herroepingen", label: "Herroepingen & garantie", icon: Undo2 },
   { href: "/beheer/logboek", label: "Logboek", icon: History },
   { href: "/beheer/koppelingen", label: "Koppelingen", icon: PlugZap },

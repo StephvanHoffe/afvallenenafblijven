@@ -3,6 +3,7 @@ import { amsterdamDay, amsterdamHour } from "@/lib/dates";
 import { runScheduledWork } from "@/lib/plans";
 import { claimDailyRun, cleanupExpiredData } from "@/lib/repo";
 import { deleteJunctionUser } from "@/lib/health/junction";
+import { runInstagramWork } from "@/lib/instagram/posts";
 import { isMollieConfigured } from "@/lib/mollie";
 import { runSubscriptionMaintenance } from "@/lib/subscriptions";
 
@@ -18,9 +19,10 @@ const OPEN_MIN_INTERVAL_MINUTES = 3;
 /**
  * Geplande taak (zie vercel.json, elke 5 minuten): opgezegde abonnementen op
  * hun einddatum beëindigen, schema's op hun geplande moment vrijgeven en
- * mailen, en mislukte schema's opnieuw proberen. Eén keer per dag, vanaf
- * 08:00, ook de herinneringen, het opruimen en de controle van de abonnementen
- * bij Mollie.
+ * mailen, mislukte schema's opnieuw proberen en geplande Instagram-posts
+ * plaatsen. Eén keer per dag, vanaf 08:00, ook de herinneringen, het opruimen,
+ * de controle van de abonnementen bij Mollie en het verlengen van het
+ * Instagram-token.
  *
  * Staat CRON_SECRET bij Vercel, dan moet elke aanroep die sleutel meesturen
  * (Vercel doet dat zelf). Zonder CRON_SECRET hoeft er niets ingesteld te
@@ -70,7 +72,12 @@ export async function GET(request: Request) {
         return null;
       })
     : null;
-  const result = await runScheduledWork(maxDuration * 1000 - 10_000, { daily });
+  // Instagram vóór de schema's: een geplande post hoort op tijd te verschijnen, plaatsen duurt een paar seconden.
+  const instagram = await runInstagramWork({ daily }).catch((err) => {
+    console.error("Instagram-posts verwerken mislukt", err);
+    return null;
+  });
+  const result = await runScheduledWork(maxDuration * 1000 - 10_000 - (Date.now() - now.getTime()), { daily });
   // Cijfers alleen met de sleutel.
-  return authorized ? Response.json({ daily, subscriptions, ...result, cleanup }) : Response.json({ ok: true });
+  return authorized ? Response.json({ daily, subscriptions, instagram, ...result, cleanup }) : Response.json({ ok: true });
 }

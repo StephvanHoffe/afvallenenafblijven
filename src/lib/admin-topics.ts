@@ -88,6 +88,12 @@ export const ADMIN_TOPICS = [
     trigger: "Als een schema na vijf pogingen nog niet is gelukt.",
   },
   {
+    id: "instagram-mislukt",
+    group: "Instagram",
+    label: "Instagram-post mislukt",
+    trigger: "Als een Instagram-post na drie pogingen nog niet kon worden gemaakt of geplaatst.",
+  },
+  {
     id: "test",
     group: "Overig",
     label: "Testmail",
