@@ -18,6 +18,8 @@ export const STORED_CONFIG_KEYS = [
   "SMTP_PASS",
   "EMAIL_FROM",
   "ADMIN_EMAIL",
+  "INSTAGRAM_ACCESS_TOKEN",
+  "INSTAGRAM_ACCOUNT_ID",
 ] as const;
 
 export type StoredConfigKey = (typeof STORED_CONFIG_KEYS)[number];

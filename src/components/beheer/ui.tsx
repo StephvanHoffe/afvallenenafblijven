@@ -162,6 +162,18 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "ai-mislukt": { tone: "warn", text: "Het advies kon niet worden gemaakt. Controleer de API-sleutel en het tegoed bij Anthropic, en probeer het later opnieuw." },
   "ai-te-snel": { tone: "warn", text: "Je hebt net al advies gevraagd. Probeer het over tien minuten opnieuw." },
   "ai-geen-sleutel": { tone: "warn", text: "Vul eerst de API-sleutel van Claude in bij Koppelingen." },
+  "koppeling-instagram-account": { tone: "warn", text: "Het Instagram-account-ID bestaat alleen uit cijfers. Laat het leeg bij een token dat met IG begint." },
+  "instagram-opdracht-leeg": { tone: "warn", text: "Schrijf eerst waar de post over moet gaan." },
+  "instagram-moment-ongeldig": { tone: "warn", text: "Kies een datum en tijd in de toekomst." },
+  "instagram-niet-gekoppeld": { tone: "warn", text: "Koppel eerst Instagram bij Koppelingen, of kies \"Eerst bekijken\" om alleen een concept te maken." },
+  "instagram-wordt-gemaakt": { tone: "ok", text: "Claude maakt de post. Dat duurt meestal één tot twee minuten; deze pagina ververst vanzelf." },
+  "instagram-wordt-geplaatst": { tone: "ok", text: "De post wordt nu op Instagram geplaatst; deze pagina ververst vanzelf." },
+  "instagram-ingepland": { tone: "ok", text: "De post is ingepland en wordt op het gekozen moment automatisch geplaatst." },
+  "instagram-concept": { tone: "ok", text: "De post is nu een concept en wordt niet automatisch geplaatst." },
+  "instagram-opgeslagen": { tone: "ok", text: "Je aanpassingen zijn opgeslagen en de afbeeldingen zijn opnieuw getekend." },
+  "instagram-ongeldig": { tone: "warn", text: "Controleer de post: elke slide heeft een kop nodig en er moet minstens één slide overblijven." },
+  "instagram-opnieuw": { tone: "ok", text: "Claude maakt een nieuwe versie (als concept). Deze pagina ververst vanzelf." },
+  "instagram-verwijderd": { tone: "ok", text: "De post is verwijderd uit het beheer. Stond hij al op Instagram, dan blijft hij daar staan." },
 };
 
 export function Notice({ code }: { code?: string }) {

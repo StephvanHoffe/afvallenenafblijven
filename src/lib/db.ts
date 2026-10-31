@@ -419,6 +419,33 @@ create table if not exists health_workouts (
   primary key (customer_id, provider, external_id)
 );
 create index if not exists health_workouts_started_idx on health_workouts(customer_id, started_at);
+
+-- Instagram-posts die Claude maakt op basis van een opdracht (Beheer → Instagram).
+-- status: pending (in de wachtrij) → generating → draft (concept) of scheduled
+-- (publish_at) → publishing → published; failed bij een fout, met in failed_step
+-- of het maken (generate) of het plaatsen (publish) mislukte. container_id: de
+-- container bij Instagram, zodat een nieuwe poging nooit dubbel plaatst.
+create table if not exists instagram_posts (
+  id uuid primary key default gen_random_uuid(),
+  prompt text not null,
+  format text not null default 'auto',
+  instruction text,
+  status text not null default 'pending',
+  content jsonb,
+  publish_at timestamptz,
+  attempts integer not null default 0,
+  error text,
+  failed_step text,
+  started_at timestamptz,
+  container_id text,
+  media_id text,
+  permalink text,
+  generated_at timestamptz,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists instagram_posts_status_idx on instagram_posts(status, publish_at);
 `;
 
 /** Hoe lang de instellingen uit het beheer (Koppelingen) in het geheugen blijven voordat we ze opnieuw lezen. */
