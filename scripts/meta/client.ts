@@ -1,8 +1,14 @@
 /**
  * Kleine client voor de Meta Graph API (Facebook, Instagram en advertenties).
  *
+ * Het token van de systeemgebruiker komt op een van deze twee manieren binnen:
+ *   - als network secret in Claude Code op het web (host graph.facebook.com, header
+ *     Authorization, prefix Bearer): de proxy voegt het toe aan elk verzoek, het script
+ *     ziet het token zelf nooit;
+ *   - als META_ACCESS_TOKEN in de omgeving of in .env.local (lokaal).
+ *
  * Instellingen (omgevingsvariabelen, of in .env.local):
- *   META_ACCESS_TOKEN    verplicht: token van een systeemgebruiker (Bedrijfsinstellingen)
+ *   META_ACCESS_TOKEN    token van een systeemgebruiker; niet nodig met een network secret
  *   META_AD_ACCOUNT_ID   optioneel: advertentieaccount (act_... of alleen het nummer)
  *   META_PAGE_ID         optioneel: Facebook-pagina
  *   META_IG_USER_ID      optioneel: Instagram-zakelijk account
@@ -40,15 +46,19 @@ export class GraphError extends Error {
 
 export class ConfigError extends Error {}
 
-export function token(): string {
-  const value = process.env.META_ACCESS_TOKEN?.trim();
-  if (!value) {
-    throw new ConfigError(
-      "META_ACCESS_TOKEN ontbreekt. Zet het token van je systeemgebruiker in de omgeving (zie scripts/meta/README.md).",
-    );
-  }
-  return value;
+/**
+ * Het token uit META_ACCESS_TOKEN. Zonder die variabele sturen we geen token mee en
+ * rekenen we op de network secret: de proxy zet het token dan in de Authorization-header.
+ */
+export function token(): string | undefined {
+  return process.env.META_ACCESS_TOKEN?.trim() || undefined;
 }
+
+export const tokenSource = (): string =>
+  token() ? "META_ACCESS_TOKEN" : "network secret voor graph.facebook.com (via de proxy)";
+
+/** Meta-foutcodes voor een ontbrekend, ongeldig of verlopen token. */
+const TOKEN_ERRORS = new Set([102, 190, 2500]);
 
 function encode(params: Params): URLSearchParams {
   const search = new URLSearchParams();
@@ -69,9 +79,11 @@ function describe(status: number, body: Json): string {
 
 async function request(method: "GET" | "POST" | "DELETE", path: string, params: Params | FormData = {}, accessToken = token()) {
   const url = path.startsWith("http") ? new URL(path) : new URL(`${API_BASE}/${API_VERSION}/${path.replace(/^\//, "")}`);
+  // Een access_token in de url of de body gaat bij Meta voor op de Authorization-header.
+  // Zo werken paginatokens ook als de proxy het token van de systeemgebruiker meestuurt.
   let res: Response;
   if (params instanceof FormData) {
-    params.set("access_token", accessToken);
+    if (accessToken) params.set("access_token", accessToken);
     res = await fetch(url, { method, body: params });
   } else if (method === "GET") {
     for (const [key, value] of encode({ ...params, access_token: accessToken })) url.searchParams.set(key, value);
@@ -86,7 +98,16 @@ async function request(method: "GET" | "POST" | "DELETE", path: string, params: 
   } catch {
     json = { raw: text };
   }
-  if (!res.ok || json?.error) throw new GraphError(describe(res.status, json), res.status, json);
+  if (!res.ok || json?.error) {
+    if (!accessToken && TOKEN_ERRORS.has(json?.error?.code)) {
+      throw new ConfigError(
+        `Meta accepteert het token niet, of er is geen token: ${describe(res.status, json)}\n` +
+          "Zet een network secret voor graph.facebook.com (header Authorization, prefix Bearer) en start een nieuwe sessie, " +
+          "of zet META_ACCESS_TOKEN in de omgeving of in .env.local (zie scripts/meta/README.md).",
+      );
+    }
+    throw new GraphError(describe(res.status, json), res.status, json);
+  }
   return json;
 }
 

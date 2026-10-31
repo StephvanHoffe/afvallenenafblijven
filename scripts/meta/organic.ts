@@ -1,6 +1,6 @@
 /** Gewone (niet-betaalde) berichten, reacties en statistieken op Facebook en Instagram. */
 import { readFileSync } from "node:fs";
-import { API_VERSION, graph, instagramId, page, token, type Json, type Params } from "./client";
+import { API_VERSION, graph, instagramId, page, tokenSource, type Json, type Params } from "./client";
 import { confirmed, date, dump, heading, list, need, num, str, table, unixTime, type Args } from "./util";
 
 function short(text: string | undefined, length = 60): string {
@@ -328,7 +328,6 @@ export async function igStats(args: Args) {
 // --- Overzicht van het token -------------------------------------------------
 
 export async function status(args: Args) {
-  token();
   const [me, permissions, accounts, pages] = await Promise.all([
     graph.get("me", { fields: "id,name" }),
     graph.all("me/permissions").catch(() => []),
@@ -337,6 +336,7 @@ export async function status(args: Args) {
   ]);
   if (args.json) return dump({ me, permissions, accounts, pages });
   heading(`Verbonden als ${me.name} (${me.id}), Graph API ${API_VERSION}`);
+  console.log(`token: ${tokenSource()}`);
   const granted = permissions.filter((x: Json) => x.status === "granted").map((x: Json) => x.permission);
   console.log(`rechten: ${granted.join(", ") || "(onbekend)"}`);
   const wanted = ["ads_management", "ads_read", "pages_manage_posts", "pages_read_engagement", "pages_manage_engagement", "instagram_basic", "instagram_content_publish", "instagram_manage_comments", "instagram_manage_insights", "read_insights"];

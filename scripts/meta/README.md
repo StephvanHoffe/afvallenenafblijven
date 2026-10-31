@@ -42,8 +42,18 @@ De koppeling gebruikt het token van een **systeemgebruiker** in je Meta-bedrijfs
 4. **Token maken.** Klik bij de systeemgebruiker op *Nieuw token genereren*, kies de app, verloopdatum *Nooit*, en vink deze rechten aan:
    `ads_management`, `ads_read`, `business_management`, `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `pages_manage_posts`, `pages_manage_engagement`, `read_insights`, `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`, `instagram_manage_insights`, `leads_retrieval`.
 5. **Token bewaren.** Behandel het als een wachtwoord en zet het nooit in de code, in een chat of in git.
-   - **Claude Code op het web:** open het omgevingsmenu in de titelbalk van de sessie → *Edit* → *Network secrets* (of als omgevingsvariabele) met de naam `META_ACCESS_TOKEN`. Een nieuwe sessie pakt het op.
-   - **Lokaal:** zet `META_ACCESS_TOKEN=...` in `.env.local` (dat bestand gaat niet mee in git).
+   - **Claude Code op het web (aanbevolen):** open het omgevingsmenu in de titelbalk van de sessie → *Edit* → *Network secrets* → *Add secret* en vul in:
+
+     | Veld | Waarde |
+     | --- | --- |
+     | Host | `graph.facebook.com` |
+     | Secret type | *Token* |
+     | Header | `Authorization` |
+     | Prefix | `Bearer` |
+     | Token | het token uit stap 4 (zonder "Bearer") |
+
+     De proxy van de sessie zet het token dan in elk verzoek naar de Graph API. Het token komt zo nooit in de sessie zelf terecht; `META_ACCESS_TOKEN` is dan niet nodig. Een nieuwe sessie pakt het op.
+   - **Lokaal:** zet `META_ACCESS_TOKEN=...` in `.env.local` (dat bestand gaat niet mee in git). Staat `META_ACCESS_TOKEN` ingesteld, dan gaat dat token voor.
 6. **Controleren.** `npm run meta -- status` toont je accounts, pagina's en Instagram, en welke rechten nog ontbreken.
 
 ### Optionele instellingen
