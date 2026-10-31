@@ -148,6 +148,16 @@ ANTHROPIC_API_KEY=sk-ant-... npm run schema:test voeding
 
 Het resultaat komt in `schema-test/`, met per dag een overzicht van kcal en eiwit. Elke run kost API-tegoed: enkele tientallen eurocenten per schema met Claude Opus 5.5. Wil je de instructies verbeteren, pas dan `src/lib/ai/prompts.ts` aan en test opnieuw.
 
+### Facebook en Instagram beheren
+
+```bash
+npm run meta -- help                      # alle opdrachten
+npm run meta -- report --period last_7d   # resultaten van je advertenties
+npm run meta -- comments --open           # onbeantwoorde reacties
+```
+
+Advertenties (cijfers, pauzeren, budget, nieuwe campagnes), berichten op de pagina en Instagram, en reacties, rechtstreeks via de Meta Graph API. Wijzigingen gebeuren pas met `--confirm`. Hoe je het token instelt: `scripts/meta/README.md`.
+
 ## Live zetten met Vimexx, Vercel en Neon (stap voor stap)
 
 De domeinnaam en de e-mail blijven bij Vimexx. De website draait op Vercel (Pro), de database bij Neon. Alle drie in Europa: Vercel draait de website in Frankfurt (`"regions": ["fra1"]` in `vercel.json`), kies bij Neon ook Frankfurt.
