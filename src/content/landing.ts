@@ -77,8 +77,11 @@ interface SharedCopy {
   /** De grote knop bovenaan, met de duur eronder. */
   heroCta: string;
   heroCtaNote: string;
-  /** Drie korte zekerheden onder de knop. */
-  heroPoints: (guaranteeDays: number | null) => string[];
+  /** De garantie, direct onder de knop (alleen als de garantie aanstaat). */
+  guaranteeTitle: string;
+  guaranteeText: (days: number) => string;
+  /** Korte zekerheden onder de garantie. */
+  heroPoints: string[];
   /** De kortingscode uit de advertentielink, bijv. "20% korting op je eerste 3 maanden". */
   codeOffer: (offer: string, code: string) => string;
   sampleTitle: string;
@@ -109,11 +112,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pickTitle: "Waar wil je aan werken?",
       heroCta: "Start je gratis vragenlijst",
       heroCtaNote: "± 3 minuten · je betaalt pas als je een plan kiest",
-      heroPoints: (days) => [
-        "Persoonlijk schema binnen 2 uur",
-        ...(days ? [`${days} dagen geld-terug-garantie`] : []),
-        "Maandelijks opzegbaar of vaste looptijd",
-      ],
+      guaranteeTitle: "Niet goed? Geld terug.",
+      guaranteeText: (days) =>
+        `Niet tevreden? Vraag binnen ${days} dagen je eerste betaling terug; een abonnement stopt dan direct. Zonder opgaaf van reden.`,
+      heroPoints: ["Persoonlijk schema binnen 2 uur", "Maandelijks opzegbaar of vaste looptijd"],
       codeOffer: (offer, code) => `${offer} · code ${code}`,
       sampleTitle: "Zo ziet een schema eruit",
       sampleDay: "Voorbeeld van één dag",
@@ -196,11 +198,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       pickTitle: "What would you like to work on?",
       heroCta: "Start your free questionnaire",
       heroCtaNote: "About 3 minutes · you only pay once you choose a plan",
-      heroPoints: (days) => [
-        "Personal plan within 2 hours",
-        ...(days ? [`${days}-day money-back guarantee`] : []),
-        "Cancel monthly or choose a fixed term",
-      ],
+      guaranteeTitle: "Not happy? Money back.",
+      guaranteeText: (days) =>
+        `Not satisfied? Ask for your first payment back within ${days} days; a subscription then stops straight away. No questions asked.`,
+      heroPoints: ["Personal plan within 2 hours", "Cancel monthly or choose a fixed term"],
       codeOffer: (offer, code) => `${offer} · code ${code}`,
       sampleTitle: "What a plan looks like",
       sampleDay: "Sample of one day",
