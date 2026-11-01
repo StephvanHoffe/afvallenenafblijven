@@ -158,6 +158,11 @@ const MESSAGES: Record<string, { tone: "ok" | "warn"; text: string }> = {
   "herinnering-verstuurd": { tone: "ok", text: "De herinnering is verstuurd." },
   "kans-verborgen": { tone: "ok", text: "De kans is 30 dagen verborgen. Is hij daarna nog actueel, dan verschijnt hij weer." },
   "kansen-hersteld": { tone: "ok", text: "Alle verborgen kansen worden weer getoond." },
+  "kans-afgevinkt": {
+    tone: "ok",
+    text: "Afgevinkt. Over 30 dagen kijken we of het probleem uit de cijfers is verdwenen; ondertussen staan de volgende kansen bovenaan.",
+  },
+  "kans-teruggezet": { tone: "ok", text: "De kans staat weer open." },
   "ai-klaar": { tone: "ok", text: "Het advies van Claude staat hieronder." },
   "ai-mislukt": { tone: "warn", text: "Het advies kon niet worden gemaakt. Controleer de API-sleutel en het tegoed bij Anthropic, en probeer het later opnieuw." },
   "ai-te-snel": { tone: "warn", text: "Je hebt net al advies gevraagd. Probeer het over tien minuten opnieuw." },

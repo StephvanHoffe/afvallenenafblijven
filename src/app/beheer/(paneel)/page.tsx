@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { ArrowRight, ChevronRight, CircleAlert, Lightbulb } from "lucide-react";
 import { OrdersChart } from "@/components/beheer/OrdersChart";
 import { Badge, NeedsDatabase, Notice, OrderStatusBadge, Panel, StatTile, pct, planName, table } from "@/components/beheer/ui";
-import { AREA_LABELS, buildOpportunities, hiddenOpportunities, opportunityInput } from "@/lib/admin/opportunities";
+import { AREA_LABELS, buildOpportunities, doneOpportunities, doneStatus, hiddenOpportunities, opportunityInput } from "@/lib/admin/opportunities";
 import { funnelReport } from "@/lib/admin/funnel-report";
 import { durations, products } from "@/config/pricing";
 import { adminData, adminDataAvailable } from "@/lib/admin/data";
@@ -32,8 +32,13 @@ async function Overview({ searchParams }: Pick<PageProps<"/beheer">, "searchPara
     adminData().approvalRequired(),
     funnelReport({ days: 30 }).catch(() => null),
   ]);
-  const topKansen = await Promise.all([opportunityInput(), hiddenOpportunities()])
-    .then(([input, hidden]) => buildOpportunities(input).kansen.filter((k) => !hidden[k.id]).slice(0, 3))
+  const topKansen = await Promise.all([opportunityInput(), hiddenOpportunities(), doneOpportunities()])
+    .then(([input, hidden, done]) => {
+      const kansen = buildOpportunities(input).kansen;
+      // Afgevinkte kansen die nog worden gemeten, horen hier ook niet bij de top.
+      const measuring = new Set(doneStatus(done, kansen).measuring.map((x) => x.id));
+      return kansen.filter((k) => !hidden[k.id] && !measuring.has(k.id)).slice(0, 3);
+    })
     .catch((err) => {
       console.error("Kansen berekenen mislukt", err);
       return [];

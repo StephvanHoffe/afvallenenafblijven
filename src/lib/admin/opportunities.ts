@@ -1138,6 +1138,63 @@ export async function showAllOpportunities(): Promise<void> {
   await setSetting(HIDDEN_KEY, {});
 }
 
+// ---------- Afgevinkte kansen ----------
+
+const DONE_KEY = "kansen_afgevinkt";
+/** Na het afvinken kijken we zoveel dagen later opnieuw: de meeste kansen rekenen met de laatste 30 dagen. */
+export const DONE_CHECK_DAYS = 30;
+
+/** Een kans die de beheerder heeft opgepakt, met wat de cijfers toen lieten zien. */
+export interface DoneKans {
+  at: string;
+  title: string;
+  finding: string;
+  area: KansArea;
+}
+
+export interface DoneItem {
+  id: string;
+  done: DoneKans;
+  /** De kans zoals hij nu uit de cijfers komt (ontbreekt als hij niet meer verschijnt). */
+  current: Kans | null;
+  checkAt: Date;
+}
+
+export async function doneOpportunities(): Promise<Record<string, DoneKans>> {
+  if (isDemoMode()) return {};
+  return (await getSetting<Record<string, DoneKans>>(DONE_KEY).catch(() => null)) ?? {};
+}
+
+export async function markOpportunityDone(id: string, kans: Omit<DoneKans, "at">): Promise<void> {
+  const current = await doneOpportunities();
+  await setSetting(DONE_KEY, { ...current, [id.slice(0, 120)]: { ...kans, at: new Date().toISOString() } });
+}
+
+export async function undoOpportunityDone(id: string): Promise<void> {
+  const rest = { ...(await doneOpportunities()) };
+  delete rest[id];
+  await setSetting(DONE_KEY, rest);
+}
+
+/**
+ * Waar elke afgevinkte kans staat ten opzichte van de berekening van nu:
+ * - measuring: komt nog uit de cijfers, maar de 30 dagen om te meten zijn nog niet om (niet in de lijst);
+ * - back: na 30 dagen nog steeds een kans (terug in de lijst, met wat het toen was);
+ * - solved: komt niet meer uit de cijfers.
+ */
+export function doneStatus(done: Record<string, DoneKans>, kansen: Kans[], now: number = Date.now()) {
+  const byId = new Map(kansen.map((k) => [k.id, k]));
+  const items: DoneItem[] = Object.entries(done)
+    // Een onleesbare datum telt als lang geleden: dan staat de kans gewoon weer in de lijst.
+    .map(([id, d]) => ({ id, done: d, current: byId.get(id) ?? null, checkAt: new Date((Date.parse(d.at) || 0) + DONE_CHECK_DAYS * DAY) }))
+    .sort((a, b) => Date.parse(b.done.at) - Date.parse(a.done.at));
+  return {
+    measuring: items.filter((x) => x.current && x.checkAt.getTime() > now),
+    back: new Map(items.filter((x) => x.current && x.checkAt.getTime() <= now).map((x) => [x.id, x])),
+    solved: items.filter((x) => !x.current),
+  };
+}
+
 // ---------- Advies van Claude ----------
 
 export const aiAdviceSchema = z.object({

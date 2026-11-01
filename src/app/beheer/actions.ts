@@ -46,7 +46,16 @@ import { disconnect } from "@/lib/health/sync";
 import { logAdminAction } from "@/lib/admin/log";
 import { CONFIG_GROUPS, saveGroup, testGroup, type ConfigGroupId } from "@/lib/admin/koppelingen";
 import { cancelReasonLabel, isCancelReason } from "@/lib/cancel-reasons";
-import { aiAdvice, generateAiAdvice, hideOpportunity as hideOpportunityInDb, showAllOpportunities as showAllOpportunitiesInDb } from "@/lib/admin/opportunities";
+import {
+  AREA_LABELS,
+  aiAdvice,
+  generateAiAdvice,
+  hideOpportunity as hideOpportunityInDb,
+  markOpportunityDone as markOpportunityDoneInDb,
+  showAllOpportunities as showAllOpportunitiesInDb,
+  undoOpportunityDone as undoOpportunityDoneInDb,
+  type KansArea,
+} from "@/lib/admin/opportunities";
 import { amsterdamLocalToDate } from "@/lib/dates";
 import { instagramConfigured } from "@/lib/instagram/api";
 import { SLIDE_KINDS, cleanHashtag, formatLabels, isPostFormat, postContentSchema, type Slide } from "@/lib/instagram/content";
@@ -652,6 +661,27 @@ export async function showAllOpportunities(formData: FormData): Promise<void> {
   await guard(formData);
   await showAllOpportunitiesInDb();
   back(formData, "kansen-hersteld");
+}
+
+/** Kans opgepakt: uit de lijst, en na 30 dagen kijken we of hij nog uit de cijfers komt. */
+export async function markOpportunityDone(formData: FormData): Promise<void> {
+  await guard(formData);
+  const id = String(formData.get("kans") ?? "");
+  const area = String(formData.get("gebied") ?? "");
+  if (!id || !(area in AREA_LABELS)) back(formData, "niet-gevonden");
+  const title = String(formData.get("titel") ?? id).slice(0, 200);
+  await markOpportunityDoneInDb(id, { title, finding: String(formData.get("bevinding") ?? "").slice(0, 600), area: area as KansArea });
+  await logAdminAction("Kans afgevinkt", title);
+  back(formData, "kans-afgevinkt");
+}
+
+export async function undoOpportunityDone(formData: FormData): Promise<void> {
+  await guard(formData);
+  const id = String(formData.get("kans") ?? "");
+  if (!id) back(formData, "niet-gevonden");
+  await undoOpportunityDoneInDb(id);
+  await logAdminAction("Afgevinkte kans teruggezet", String(formData.get("titel") ?? id).slice(0, 200));
+  back(formData, "kans-teruggezet");
 }
 
 /** Vraagt Claude om advies op basis van de opgetelde cijfers (duurt ongeveer een minuut). */
