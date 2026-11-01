@@ -10,8 +10,6 @@ import { defineCopy, type Locale } from "@/i18n/config";
  */
 export const storyCopy = defineCopy({
   nl: {
-    heroCta: "Laat zien hoe het anders kan",
-    heroOr: "Of start meteen",
     solutionEyebrow: "De oplossing",
     solutionIntro: {
       afvallen:
@@ -55,8 +53,6 @@ export const storyCopy = defineCopy({
     },
   },
   en: {
-    heroCta: "Show me how it can be different",
-    heroOr: "Or start right away",
     solutionEyebrow: "The solution",
     solutionIntro: {
       afvallen:
