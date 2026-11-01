@@ -60,18 +60,6 @@ export const site = {
    */
   promotions: [
     {
-      // Pre-Black Friday: in de weken voor Black Friday 20% op de eerste 3 maanden, voor elke looptijd.
-      id: "pre-blackfriday-2026",
-      enabled: true,
-      label: "Pre-Black Friday",
-      labelEn: "Pre-Black Friday",
-      startsAt: "2026-11-01T00:00:00+01:00",
-      endsAt: "2026-11-22T23:59:59+01:00",
-      percentOff: { "1m": 20, "3m": 20, "6m": 20, "12m": 20, eenmalig: 20 },
-      months: 3,
-      theme: null,
-    },
-    {
       // Black Week tot en met Cyber Monday: korting op de eerste 3 maanden, oplopend
       // met de looptijd. 12 maanden krijgt het maximum (50%); de rest staat in
       // verhouding: 50% × √(looptijd / 12), afgerond op 5%. Zo levert een langere
