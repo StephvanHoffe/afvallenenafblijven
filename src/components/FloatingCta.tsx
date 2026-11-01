@@ -15,7 +15,7 @@ const copy = defineCopy({
   nl: {
     main: { voeding: "Ja, maak mijn voedingsschema!", training: "Ja, maak mijn trainingsschema!", bundel: "Ja, maak mijn plan!" } as Record<ProductId, string>,
     mainAny: "Ja, maak mijn plan!",
-    sub: "2 min invullen · binnen 2 uur in je mailbox",
+    sub: "± 3 min invullen · binnen 2 uur in je mailbox",
     promoMain: (pct: number, tiers: boolean) => `Pak ${tiers ? "tot " : ""}${pct}% Black Friday-korting`,
     promoMainOther: (pct: number, label: string, tiers: boolean) => `Pak ${tiers ? "tot " : ""}${pct}% ${label}-korting`,
     upTo: "tot",
@@ -24,7 +24,7 @@ const copy = defineCopy({
   en: {
     main: { voeding: "Yes, make my nutrition plan!", training: "Yes, make my training plan!", bundel: "Yes, make my plan!" } as Record<ProductId, string>,
     mainAny: "Yes, make my plan!",
-    sub: "2 min to fill in · in your inbox within 2 hours",
+    sub: "About 3 min to fill in · in your inbox within 2 hours",
     promoMain: (pct: number, tiers: boolean) => `Get ${tiers ? "up to " : ""}${pct}% off for Black Friday`,
     promoMainOther: (pct: number, label: string, tiers: boolean) => `Get ${tiers ? "up to " : ""}${pct}% off: ${label}`,
     upTo: "up to",

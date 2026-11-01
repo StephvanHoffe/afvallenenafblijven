@@ -59,8 +59,12 @@ interface VariantCopy {
   metaTitle: string;
   metaDescription: string;
   heroAlt: string;
-  /** Kop bovenaan: het probleem van de bezoeker (anders die van het onderwerp in src/content/pains.ts). */
-  heroTitle?: string;
+  /** Bovenaan: dezelfde belofte als in de advertentie, zodat bezoekers zien dat ze goed zitten. */
+  heroEyebrow: string;
+  heroTitle: { start: string; accent: string };
+  heroLead: string;
+  /** Kop van het blok "Herken je dit?" (anders die van het onderwerp in src/content/pains.ts). */
+  painTitle?: string;
   /** Wat je krijgt, in vier korte punten. */
   gets: { title: string; text: string }[];
   finalTitle: string;
@@ -68,15 +72,20 @@ interface VariantCopy {
 }
 
 interface SharedCopy {
-  badge: string;
   launchBadge: (label: string, discount: string, until: string) => string;
   pickTitle: string;
-  /** De eerste vraag van de vragenlijst, bovenaan de pagina. */
-  quizTitle: string;
-  quizTime: string;
-  quizQuestion: string;
-  quizNote: string;
-  seeSample: string;
+  /** De grote knop bovenaan, met de duur eronder. */
+  heroCta: string;
+  heroCtaNote: string;
+  /** Drie korte zekerheden onder de knop. */
+  heroPoints: (guaranteeDays: number | null) => string[];
+  /** De kortingscode uit de advertentielink, bijv. "20% korting op je eerste 3 maanden". */
+  codeOffer: (offer: string, code: string) => string;
+  sampleTitle: string;
+  sampleDay: string;
+  sampleWorkout: string;
+  sampleFull: string;
+  painNext: string;
   previewTargets: string;
   kcal: string;
   protein: string;
@@ -96,14 +105,21 @@ interface SharedCopy {
 export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<LandingVariant, VariantCopy> }>({
   nl: {
     shared: {
-      badge: "In 2 minuten ingevuld · binnen 2 uur je plan",
       launchBadge: (label, discount, until) => `${label}: ${discount}, t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
-      quizTitle: "Start de gratis vragenlijst",
-      quizTime: "2 minuten",
-      quizQuestion: "Vraag 1: wat is je doel?",
-      quizNote: "Gratis en vrijblijvend · je betaalt pas als je een plan kiest",
-      seeSample: "Bekijk eerst een voorbeeldschema",
+      heroCta: "Start je gratis vragenlijst",
+      heroCtaNote: "± 3 minuten · je betaalt pas als je een plan kiest",
+      heroPoints: (days) => [
+        "Persoonlijk schema binnen 2 uur",
+        ...(days ? [`${days} dagen geld-terug-garantie`] : []),
+        "Maandelijks opzegbaar of vaste looptijd",
+      ],
+      codeOffer: (offer, code) => `${offer} · code ${code}`,
+      sampleTitle: "Zo ziet een schema eruit",
+      sampleDay: "Voorbeeld van één dag",
+      sampleWorkout: "Training",
+      sampleFull: "Bekijk het volledige voorbeeld",
+      painNext: "Zo kan het anders",
       previewTargets: "Dagdoelen in het voorbeeld",
       kcal: "kcal",
       protein: "eiwit",
@@ -125,7 +141,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen 2 uur in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
-        heroTitle: "Weer een dieet. Weer gestopt. Weer terug bij af.",
+        heroEyebrow: "Persoonlijk voedings- en trainingsschema",
+        heroTitle: { start: "Een plan dat past bij ", accent: "jouw dag en jouw eten." },
+        heroLead: "Afgestemd op jouw doel, je agenda en wat je lekker vindt, en elke week bijgestuurd.",
+        painTitle: "Weer een dieet. Weer gestopt. Weer terug bij af.",
         gets: [
           { title: "Jouw dagdoelen", text: "Calorieën en eiwit, berekend voor jouw lichaam en doel." },
           { title: "Weekmenu met recepten", text: "Gerechten die je lekker vindt, plus een boodschappenlijst." },
@@ -140,6 +159,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Een persoonlijk weekmenu met recepten en boodschappenlijst, afgestemd op jouw calorieën, smaak en allergieën. Binnen 2 uur in je mailbox.",
         heroAlt: "Bowl met zalm, ei en verse groente",
+        heroEyebrow: "Persoonlijk voedingsschema",
+        heroTitle: { start: "Een weekmenu dat past bij ", accent: "jouw dag en jouw eten." },
+        heroLead: "Met recepten en boodschappenlijst, afgestemd op jouw doel en wat je lekker vindt, en elke week bijgestuurd.",
         gets: [
           { title: "Jouw calorie- en eiwitdoel", text: "Berekend voor jouw lichaam, activiteit en tempo." },
           { title: "7-daags weekmenu", text: "Ontbijt, lunch, avondeten en tussendoortjes met recepten." },
@@ -154,6 +176,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Een persoonlijk trainingsschema met duidelijke uitleg, opgebouwd over 4 weken en afgestemd op jouw niveau, materiaal en blessures.",
         heroAlt: "Vrouw doet een schouderpress met dumbbells",
+        heroEyebrow: "Persoonlijk trainingsschema",
+        heroTitle: { start: "Een schema dat past bij ", accent: "jouw niveau en jouw week." },
+        heroLead: "Thuis of in de sportschool, afgestemd op je materiaal en je tijd, en elke week bijgestuurd.",
         gets: [
           { title: "Schema voor jouw situatie", text: "Thuis zonder of met materiaal, of in de sportschool." },
           { title: "Opbouw over 4 weken", text: "Elke week een stap verder, zodat je blijft vooruitgaan." },
@@ -167,14 +192,21 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
   },
   en: {
     shared: {
-      badge: "2 minutes to fill in · your plan within 2 hours",
       launchBadge: (label, discount, until) => `${label}: ${discount}, until ${until}`,
       pickTitle: "What would you like to work on?",
-      quizTitle: "Start the free questionnaire",
-      quizTime: "2 minutes",
-      quizQuestion: "Question 1: what's your goal?",
-      quizNote: "Free, no strings attached · you only pay once you choose a plan",
-      seeSample: "See a sample plan first",
+      heroCta: "Start your free questionnaire",
+      heroCtaNote: "About 3 minutes · you only pay once you choose a plan",
+      heroPoints: (days) => [
+        "Personal plan within 2 hours",
+        ...(days ? [`${days}-day money-back guarantee`] : []),
+        "Cancel monthly or choose a fixed term",
+      ],
+      codeOffer: (offer, code) => `${offer} · code ${code}`,
+      sampleTitle: "What a plan looks like",
+      sampleDay: "Sample of one day",
+      sampleWorkout: "Workout",
+      sampleFull: "See the full sample",
+      painNext: "How it can be different",
       previewTargets: "Daily targets in the sample",
       kcal: "kcal",
       protein: "protein",
@@ -196,7 +228,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within 2 hours.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
-        heroTitle: "Another diet. Stopped again. Back to square one.",
+        heroEyebrow: "Personal nutrition and workout plan",
+        heroTitle: { start: "A plan that fits ", accent: "your day and your food." },
+        heroLead: "Tailored to your goal, your schedule and what you enjoy eating, and adjusted every week.",
+        painTitle: "Another diet. Stopped again. Back to square one.",
         gets: [
           { title: "Your daily targets", text: "Calories and protein, calculated for your body and goal." },
           { title: "Weekly meal plan with recipes", text: "Dishes you enjoy, plus a shopping list." },
@@ -211,6 +246,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "A personal weekly meal plan with recipes and a shopping list, tailored to your calories, taste and allergies. In your inbox within 2 hours.",
         heroAlt: "Bowl with salmon, egg and fresh vegetables",
+        heroEyebrow: "Personal nutrition plan",
+        heroTitle: { start: "A weekly menu that fits ", accent: "your day and your food." },
+        heroLead: "With recipes and a shopping list, tailored to your goal and what you enjoy eating, and adjusted every week.",
         gets: [
           { title: "Your calorie and protein target", text: "Calculated for your body, activity and pace." },
           { title: "7-day meal plan", text: "Breakfast, lunch, dinner and snacks with recipes." },
@@ -225,6 +263,9 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "A personal workout plan with clear instructions, built up over 4 weeks and tailored to your level, equipment and injuries.",
         heroAlt: "Woman doing a shoulder press with dumbbells",
+        heroEyebrow: "Personal workout plan",
+        heroTitle: { start: "A plan that fits ", accent: "your level and your week." },
+        heroLead: "At home or at the gym, tailored to your equipment and your time, and adjusted every week.",
         gets: [
           { title: "A plan for your situation", text: "At home with or without equipment, or at the gym." },
           { title: "Built up over 4 weeks", text: "A step further each week, so you keep progressing." },

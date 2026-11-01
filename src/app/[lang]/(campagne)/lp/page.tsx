@@ -5,6 +5,6 @@ export function generateMetadata() {
 }
 
 /** Landingspagina voor campagnes (afvallen). Zie README → "Campagnes". */
-export default function LandingPage() {
-  return <CampaignLanding variant="afvallen" />;
+export default function LandingPage({ searchParams }: PageProps<"/[lang]/lp">) {
+  return <CampaignLanding variant="afvallen" searchParams={searchParams} />;
 }

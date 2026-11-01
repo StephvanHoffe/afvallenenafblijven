@@ -22,7 +22,7 @@ export const storyCopy = defineCopy({
     proofEyebrow: "Zo ziet het eruit",
     proofTitle: "Binnen 2 uur in je mailbox: jouw eigen plan",
     closeEyebrow: "Jouw beurt",
-    steps: ["2 minuten vragen beantwoorden", "Kies je plan", "Binnen 2 uur je schema"],
+    steps: ["± 3 minuten vragen beantwoorden", "Kies je plan", "Binnen 2 uur je schema"],
     chart: {
       weight: {
         painTitle: "Zo gaat het vaak",
@@ -65,7 +65,7 @@ export const storyCopy = defineCopy({
     proofEyebrow: "What it looks like",
     proofTitle: "In your inbox within 2 hours: your own plan",
     closeEyebrow: "Your turn",
-    steps: ["Answer questions for 2 minutes", "Choose your plan", "Your plan within 2 hours"],
+    steps: ["Answer questions for about 3 minutes", "Choose your plan", "Your plan within 2 hours"],
     chart: {
       weight: {
         painTitle: "How it often goes",
