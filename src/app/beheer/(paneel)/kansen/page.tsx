@@ -2,23 +2,27 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { ArrowRight, CircleCheck, EyeOff, Info, Lightbulb, Sparkles } from "lucide-react";
-import { hideOpportunity, requestAiAdvice, showAllOpportunities } from "@/app/beheer/actions";
+import { ArrowRight, CircleCheck, EyeOff, Hourglass, Info, Lightbulb, RotateCcw, Sparkles } from "lucide-react";
+import { hideOpportunity, markOpportunityDone, requestAiAdvice, showAllOpportunities, undoOpportunityDone } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Badge, NeedsDatabase, Notice, PageTitle, Panel, QueryTabs, StatTile } from "@/components/beheer/ui";
 import { adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import {
   AREA_LABELS,
+  DONE_CHECK_DAYS,
   aiAdvice,
   buildOpportunities,
+  doneOpportunities,
+  doneStatus,
   hiddenOpportunities,
   opportunityInput,
+  type DoneItem,
   type Kans,
   type KansArea,
   type KansImpact,
 } from "@/lib/admin/opportunities";
-import { formatDateTime, formatNumber } from "@/lib/format";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Kansen" };
 
@@ -39,10 +43,30 @@ const IMPACT: Record<KansImpact, { tone: "bad" | "warn" | "muted"; label: string
   laag: { tone: "muted", label: "Kleine verbetering" },
 };
 
-function KansCard({ kans, back }: { kans: Kans; back: string }) {
+/** Knop om een afgevinkte kans weer open te zetten of uit het overzicht te halen. */
+function UndoButton({ item, back, label }: { item: DoneItem; back: string; label: string }) {
+  return (
+    <form action={undoOpportunityDone}>
+      <input type="hidden" name="kans" value={item.id} />
+      <input type="hidden" name="titel" value={item.done.title} />
+      <input type="hidden" name="terug" value={back} />
+      <SubmitButton className="inline-flex items-center gap-1 text-xs font-semibold whitespace-nowrap text-muted hover:text-ink">
+        <RotateCcw className="size-3.5" aria-hidden /> {label}
+      </SubmitButton>
+    </form>
+  );
+}
+
+function KansCard({ kans, back, doneBefore }: { kans: Kans; back: string; doneBefore?: DoneItem }) {
   const impact = IMPACT[kans.impact];
   return (
     <article className="rounded-2xl border border-line bg-white p-5">
+      {doneBefore && (
+        <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Afgevinkt op {formatDate(doneBefore.done.at)}, maar na {DONE_CHECK_DAYS} dagen komt deze kans nog steeds uit de cijfers. Toen:{" "}
+          {doneBefore.done.finding}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={impact.tone}>{impact.label}</Badge>
         <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-semibold text-muted">{AREA_LABELS[kans.area]}</span>
@@ -75,6 +99,16 @@ function KansCard({ kans, back }: { kans: Kans; back: string }) {
               <EyeOff className="size-3.5" aria-hidden /> Verbergen (30 dagen)
             </SubmitButton>
           </form>
+          <form action={markOpportunityDone}>
+            <input type="hidden" name="kans" value={kans.id} />
+            <input type="hidden" name="titel" value={kans.title} />
+            <input type="hidden" name="bevinding" value={kans.finding} />
+            <input type="hidden" name="gebied" value={kans.area} />
+            <input type="hidden" name="terug" value={back} />
+            <SubmitButton className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand-600 px-3 py-1 text-xs font-bold text-brand-700 hover:bg-brand-600 hover:text-white">
+              <CircleCheck className="size-3.5" aria-hidden /> Gedaan, afvinken
+            </SubmitButton>
+          </form>
         </span>
       </div>
     </article>
@@ -86,10 +120,13 @@ async function Opportunities({ searchParams }: Pick<PageProps<"/beheer/kansen">,
   await requireAdmin();
   if (!adminDataAvailable()) return <NeedsDatabase />;
   const sp = await searchParams;
-  const [input, hidden, advice] = await Promise.all([opportunityInput(), hiddenOpportunities(), aiAdvice()]);
+  const [input, hidden, done, advice] = await Promise.all([opportunityInput(), hiddenOpportunities(), doneOpportunities(), aiAdvice()]);
   const { kansen: all, strengths, dataNote } = buildOpportunities(input);
-  const visible = all.filter((k) => !hidden[k.id]);
-  const hiddenCount = all.length - visible.length;
+  // Afgevinkte kansen staan 30 dagen niet in de lijst: zo lang duurt het voor de cijfers het effect laten zien.
+  const status = doneStatus(done, all);
+  const measuring = new Set(status.measuring.map((x) => x.id));
+  const visible = all.filter((k) => !hidden[k.id] && !measuring.has(k.id));
+  const hiddenCount = all.filter((k) => hidden[k.id]).length;
   const areas = [...new Set(visible.map((k) => k.area))];
   const area = areas.find((a) => a === sp.gebied) ?? null;
   const shown = area ? visible.filter((k) => k.area === area) : visible;
@@ -101,7 +138,7 @@ async function Opportunities({ searchParams }: Pick<PageProps<"/beheer/kansen">,
       <Notice code={typeof sp.melding === "string" ? sp.melding : undefined} />
       <PageTitle
         title="Kansen"
-        intro="Tips en verbeteringen op basis van alles wat binnenkomt: funnel, bezoekers, omzet en behoud, feedback, e-mails en kortingscodes. Elke keer dat je deze pagina opent opnieuw berekend; de belangrijkste staan bovenaan."
+        intro={`Tips en verbeteringen op basis van alles wat binnenkomt: funnel, bezoekers, omzet en behoud, feedback, e-mails en kortingscodes. Elke keer dat je deze pagina opent opnieuw berekend; de belangrijkste staan bovenaan. Heb je een kans opgepakt, vink hem dan af: na ${DONE_CHECK_DAYS} dagen kijken we of het probleem uit de cijfers is verdwenen.`}
       />
 
       {dataNote && (
@@ -132,11 +169,13 @@ async function Opportunities({ searchParams }: Pick<PageProps<"/beheer/kansen">,
       <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         {shown.length === 0 && (
           <p className="rounded-2xl border border-line bg-white p-8 text-center text-muted xl:col-span-2">
-            Geen kansen op dit moment. {hiddenCount > 0 ? "Een deel is verborgen." : "Kom over een paar dagen terug als er meer gegevens zijn."}
+            Geen openstaande kansen. {hiddenCount > 0 ? "Een deel is verborgen. " : ""}
+            {measuring.size > 0 ? "Wat je hebt afgevinkt, meten we nog (zie hieronder). " : ""}
+            De pagina rekent elke keer opnieuw: laten de cijfers iets nieuws zien, dan staat het hier.
           </p>
         )}
         {shown.map((k) => (
-          <KansCard key={k.id} kans={k} back={here} />
+          <KansCard key={k.id} kans={k} back={here} doneBefore={status.back.get(k.id)} />
         ))}
       </div>
 
@@ -146,6 +185,59 @@ async function Opportunities({ searchParams }: Pick<PageProps<"/beheer/kansen">,
           {formatNumber(hiddenCount)} {hiddenCount === 1 ? "kans is" : "kansen zijn"} verborgen.
           <SubmitButton className="font-semibold text-brand-700 hover:underline">Toon ze weer</SubmitButton>
         </form>
+      )}
+
+      {(status.measuring.length > 0 || status.solved.length > 0) && (
+        <Panel title="Afgevinkt" className="mt-8">
+          <ul className="divide-y divide-line">
+            {status.measuring.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 py-4 text-sm">
+                <span className="flex min-w-0 flex-1 items-start gap-3">
+                  <Hourglass className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{x.done.title}</span>
+                      <Badge tone="warn">Wordt gemeten</Badge>
+                    </span>
+                    <span className="mt-0.5 block text-muted">
+                      Afgevinkt op {formatDate(x.done.at)}. Op {formatDate(x.checkAt)} kijken we of het probleem uit de cijfers is verdwenen.
+                    </span>
+                    <span className="mt-1 block">
+                      <span className="text-muted">Toen:</span> {x.done.finding}
+                    </span>
+                    {x.current && x.current.finding !== x.done.finding && (
+                      <span className="block">
+                        <span className="text-muted">Nu:</span> {x.current.finding}
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <UndoButton item={x} back={here} label="Toch nog openzetten" />
+              </li>
+            ))}
+            {status.solved.map((x) => (
+              <li key={x.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 py-4 text-sm">
+                <span className="flex min-w-0 flex-1 items-start gap-3">
+                  <CircleCheck className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{x.done.title}</span>
+                      <Badge tone="ok">Opgelost</Badge>
+                    </span>
+                    <span className="mt-0.5 block text-muted">Afgevinkt op {formatDate(x.done.at)}. Deze kans komt niet meer uit de cijfers.</span>
+                    <span className="mt-1 block">
+                      <span className="text-muted">Toen:</span> {x.done.finding}
+                    </span>
+                  </span>
+                </span>
+                <UndoButton item={x} back={here} label="Uit dit overzicht halen" />
+              </li>
+            ))}
+          </ul>
+          <p className="border-t border-line px-5 py-3 text-xs text-muted">
+            Komt een opgeloste kans later toch weer uit de cijfers, dan staat hij vanzelf weer in de lijst, met de datum waarop je hem had afgevinkt.
+          </p>
+        </Panel>
       )}
 
       <Panel title="Meedenken met Claude" className="mt-8">
