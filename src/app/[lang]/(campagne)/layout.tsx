@@ -17,7 +17,8 @@ import { currentPromotion } from "@/lib/promotion";
 const copy = defineCopy({
   nl: {
     skip: "Naar de inhoud",
-    start: "Start je plan",
+    start: "Start de gratis vragenlijst",
+    startShort: "Start",
     legal: [
       { href: "/algemene-voorwaarden", label: "Algemene voorwaarden" },
       { href: "/privacybeleid", label: "Privacybeleid" },
@@ -31,7 +32,8 @@ const copy = defineCopy({
   },
   en: {
     skip: "Skip to content",
-    start: "Start your plan",
+    start: "Start the free questionnaire",
+    startShort: "Start",
     legal: [
       { href: "/algemene-voorwaarden", label: "Terms and conditions" },
       { href: "/privacybeleid", label: "Privacy policy" },
@@ -71,11 +73,15 @@ export default async function CampaignLayout({ children }: { children: React.Rea
         <div className="container-page flex h-16 items-center justify-between gap-3">
           <Logo />
           <div className="flex items-center gap-2">
-            <Suspense fallback={<LanguageSwitcherFallback />}>
-              <LanguageSwitcher />
-            </Suspense>
-            <Link href="/start" data-lp-cta="header" className="btn-primary hidden !px-5 !py-2.5 text-[0.9375rem] sm:inline-flex">
-              {c.start} <ArrowRight className="size-4" aria-hidden />
+            {/* Op mobiel past de startknop er anders niet naast; bezoekers komen via de advertentie al in de juiste taal binnen. */}
+            <div className="hidden sm:block">
+              <Suspense fallback={<LanguageSwitcherFallback />}>
+                <LanguageSwitcher />
+              </Suspense>
+            </div>
+            <Link href="/start" data-lp-cta="header" className="btn-primary !px-4 !py-2 text-sm sm:!px-5 sm:!py-2.5 sm:text-[0.9375rem]">
+              <span className="sm:hidden">{c.startShort}</span>
+              <span className="hidden sm:inline">{c.start}</span> <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
         </div>

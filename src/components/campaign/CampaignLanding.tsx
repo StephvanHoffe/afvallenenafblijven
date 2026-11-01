@@ -37,7 +37,7 @@ function startHref(variant: LandingVariant, goal?: Intake["goal"]): string {
   return q ? `/start?${q}` : "/start";
 }
 
-/** "Maandag begin je. Alweer.": de laatste zin krijgt de accentkleur. */
+/** "Weer een dieet. Weer gestopt. Weer terug bij af.": de laatste zin krijgt de accentkleur. */
 function accentLastSentence(title: string): [string, string] {
   const i = title.lastIndexOf(". ", title.length - 2);
   return i === -1 ? [title, ""] : [title.slice(0, i + 2), title.slice(i + 2)];
@@ -76,7 +76,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   const heroMeal = day.meals.find((m) => /lunch/i.test(m.moment)) ?? day.meals[0];
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
-  const [titleStart, titleAccent] = accentLastSentence(pain.painTitle);
+  const [titleStart, titleAccent] = accentLastSentence(v.heroTitle ?? pain.painTitle);
 
   return (
     <>
@@ -101,21 +101,45 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
               {titleAccent && <span className="text-accent-500">{titleAccent}</span>}
             </h1>
             <ul className="mt-7 space-y-3.5">
-              {pain.painPoints.slice(0, 3).map((point) => (
-                <li key={point} className="flex gap-3 text-lg leading-relaxed text-ink/85">
+              {pain.painPoints.slice(0, 3).map((point, i) => (
+                // Op mobiel twee punten, zodat de eerste vraag eerder in beeld is.
+                <li key={point} className={`gap-3 text-lg leading-relaxed text-ink/85 ${i === 2 ? "hidden sm:flex" : "flex"}`}>
                   <X className="mt-1 size-5 shrink-0 text-accent-500" aria-hidden />
                   {point}
                 </li>
               ))}
             </ul>
-            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <a href="#oplossing" className="btn-primary text-lg">
-                {s.heroCta} <ArrowDown className="size-5" aria-hidden />
-              </a>
-              <Link href={mainHref} data-lp-cta="hero" className="inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
-                {s.heroOr} <ArrowRight className="size-4" aria-hidden />
-              </Link>
+            {/* De eerste vraag van de vragenlijst: één klik en je zit erin. */}
+            <div className="mt-8 rounded-[1.75rem] border border-line bg-white p-4 shadow-[var(--shadow-lift)] sm:p-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <p className="text-lg font-extrabold">{c.quizTitle}</p>
+                <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-800">{c.quizTime}</span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-muted">{c.quizQuestion}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2.5">
+                {settings.goals.map((goal) => {
+                  const Icon = goalIcons[goal];
+                  return (
+                    <Link
+                      key={goal}
+                      href={startHref(variant, goal)}
+                      data-lp-cta="hero-doel"
+                      className="group flex min-h-[4.5rem] items-center gap-3 rounded-2xl border-2 border-line bg-white p-3 leading-tight font-bold transition hover:border-brand-500 hover:bg-brand-50 focus-visible:border-brand-500 focus-visible:ring-4 focus-visible:ring-brand-100 focus-visible:outline-none"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
+                        <Icon className="size-[1.125rem]" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 text-[0.9375rem]">{labels.goal[goal].label}</span>
+                      <ArrowRight className="hidden size-4 shrink-0 text-brand-600 transition group-hover:translate-x-0.5 sm:block" aria-hidden />
+                    </Link>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs text-muted">{c.quizNote}</p>
             </div>
+            <a href="#voorbeeld" className="mt-5 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
+              {c.seeSample} <ArrowDown className="size-4" aria-hidden />
+            </a>
           </div>
           <StoryChart kind="pain" variant={variant} l={l} />
         </div>
@@ -162,7 +186,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
       </section>
 
       {/* 4. ZO ZIET HET ERUIT: het echte plan */}
-      <section className="bg-sand py-16">
+      <section id="voorbeeld" className="scroll-mt-16 bg-sand py-16">
         <div className="container-page grid items-center gap-12 lg:grid-cols-2 lg:gap-14">
           <div className="relative mx-auto w-full max-w-xl">
             <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)]">
@@ -262,7 +286,7 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
         <FaqList items={faqInOrder(l, settings.faq).slice(0, 5)} />
       </section>
 
-      {/* 8. DE KEUZE: terug naar het begin ("maandag begin je, alweer") en meteen een eerste stap */}
+      {/* 8. DE KEUZE: terug naar het begin ("dit keer niet terug bij af") en meteen een eerste stap */}
       <section className="container-page py-16">
         <div className={`rounded-[2rem] px-5 py-12 text-white sm:px-12 ${bf ? "ring-1 ring-lime-glow/25" : "bg-brand-900"}`} style={bf ? bfGlow : undefined}>
           <div className="mx-auto max-w-3xl text-center">

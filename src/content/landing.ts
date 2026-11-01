@@ -59,6 +59,8 @@ interface VariantCopy {
   metaTitle: string;
   metaDescription: string;
   heroAlt: string;
+  /** Kop bovenaan: het probleem van de bezoeker (anders die van het onderwerp in src/content/pains.ts). */
+  heroTitle?: string;
   /** Wat je krijgt, in vier korte punten. */
   gets: { title: string; text: string }[];
   finalTitle: string;
@@ -69,6 +71,12 @@ interface SharedCopy {
   badge: string;
   launchBadge: (label: string, discount: string, until: string) => string;
   pickTitle: string;
+  /** De eerste vraag van de vragenlijst, bovenaan de pagina. */
+  quizTitle: string;
+  quizTime: string;
+  quizQuestion: string;
+  quizNote: string;
+  seeSample: string;
   previewTargets: string;
   kcal: string;
   protein: string;
@@ -91,6 +99,11 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       badge: "In 2 minuten ingevuld · binnen 2 uur je plan",
       launchBadge: (label, discount, until) => `${label}: ${discount}, t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
+      quizTitle: "Start de gratis vragenlijst",
+      quizTime: "2 minuten",
+      quizQuestion: "Vraag 1: wat is je doel?",
+      quizNote: "Gratis en vrijblijvend · je betaalt pas als je een plan kiest",
+      seeSample: "Bekijk eerst een voorbeeldschema",
       previewTargets: "Dagdoelen in het voorbeeld",
       kcal: "kcal",
       protein: "eiwit",
@@ -112,13 +125,14 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen 2 uur in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
+        heroTitle: "Weer een dieet. Weer gestopt. Weer terug bij af.",
         gets: [
           { title: "Jouw dagdoelen", text: "Calorieën en eiwit, berekend voor jouw lichaam en doel." },
           { title: "Weekmenu met recepten", text: "Gerechten die je lekker vindt, plus een boodschappenlijst." },
           { title: "Trainingsschema", text: "Thuis of in de sportschool, opgebouwd over 4 weken." },
           { title: "Wekelijkse bijsturing", text: "We passen je plan aan op hoe het echt gaat." },
         ],
-        finalTitle: "Wacht niet weer tot maandag",
+        finalTitle: "Dit keer niet terug bij af",
         finalText: "Beantwoord een paar vragen en ontvang binnen 2 uur je persoonlijke plan. Je betaalt pas als je een plan kiest.",
       },
       voeding: {
@@ -156,6 +170,11 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       badge: "2 minutes to fill in · your plan within 2 hours",
       launchBadge: (label, discount, until) => `${label}: ${discount}, until ${until}`,
       pickTitle: "What would you like to work on?",
+      quizTitle: "Start the free questionnaire",
+      quizTime: "2 minutes",
+      quizQuestion: "Question 1: what's your goal?",
+      quizNote: "Free, no strings attached · you only pay once you choose a plan",
+      seeSample: "See a sample plan first",
       previewTargets: "Daily targets in the sample",
       kcal: "kcal",
       protein: "protein",
@@ -177,13 +196,14 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within 2 hours.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
+        heroTitle: "Another diet. Stopped again. Back to square one.",
         gets: [
           { title: "Your daily targets", text: "Calories and protein, calculated for your body and goal." },
           { title: "Weekly meal plan with recipes", text: "Dishes you enjoy, plus a shopping list." },
           { title: "Workout plan", text: "At home or at the gym, built up over 4 weeks." },
           { title: "Weekly adjustments", text: "We adapt your plan to how things are really going." },
         ],
-        finalTitle: "Don't wait for Monday again",
+        finalTitle: "Not back to square one this time",
         finalText: "Answer a few questions and receive your personal plan within 2 hours. You only pay once you choose a plan.",
       },
       voeding: {
