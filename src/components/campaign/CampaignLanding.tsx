@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Image from "next/image";
 import { Suspense } from "react";
-import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, Tag, Target, TrendingDown, X } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Tag, Target, TrendingDown, X } from "lucide-react";
 import { BlackFridayDeal, BlackFridayStrip, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
 import { StoryChart, storyCopy } from "@/components/campaign/Story";
 import { FutureSection } from "@/components/conversion";
@@ -167,8 +167,20 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
               </span>
               <span className="text-[0.8125rem] font-semibold text-white/85">{c.heroCtaNote}</span>
             </Link>
-            <ul className="mt-5 grid gap-2 text-[0.9375rem] font-semibold text-ink/85">
-              {c.heroPoints(site.guarantee.enabled ? site.guarantee.days : null).map((point) => (
+            {/* Direct onder de knop: niet goed, geld terug (de garantie uit artikel 10 van de voorwaarden) */}
+            {site.guarantee.enabled && (
+              <div className="mt-4 flex max-w-xl items-start gap-3 rounded-2xl border-2 border-brand-200 bg-white p-3 sm:p-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
+                  <ShieldCheck className="size-5" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-extrabold">{c.guaranteeTitle}</span>
+                  <span className="block text-sm leading-snug text-ink/75">{c.guaranteeText(site.guarantee.days)}</span>
+                </span>
+              </div>
+            )}
+            <ul className="mt-4 grid gap-2 text-[0.9375rem] font-semibold text-ink/85">
+              {c.heroPoints.map((point) => (
                 <li key={point} className="flex items-center gap-2.5">
                   <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
                     <Check className="size-3.5" aria-hidden />
