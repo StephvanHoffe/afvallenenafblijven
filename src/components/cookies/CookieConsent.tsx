@@ -22,6 +22,7 @@ const copy = defineCopy({
     title: "Mogen we cookies gebruiken?",
     settingsTitle: "Cookie-instellingen",
     text: "We gebruiken noodzakelijke cookies om de site te laten werken. Met jouw toestemming gebruiken we ook cookies om de site te verbeteren en onze advertenties te meten. Meer info in ons",
+    short: "Alleen met jouw toestemming, voor statistieken en advertenties. Zie ons",
     policy: "cookiebeleid",
     necessary: "Noodzakelijk",
     necessaryText: "Nodig voor inloggen, betalen en het onthouden van je keuze.",
@@ -39,6 +40,7 @@ const copy = defineCopy({
     title: "May we use cookies?",
     settingsTitle: "Cookie settings",
     text: "We use necessary cookies to make the site work. With your consent, we also use cookies to improve the site and measure our adverts. More information in our",
+    short: "Only with your consent, for statistics and adverts. See our",
     policy: "cookie policy",
     necessary: "Necessary",
     necessaryText: "Needed for logging in, paying and remembering your choice.",
@@ -116,21 +118,32 @@ export function CookieConsent() {
 
       {showBanner && (
         <div
-          className="no-print fixed inset-x-3 bottom-3 z-[60] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[26rem]"
+          className="no-print fixed inset-x-2 bottom-2 z-[60] sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[26rem]"
           role="dialog"
           aria-modal="false"
           aria-labelledby="cookie-title"
         >
-          <div className="card p-5 shadow-[var(--shadow-lift)]">
-            <div className="mb-2 flex items-center gap-2">
+          {/* Op mobiel compact: de melding mag de startknop van de pagina niet bedekken. */}
+          <div className="card p-3.5 shadow-[var(--shadow-lift)] sm:p-5">
+            <div className="mb-1.5 flex items-center gap-2 sm:mb-2">
               <Cookie className="size-5 text-brand-600" aria-hidden />
-              <h2 id="cookie-title" className="font-bold">
+              <h2 id="cookie-title" className="text-[0.9375rem] font-bold sm:text-base">
                 {showSettings ? c.settingsTitle : c.title}
               </h2>
+              {!showSettings && (
+                <button
+                  type="button"
+                  className="ml-auto shrink-0 text-sm font-semibold whitespace-nowrap text-muted underline hover:text-ink sm:hidden"
+                  onClick={() => setShowSettings(true)}
+                >
+                  {c.choose}
+                </button>
+              )}
             </div>
             {!showSettings ? (
-              <p className="text-sm leading-relaxed text-muted">
-                {c.text}{" "}
+              <p className="text-[0.8125rem] leading-snug text-muted sm:text-sm sm:leading-relaxed">
+                <span className="sm:hidden">{c.short}</span>
+                <span className="hidden sm:inline">{c.text}</span>{" "}
                 <Link href="/cookiebeleid" className="font-semibold text-brand-700 underline">
                   {c.policy}
                 </Link>
@@ -171,22 +184,22 @@ export function CookieConsent() {
                 </label>
               </div>
             )}
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4">
               {showSettings ? (
                 <>
-                  <button type="button" className="btn-secondary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: false, marketing: false })}>
+                  <button type="button" className="btn-secondary !px-3 !py-2 text-sm sm:!py-2.5" onClick={() => save({ analytics: false, marketing: false })}>
                     {c.rejectAll}
                   </button>
-                  <button type="button" className="btn-primary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics, marketing })}>
+                  <button type="button" className="btn-primary !px-3 !py-2 text-sm sm:!py-2.5" onClick={() => save({ analytics, marketing })}>
                     {c.save}
                   </button>
                 </>
               ) : (
                 <>
-                  <button type="button" className="btn-secondary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: false, marketing: false })}>
+                  <button type="button" className="btn-secondary !px-3 !py-2 text-sm sm:!py-2.5" onClick={() => save({ analytics: false, marketing: false })}>
                     {c.necessaryOnly}
                   </button>
-                  <button type="button" className="btn-primary !px-3 !py-2.5 text-sm" onClick={() => save({ analytics: true, marketing: true })}>
+                  <button type="button" className="btn-primary !px-3 !py-2 text-sm sm:!py-2.5" onClick={() => save({ analytics: true, marketing: true })}>
                     {c.acceptAll}
                   </button>
                 </>
@@ -195,7 +208,7 @@ export function CookieConsent() {
             {!showSettings && (
               <button
                 type="button"
-                className="mt-3 w-full text-center text-sm font-semibold text-muted underline hover:text-ink"
+                className="mt-3 hidden w-full text-center text-sm font-semibold text-muted underline hover:text-ink sm:block"
                 onClick={() => setShowSettings(true)}
               >
                 {c.choose}

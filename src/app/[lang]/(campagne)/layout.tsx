@@ -17,7 +17,7 @@ import { currentPromotion } from "@/lib/promotion";
 const copy = defineCopy({
   nl: {
     skip: "Naar de inhoud",
-    start: "Start de gratis vragenlijst",
+    start: "Start je gratis vragenlijst",
     startShort: "Start",
     legal: [
       { href: "/algemene-voorwaarden", label: "Algemene voorwaarden" },
@@ -32,7 +32,7 @@ const copy = defineCopy({
   },
   en: {
     skip: "Skip to content",
-    start: "Start the free questionnaire",
+    start: "Start your free questionnaire",
     startShort: "Start",
     legal: [
       { href: "/algemene-voorwaarden", label: "Terms and conditions" },

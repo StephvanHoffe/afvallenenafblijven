@@ -5,6 +5,6 @@ export function generateMetadata() {
 }
 
 /** Landingspagina voor campagnes (voeding). Zie README → "Campagnes". */
-export default function LandingPage() {
-  return <CampaignLanding variant="voeding" />;
+export default function LandingPage({ searchParams }: PageProps<"/[lang]/lp/voeding">) {
+  return <CampaignLanding variant="voeding" searchParams={searchParams} />;
 }

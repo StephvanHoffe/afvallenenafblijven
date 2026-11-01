@@ -5,6 +5,6 @@ export function generateMetadata() {
 }
 
 /** Landingspagina voor campagnes (training). Zie README → "Campagnes". */
-export default function LandingPage() {
-  return <CampaignLanding variant="training" />;
+export default function LandingPage({ searchParams }: PageProps<"/[lang]/lp/training">) {
+  return <CampaignLanding variant="training" searchParams={searchParams} />;
 }

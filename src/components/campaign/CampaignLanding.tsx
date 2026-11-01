@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import Image from "next/image";
-import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, Target, TrendingDown, X } from "lucide-react";
+import { Suspense } from "react";
+import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, Tag, Target, TrendingDown, X } from "lucide-react";
 import { BlackFridayDeal, BlackFridayStrip, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
 import { StoryChart, storyCopy } from "@/components/campaign/Story";
 import { FutureSection } from "@/components/conversion";
@@ -15,8 +17,12 @@ import { painCopy, painLabels } from "@/content/pains";
 import { samplePlansFor } from "@/content/sample-plans";
 import Link from "@/i18n/Link";
 import { intakeLabels } from "@/i18n/options";
+import type { Locale } from "@/i18n/config";
 import { getLocale } from "@/i18n/server";
-import { formatNumber } from "@/lib/format";
+import { isDatabaseConfigured } from "@/lib/db";
+import { normalizeCode, type DiscountTerms } from "@/lib/discounts";
+import { getDiscountCode, termsOf } from "@/lib/discounts-server";
+import { euro, formatNumber } from "@/lib/format";
 import type { Intake } from "@/lib/intake";
 import { currentPromotion } from "@/lib/promotion";
 
@@ -50,15 +56,55 @@ export async function landingMetadata(variant: LandingVariant): Promise<Metadata
   return { title: v.metaTitle, description: v.metaDescription, robots: { index: false, follow: true } };
 }
 
+/** "20% korting op je eerste 3 maanden": dezelfde woorden als in de advertentie. */
+function offerText(terms: Pick<DiscountTerms, "percentOff" | "amountOffCents" | "duration" | "durationMonths">, l: Locale): string {
+  const off = terms.percentOff ? `${terms.percentOff}%` : euro(terms.amountOffCents ?? 0, l);
+  const months = Math.max(1, terms.durationMonths ?? 1);
+  if (terms.duration === "once" || (terms.duration === "repeating" && months === 1)) {
+    return l === "en" ? `${off} off your first month` : `${off} korting op je eerste maand`;
+  }
+  if (terms.duration === "repeating") return l === "en" ? `${off} off your first ${months} months` : `${off} korting op je eerste ${months} maanden`;
+  return l === "en" ? `${off} off every month` : `${off} korting op elke maand`;
+}
+
+/** Wat de kortingscode uit de advertentielink oplevert, als hij nu geldt. Kort gecachet, zodat de pagina snel blijft. */
+async function codeOffer(code: string, l: Locale): Promise<string | null> {
+  "use cache";
+  cacheLife("minutes");
+  if (!isDatabaseConfigured()) return null;
+  const row = await getDiscountCode(code).catch(() => null);
+  const now = Date.now();
+  if (!row || !row.active || (row.starts_at && row.starts_at.getTime() > now) || (row.expires_at && row.expires_at.getTime() < now)) return null;
+  if (row.max_redemptions !== null && row.redemptions >= row.max_redemptions) return null;
+  return offerText(termsOf(row), l);
+}
+
+/** Bovenaan: de korting uit de advertentielink (?code=), anders de lopende actie. */
+async function OfferLine({ searchParams, l, fallback }: { searchParams: Promise<SearchParams>; l: Locale; fallback: React.ReactNode }) {
+  const sp = await searchParams;
+  const code = typeof sp.code === "string" ? normalizeCode(sp.code) : "";
+  const offer = code ? await codeOffer(code, l) : null;
+  if (!offer) return fallback;
+  return (
+    <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-lime-glow px-3.5 py-1.5 text-[0.9375rem] font-extrabold text-brand-950 sm:mb-4">
+      <Tag className="size-4 shrink-0" aria-hidden /> {landingCopy[l].shared.codeOffer(offer, code)}
+    </p>
+  );
+}
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
 /**
- * De landingspagina voor bezoekers uit een online campagne, als één verhaal:
- * bovenaan de pijn (herkenning en het patroon dat iedereen kent), dan de
- * omslag ("het ligt niet aan jou"), de oplossing, hoe het eruitziet, waar je
- * over 3 maanden staat, het aanbod en tot slot één duidelijke keuze. Elke
- * stap leidt naar de volgende; de zwevende startknop is er voor wie al
- * overtuigd is. Tijdens Black Friday komt de actie erbij als accent.
+ * De landingspagina voor bezoekers uit een online campagne. Bovenaan,
+ * zonder te scrollen, dezelfde belofte als in de advertentie (en de korting
+ * uit de link), één grote startknop en drie zekerheden. Daarna het verhaal:
+ * de pijn (herkenning en het patroon dat iedereen kent), de omslag ("het
+ * ligt niet aan jou"), de oplossing, hoe het eruitziet, waar je over 3
+ * maanden staat, het aanbod en tot slot één duidelijke keuze. De zwevende
+ * startknop is er voor wie al overtuigd is. Tijdens Black Friday komt de
+ * actie erbij als accent.
  */
-export async function CampaignLanding({ variant }: { variant: LandingVariant }) {
+export async function CampaignLanding({ variant, searchParams }: { variant: LandingVariant; searchParams?: Promise<SearchParams> }) {
   const l = await getLocale();
   const c = landingCopy[l].shared;
   const v = landingCopy[l].variants[variant];
@@ -76,69 +122,144 @@ export async function CampaignLanding({ variant }: { variant: LandingVariant }) 
   const heroMeal = day.meals.find((m) => /lunch/i.test(m.moment)) ?? day.meals[0];
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
-  const [titleStart, titleAccent] = accentLastSentence(v.heroTitle ?? pain.painTitle);
+  const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
+  const promoBadge =
+    promo && !bf ? (
+      <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800 sm:mb-4">
+        <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
+        {c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel)}
+      </p>
+    ) : null;
 
   return (
     <>
-      {/* 1. DE PIJN: herkenning, en het patroon dat iedereen kent */}
+      {/* 1. DE BELOFTE: dezelfde woorden als de advertentie, en meteen de knop (zonder te scrollen, ook in de app van Instagram) */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 -z-10 h-[46rem] bg-gradient-to-b from-sand to-cream" />
-        <div className="container-page grid items-center gap-10 pt-10 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pt-16 lg:pb-20">
+        <div className="container-page grid items-center gap-10 pt-4 pb-14 sm:pt-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-14 lg:pb-20">
           <div className="min-w-0">
-            {bf ? (
-              <div className="mb-6">
+            {bf && (
+              <div className="mb-5">
                 <BlackFridayStrip promo={bf} l={l} />
               </div>
-            ) : (
-              <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
-                <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-                {promo ? c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel) : c.badge}
-              </p>
             )}
+            {searchParams ? (
+              <Suspense fallback={promoBadge}>
+                <OfferLine searchParams={searchParams} l={l} fallback={promoBadge} />
+              </Suspense>
+            ) : (
+              promoBadge
+            )}
+            <p className="eyebrow mb-2">{v.heroEyebrow}</p>
+            <h1 className="text-[2rem] leading-[1.08] font-extrabold tracking-[-0.025em] text-balance sm:text-5xl lg:text-6xl">
+              {v.heroTitle.start}
+              <span className="text-brand-600">{v.heroTitle.accent}</span>
+            </h1>
+            {/* Op een laag scherm (kleine telefoon in de app van Facebook) eerst de knop; de uitleg komt verderop ook. */}
+            <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-ink/80 sm:mt-4 sm:text-lg [@media(max-height:640px)]:hidden">{v.heroLead}</p>
+            <Link
+              href={mainHref}
+              data-lp-cta="hero"
+              className="btn-primary mt-5 w-full flex-col !gap-0.5 !py-3 !whitespace-normal sm:mt-6 sm:w-auto sm:!px-8 sm:!py-3.5"
+            >
+              <span className="inline-flex items-center gap-2 text-lg">
+                {c.heroCta} <ArrowRight className="size-5" aria-hidden />
+              </span>
+              <span className="text-[0.8125rem] font-semibold text-white/85">{c.heroCtaNote}</span>
+            </Link>
+            <ul className="mt-5 grid gap-2 text-[0.9375rem] font-semibold text-ink/85">
+              {c.heroPoints(site.guarantee.enabled ? site.guarantee.days : null).map((point) => (
+                <li key={point} className="flex items-center gap-2.5">
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
+                    <Check className="size-3.5" aria-hidden />
+                  </span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Een stukje voorbeeldschema, zodat je meteen ziet wat je krijgt */}
+          <div className="mx-auto w-full max-w-md rounded-[1.75rem] border border-line bg-white p-5 shadow-[var(--shadow-lift)] sm:p-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="font-extrabold">{c.sampleTitle}</p>
+              <span className="text-xs font-semibold text-muted">{c.sampleDay}</span>
+            </div>
+            {variant !== "training" && (
+              <>
+                <div className="mt-4 flex flex-wrap gap-2 text-sm">
+                  <span className="rounded-full bg-brand-900 px-3 py-1 font-bold text-white">
+                    {n(targets.calories)} {c.kcal}
+                  </span>
+                  <span className="rounded-full bg-sand px-3 py-1 font-bold">
+                    {n(targets.proteinG)} g {c.protein}
+                  </span>
+                </div>
+                <ul className="mt-3 divide-y divide-line">
+                  {day.meals.slice(0, 4).map((m) => (
+                    <li key={m.moment + m.name} className="flex items-baseline justify-between gap-3 py-2.5">
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold text-brand-600 uppercase">{m.moment}</span>
+                        <span className="block text-sm leading-snug font-semibold">{m.name}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-bold text-muted tabular-nums">
+                        {n(m.kcal)} {c.kcal}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {variant === "training" ? (
+              <>
+                <p className="mt-4 flex items-center gap-2 text-sm font-bold">
+                  <Dumbbell className="size-4 text-brand-600" aria-hidden /> {workout.name} · {c.minutes(workout.minutes)}
+                </p>
+                <ul className="mt-3 divide-y divide-line">
+                  {workout.exercises.slice(0, 4).map((e) => (
+                    <li key={e.name} className="flex items-baseline justify-between gap-3 py-2.5">
+                      <span className="min-w-0 text-sm leading-snug font-semibold">{e.name}</span>
+                      <span className="shrink-0 text-xs font-bold text-muted tabular-nums">{c.setsReps(e.sets, e.reps)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              variant === "afvallen" && (
+                <p className="mt-1 flex items-center gap-2 border-t border-line pt-3 text-sm">
+                  <Dumbbell className="size-4 shrink-0 text-brand-600" aria-hidden />
+                  <span>
+                    <span className="font-bold">{c.sampleWorkout}:</span> {workout.name} · {c.minutes(workout.minutes)}
+                  </span>
+                </p>
+              )
+            )}
+            <a href="#voorbeeld" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
+              {c.sampleFull} <ArrowDown className="size-4" aria-hidden />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. DE PIJN: herkenning, en het patroon dat iedereen kent */}
+      <section className="border-t border-line bg-white">
+        <div className="container-page grid items-center gap-10 py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+          <div className="min-w-0">
             <p className="eyebrow mb-3 !text-accent-600">{pl.painsEyebrow}</p>
-            <h1 className="heading-xl">
+            <h2 className="heading-lg">
               {titleStart}
               {titleAccent && <span className="text-accent-500">{titleAccent}</span>}
-            </h1>
+            </h2>
             <ul className="mt-7 space-y-3.5">
-              {pain.painPoints.slice(0, 3).map((point, i) => (
-                // Op mobiel twee punten, zodat de eerste vraag eerder in beeld is.
-                <li key={point} className={`gap-3 text-lg leading-relaxed text-ink/85 ${i === 2 ? "hidden sm:flex" : "flex"}`}>
+              {pain.painPoints.slice(0, 3).map((point) => (
+                <li key={point} className="flex gap-3 text-lg leading-relaxed text-ink/85">
                   <X className="mt-1 size-5 shrink-0 text-accent-500" aria-hidden />
                   {point}
                 </li>
               ))}
             </ul>
-            {/* De eerste vraag van de vragenlijst: één klik en je zit erin. */}
-            <div className="mt-8 rounded-[1.75rem] border border-line bg-white p-4 shadow-[var(--shadow-lift)] sm:p-6">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <p className="text-lg font-extrabold">{c.quizTitle}</p>
-                <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-bold text-brand-800">{c.quizTime}</span>
-              </div>
-              <p className="mt-1 text-sm font-semibold text-muted">{c.quizQuestion}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2.5">
-                {settings.goals.map((goal) => {
-                  const Icon = goalIcons[goal];
-                  return (
-                    <Link
-                      key={goal}
-                      href={startHref(variant, goal)}
-                      data-lp-cta="hero-doel"
-                      className="group flex min-h-[4.5rem] items-center gap-3 rounded-2xl border-2 border-line bg-white p-3 leading-tight font-bold transition hover:border-brand-500 hover:bg-brand-50 focus-visible:border-brand-500 focus-visible:ring-4 focus-visible:ring-brand-100 focus-visible:outline-none"
-                    >
-                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-600 group-hover:text-white">
-                        <Icon className="size-[1.125rem]" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1 text-[0.9375rem]">{labels.goal[goal].label}</span>
-                      <ArrowRight className="hidden size-4 shrink-0 text-brand-600 transition group-hover:translate-x-0.5 sm:block" aria-hidden />
-                    </Link>
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-xs text-muted">{c.quizNote}</p>
-            </div>
-            <a href="#voorbeeld" className="mt-5 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
-              {c.seeSample} <ArrowDown className="size-4" aria-hidden />
+            <a href="#oplossing" className="mt-7 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
+              {c.painNext} <ArrowDown className="size-4" aria-hidden />
             </a>
           </div>
           <StoryChart kind="pain" variant={variant} l={l} />
