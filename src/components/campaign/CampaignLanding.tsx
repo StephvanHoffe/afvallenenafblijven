@@ -97,7 +97,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 /**
  * De landingspagina voor bezoekers uit een online campagne. Bovenaan,
  * zonder te scrollen, dezelfde belofte als in de advertentie (en de korting
- * uit de link), één grote startknop en drie zekerheden. Daarna het verhaal:
+ * uit de link), meteen de eerste vraag van de vragenlijst (je doel: één tik
+ * en je gaat verder bij vraag 2), de garantie en twee zekerheden. Daarna het verhaal:
  * de pijn (herkenning en het patroon dat iedereen kent), de omslag ("het
  * ligt niet aan jou"), de oplossing, hoe het eruitziet, waar je over 3
  * maanden staat, het aanbod en tot slot één duidelijke keuze. De zwevende
@@ -133,7 +134,7 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
 
   return (
     <>
-      {/* 1. DE BELOFTE: dezelfde woorden als de advertentie, en meteen de knop (zonder te scrollen, ook in de app van Instagram) */}
+      {/* 1. DE BELOFTE: dezelfde woorden als de advertentie, en meteen de eerste vraag (zonder te scrollen, ook in de app van Instagram) */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 -z-10 h-[46rem] bg-gradient-to-b from-sand to-cream" />
         <div className="container-page grid items-center gap-10 pt-4 pb-14 sm:pt-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-14 lg:pb-20">
@@ -155,19 +156,40 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
               {v.heroTitle.start}
               <span className="text-brand-600">{v.heroTitle.accent}</span>
             </h1>
-            {/* Op een laag scherm (kleine telefoon in de app van Facebook) eerst de knop; de uitleg komt verderop ook. */}
-            <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-ink/80 sm:mt-4 sm:text-lg [@media(max-height:640px)]:hidden">{v.heroLead}</p>
-            <Link
-              href={mainHref}
-              data-lp-cta="hero"
-              className="btn-primary mt-5 w-full flex-col !gap-0.5 !py-3 !whitespace-normal sm:mt-6 sm:w-auto sm:!px-8 sm:!py-3.5"
-            >
-              <span className="inline-flex items-center gap-2 text-lg">
-                {c.heroCta} <ArrowRight className="size-5" aria-hidden />
-              </span>
-              <span className="text-[0.8125rem] font-semibold text-white/85">{c.heroCtaNote}</span>
-            </Link>
-            {/* Direct onder de knop: niet goed, geld terug (de garantie uit artikel 10 van de voorwaarden) */}
+            {/* Op een lage telefoon (in de app van Instagram of Facebook) eerst de vraag; de uitleg komt verderop ook. */}
+            <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-ink/80 sm:mt-4 sm:text-lg max-sm:[@media(max-height:760px)]:hidden">
+              {v.heroLead}
+            </p>
+            {/* De eerste vraag van de vragenlijst: één tik op je doel en je gaat in /start verder bij vraag 2. */}
+            <div className="mt-4 max-w-xl rounded-[1.5rem] border-2 border-brand-600 bg-white p-3.5 shadow-[var(--shadow-lift)] sm:mt-6 sm:p-5">
+              <p className="flex items-center justify-between gap-3 text-xs font-bold tracking-wide text-brand-700 uppercase">
+                <span>{c.quizEyebrow}</span>
+                <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 tracking-normal normal-case">{c.quizStep}</span>
+              </p>
+              <h2 id="lp-eerste-vraag" className="mt-2 text-xl leading-tight font-extrabold sm:text-2xl">
+                {c.quizTitle}
+              </h2>
+              <div role="group" aria-labelledby="lp-eerste-vraag" className="mt-3 grid grid-cols-2 gap-2 sm:gap-2.5">
+                {settings.goals.map((goal) => {
+                  const Icon = goalIcons[goal];
+                  return (
+                    <Link
+                      key={goal}
+                      href={startHref(variant, goal)}
+                      data-lp-cta="hero-doel"
+                      className="group flex min-h-[3.5rem] items-center gap-2.5 rounded-2xl border-2 border-line bg-cream px-2.5 py-2 text-left text-[0.9375rem] leading-tight font-bold transition hover:border-brand-600 hover:bg-brand-50 focus-visible:border-brand-600 focus-visible:ring-4 focus-visible:ring-brand-200 focus-visible:outline-none active:scale-[0.98] sm:px-3"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
+                        <Icon className="size-[1.125rem]" aria-hidden />
+                      </span>
+                      <span className="min-w-0">{labels.goal[goal].label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+              <p className="mt-2.5 text-[0.8125rem] leading-snug font-semibold text-muted">{c.quizNote}</p>
+            </div>
+            {/* Direct onder de eerste vraag: niet goed, geld terug (de garantie uit artikel 10 van de voorwaarden) */}
             {site.guarantee.enabled && (
               <div className="mt-4 flex max-w-xl items-start gap-3 rounded-2xl border-2 border-brand-200 bg-white p-3 sm:p-4">
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-600 text-white">
