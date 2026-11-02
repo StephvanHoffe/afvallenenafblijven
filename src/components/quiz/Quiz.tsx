@@ -30,7 +30,7 @@ import {
 import { nutritionTargets, weightProjection } from "@/lib/calculations";
 import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
-import { trackEvent } from "@/lib/consent";
+import { trackEvent, trackEventOnce } from "@/lib/consent";
 import { deviceType, track, visitId } from "@/lib/track";
 import type { PromoView } from "@/lib/promotion";
 import { discountedAmount, discountedPayments, type DiscountTerms } from "@/lib/discounts";
@@ -752,8 +752,11 @@ export function Quiz({
   const trackedStep = useRef<string | null>(null);
   useEffect(() => {
     if (trackedStep.current === s.step) return;
+    const opened = trackedStep.current === null;
     trackedStep.current = s.step;
     track("quiz_step", { step: s.step, product: s.product });
+    // Meta (alleen na toestemming): de vragenlijst is geopend, ook als nog geen vraag is beantwoord.
+    if (opened) trackEventOnce("quiz_open");
   }, [s.step, s.product]);
 
   useEffect(() => {

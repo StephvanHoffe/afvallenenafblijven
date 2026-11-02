@@ -57,11 +57,46 @@ export function trackEvent(name: string, params: Record<string, unknown> = {}) {
   if (typeof window === "undefined") return;
   const w = window as unknown as { gtag?: Gtag; fbq?: Fbq };
   w.gtag?.("event", name, params);
+  // Standaardgebeurtenissen van Meta: daar kun je een campagne direct op laten sturen.
   const metaEvents: Record<string, string> = {
     quiz_start: "Lead",
     begin_checkout: "InitiateCheckout",
     purchase: "Purchase",
     view_pricing: "ViewContent",
   };
+  // Eigen gebeurtenissen: in Events Manager een aangepaste conversie van maken om erop te sturen.
+  const metaCustomEvents: Record<string, string> = {
+    quiz_open: "VragenlijstGeopend",
+  };
   if (metaEvents[name]) w.fbq?.("track", metaEvents[name], params);
+  if (metaCustomEvents[name]) w.fbq?.("trackCustom", metaCustomEvents[name], params);
+}
+
+/**
+ * Zoals trackEvent, maar hooguit één keer per tabblad (bijv. bij terugkeren
+ * naar dezelfde pagina). Is er toestemming maar zijn de scripts nog niet
+ * geladen (net na het openen van de pagina), dan wachten we daar even op.
+ */
+export function trackEventOnce(name: string, params: Record<string, unknown> = {}, attempt = 0) {
+  if (typeof window === "undefined") return;
+  const key = `afb_event_${name}`;
+  try {
+    if (sessionStorage.getItem(key)) return;
+  } catch {
+    /* geen opslag: dan eventueel vaker, niet erg */
+  }
+  const consent = readConsent();
+  if (!consent?.marketing && !consent?.analytics) return;
+  const w = window as unknown as { gtag?: Gtag; fbq?: Fbq };
+  const ready = consent.marketing ? Boolean(w.fbq) : Boolean(w.gtag);
+  if (!ready) {
+    if (attempt < 10) window.setTimeout(() => trackEventOnce(name, params, attempt + 1), 500);
+    return;
+  }
+  try {
+    sessionStorage.setItem(key, "1");
+  } catch {
+    /* zie boven */
+  }
+  trackEvent(name, params);
 }

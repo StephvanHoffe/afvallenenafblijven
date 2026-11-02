@@ -56,12 +56,21 @@ const copy = defineCopy({
   },
 });
 
+/** Met `delayed`: de melding pas na zoveel milliseconden, of eerder zodra de bezoeker scrolt. */
+const DELAY_MS = 6000;
+const DELAY_SCROLL_PX = 80;
+
 /**
  * Cookiebanner volgens de richtlijnen van de Autoriteit Persoonsgegevens:
  * geen vooraf aangevinkte keuzes, "weigeren" even makkelijk als "accepteren",
  * en analytische/marketingscripts laden pas ná toestemming.
+ *
+ * `delayed` (landingspagina's voor advertenties): de melding verschijnt pas na
+ * een paar seconden of zodra de bezoeker scrolt, zodat het eerste beeld de
+ * belofte en de startknop is. Tot er een keuze is, laden er geen analytische
+ * of marketingscripts; dat verandert hierdoor niet.
  */
-export function CookieConsent() {
+export function CookieConsent({ delayed = false }: { delayed?: boolean }) {
   const c = copy[useLocale()];
   const [consent, setConsent] = useState<ConsentState | null>(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -74,7 +83,22 @@ export function CookieConsent() {
     // Toestemming kan alleen in de browser worden uitgelezen.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setConsent(existing);
-    setShowBanner(!existing);
+    let timer = 0;
+    const reveal = () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+      // Intussen via "Cookie-instellingen" gekozen? Dan niet alsnog vragen.
+      if (!readConsent()) setShowBanner(true);
+    };
+    const onScroll = () => {
+      if (window.scrollY > DELAY_SCROLL_PX) reveal();
+    };
+    if (!existing && delayed) {
+      timer = window.setTimeout(reveal, DELAY_MS);
+      window.addEventListener("scroll", onScroll, { passive: true });
+    } else {
+      setShowBanner(!existing);
+    }
     const onChange = (e: Event) => setConsent((e as CustomEvent<ConsentState>).detail);
     const onOpen = () => {
       const current = readConsent();
@@ -86,10 +110,12 @@ export function CookieConsent() {
     window.addEventListener(CONSENT_EVENT, onChange);
     window.addEventListener(OPEN_SETTINGS_EVENT, onOpen);
     return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener(CONSENT_EVENT, onChange);
       window.removeEventListener(OPEN_SETTINGS_EVENT, onOpen);
     };
-  }, []);
+  }, [delayed]);
 
   function save(choice: { analytics: boolean; marketing: boolean }) {
     const hadTracking = consent?.analytics || consent?.marketing;

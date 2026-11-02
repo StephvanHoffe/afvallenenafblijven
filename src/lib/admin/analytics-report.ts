@@ -5,6 +5,7 @@ import { isDemoMode } from "@/lib/admin/auth";
 import { demoAnalyticsReport } from "@/lib/admin/demo-reports";
 import { checkinWindow } from "@/lib/checkin";
 import { subscriptionCheckinOrders } from "@/lib/repo";
+import { notFromDatacenter } from "@/lib/admin/robots";
 
 /**
  * Cijfers voor /beheer/analyse: omzet, abonnementen, behoud, betrokkenheid en
@@ -208,7 +209,7 @@ export async function analyticsReport(): Promise<AnalyticsReport> {
       (select coalesce(-sum(amount_cents), 0)::int from payments where kind = 'refund' and paid_at > now() - interval '30 days') as refunds30,
       (select count(*)::int from guarantee_requests where created_at > now() - interval '30 days') as guarantees30,
       (select count(*)::int from customers where created_at > now() - interval '30 days') as customers30,
-      (select count(distinct visit_id)::int from funnel_events where created_at > now() - interval '30 days') as visits30,
+      (select count(distinct visit_id)::int from funnel_events where created_at > now() - interval '30 days' and ${notFromDatacenter(sql)}) as visits30,
       (select count(*)::int from orders where created_at > now() - interval '30 days') as orders30`;
   const revenue30 = paymentsTracked
     ? extra.revenue30

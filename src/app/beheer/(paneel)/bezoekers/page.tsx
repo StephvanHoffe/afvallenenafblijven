@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { ArrowRight, Radio } from "lucide-react";
 import { ColumnChart, Heatmap } from "@/components/beheer/Charts";
-import { Badge, EmptyRow, Meter, NeedsDatabase, PageTitle, Panel, QueryTabs, StatTile, duration, pct, table } from "@/components/beheer/ui";
+import { Badge, EmptyRow, Meter, NeedsDatabase, PageTitle, Panel, QueryTabs, RobotsNote, StatTile, duration, pct, table } from "@/components/beheer/ui";
 import { adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
 import { CHANNEL_LABELS } from "@/lib/admin/channels";
@@ -185,6 +185,7 @@ async function Visitors({ searchParams }: Pick<PageProps<"/beheer/bezoekers">, "
           </span>
         )}
       </div>
+      <RobotsNote robots={r.robots} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Bezoeken" value={formatNumber(k.visits)} hint={change(k.visits, p.visits, "count", days)} />
@@ -336,7 +337,7 @@ async function Visitors({ searchParams }: Pick<PageProps<"/beheer/bezoekers">, "
         />
       </Section>
 
-      <Section title="Hoe lang blijven ze?" intro="Hoe lang de website zichtbaar openstond, per bezoek. Een tabblad op de achtergrond telt niet mee.">
+      <Section title="Hoe lang blijven ze?" intro="Hoe lang de website zichtbaar openstond, per bezoek, vanaf het openen van de link (inclusief het laden). Een tabblad op de achtergrond telt niet mee.">
         <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
           <Panel title="Bezoekduur">
             <ul className="divide-y divide-line">
@@ -510,8 +511,9 @@ async function Visitors({ searchParams }: Pick<PageProps<"/beheer/bezoekers">, "
 
       <p className="mt-6 text-xs text-muted">
         Eigen meting zonder cookies: een willekeurig bezoeknummer per tabblad, geen IP-adressen, en niets bij Do Not Track of Global Privacy Control.
-        Bots en zoekmachines tellen niet mee. Tijd op een pagina telt alleen terwijl de pagina zichtbaar openstaat. Mijn schema&apos;s en het beheer
-        worden niet gemeten.
+        Bots en zoekmachines tellen niet mee, net als bezoek uit de datacenters van Meta, Google, Amazon en Microsoft. Tijd op een pagina telt
+        alleen terwijl de pagina zichtbaar openstaat; bij de eerste pagina vanaf het openen van de link, dus inclusief het laden. Mijn
+        schema&apos;s en het beheer worden niet gemeten.
       </p>
     </>
   );

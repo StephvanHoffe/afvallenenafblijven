@@ -74,10 +74,12 @@ interface VariantCopy {
 interface SharedCopy {
   launchBadge: (label: string, discount: string, until: string) => string;
   pickTitle: string;
-  /** De grote knop bovenaan, met de duur eronder. */
-  heroCta: string;
-  heroCtaNote: string;
-  /** De garantie, direct onder de knop (alleen als de garantie aanstaat). */
+  /** Bovenaan: de eerste vraag van de vragenlijst, zodat je meteen begint. */
+  quizEyebrow: string;
+  quizStep: string;
+  quizTitle: string;
+  quizNote: string;
+  /** De garantie, direct onder de eerste vraag (alleen als de garantie aanstaat). */
   guaranteeTitle: string;
   guaranteeText: (days: number) => string;
   /** Korte zekerheden onder de garantie. */
@@ -110,8 +112,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
     shared: {
       launchBadge: (label, discount, until) => `${label}: ${discount}, t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
-      heroCta: "Start je gratis vragenlijst",
-      heroCtaNote: "± 3 minuten · je betaalt pas als je een plan kiest",
+      quizEyebrow: "Gratis vragenlijst · ± 3 minuten",
+      quizStep: "Vraag 1",
+      quizTitle: "Wat is je belangrijkste doel?",
+      quizNote: "Tik op je doel en je gaat direct verder met vraag 2. Je betaalt pas als je een plan kiest.",
       guaranteeTitle: "Niet goed? Geld terug.",
       guaranteeText: (days) =>
         `Niet tevreden? Vraag binnen ${days} dagen je eerste betaling terug; een abonnement stopt dan direct. Zonder opgaaf van reden.`,
@@ -196,8 +200,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
     shared: {
       launchBadge: (label, discount, until) => `${label}: ${discount}, until ${until}`,
       pickTitle: "What would you like to work on?",
-      heroCta: "Start your free questionnaire",
-      heroCtaNote: "About 3 minutes · you only pay once you choose a plan",
+      quizEyebrow: "Free questionnaire · about 3 minutes",
+      quizStep: "Question 1",
+      quizTitle: "What's your main goal?",
+      quizNote: "Tap your goal and go straight on to question 2. You only pay once you choose a plan.",
       guaranteeTitle: "Not happy? Money back.",
       guaranteeText: (days) =>
         `Not satisfied? Ask for your first payment back within ${days} days; a subscription then stops straight away. No questions asked.`,
