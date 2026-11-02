@@ -1,5 +1,5 @@
 import Link from "@/i18n/Link";
-import { CircleAlert, CircleCheck, Info } from "lucide-react";
+import { Bot, CircleAlert, CircleCheck, Info } from "lucide-react";
 import type { OrderStatus, PlanStatus } from "@/lib/repo";
 import { durations, products, type DurationId, type ProductId } from "@/config/pricing";
 import { formatDateTime } from "@/lib/format";
@@ -191,6 +191,21 @@ export function Notice({ code }: { code?: string }) {
     >
       {m.tone === "ok" ? <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />}
       {m.text}
+    </p>
+  );
+}
+
+/** Hoeveel bezoeken uit datacenters (robots van Meta, Google en anderen) niet meetellen. */
+export function RobotsNote({ robots }: { robots: { visits: number; places: string[] } }) {
+  if (robots.visits === 0) return null;
+  const places = robots.places.slice(0, 5).join(", ") + (robots.places.length > 5 ? " …" : "");
+  return (
+    <p className="mb-6 flex items-start gap-2 rounded-2xl border border-line bg-sand px-4 py-3 text-sm text-muted">
+      <Bot className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>
+        <strong className="text-ink">Niet meegeteld: {robots.visits.toLocaleString("nl-NL")} {robots.visits === 1 ? "bezoek" : "bezoeken"} uit datacenters</strong> ({places}).
+        Dat zijn robots van Meta, Google, Amazon en Microsoft die advertenties en links controleren; ze doen zich voor als een gewone telefoon, maar zijn geen klanten.
+      </span>
     </p>
   );
 }

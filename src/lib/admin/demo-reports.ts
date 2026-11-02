@@ -130,6 +130,7 @@ export function demoFunnelReport(filters: FunnelFilters): FunnelReport {
     ordersTotal: Math.round(36 * scale * share),
     abandoned,
     sources: ["google", "meta", "tiktok"],
+    robots: { visits: n(46), places: ["Prineville", "Council Bluffs", "Forest City", "Ashburn"] },
   };
 }
 
@@ -686,5 +687,6 @@ export function demoVisitorsReport(days: number): VisitorsReport {
     languages: [seg("nl", n(2080), 0.45, 0.35, 0.0163, 136), seg("en", n(70), 0.66, 0.11, 0, 72)],
     heatmap,
     live: { visitors: 4, pages: [{ path: "/start", visitors: 2 }, { path: "/lp", visitors: 1 }, { path: "/prijzen", visitors: 1 }] },
+    robots: { visits: n(46), places: ["Prineville", "Council Bluffs", "Forest City", "Ashburn"] },
   };
 }

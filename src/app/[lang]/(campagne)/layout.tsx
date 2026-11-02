@@ -112,7 +112,8 @@ export default async function CampaignLayout({ children }: { children: React.Rea
       <Suspense fallback={null}>
         <FloatingCta promo={await currentPromotion(l)} spacer={false} />
       </Suspense>
-      <CookieConsent />
+      {/* Eerst de belofte en de startknop; de cookiemelding na een paar seconden of bij scrollen. */}
+      <CookieConsent delayed />
       <CampaignLinks />
     </>
   );

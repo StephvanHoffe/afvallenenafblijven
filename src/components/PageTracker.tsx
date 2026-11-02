@@ -7,19 +7,29 @@ import { track } from "@/lib/track";
 /** Mijn schema's en de schema's zelf horen niet bij de funnel. */
 const SKIP = /^\/(en\/)?(account|schema)(\/|$)/;
 
+/** De eerste pagina van dit tabblad (een volledige paginalading, geen klik binnen de site). */
+let firstPage = true;
+
 /**
  * Meet elke paginaweergave voor de funnel en de bezoekersanalyse (anoniem, zie
  * src/lib/track.ts), hoe lang de pagina zichtbaar openstond en hoe ver erop is
  * gescrold: bij verlaten, wisselen van tabblad of sluiten sturen we de
  * opgetelde seconden en de verste scrollpositie (in procenten van de pagina).
+ * Bij de eerste pagina tellen we vanaf het openen van de link (inclusief het
+ * laden), zodat de tijd de echte bezoekduur is en niet pas begint als de
+ * pagina klaar is.
  */
 export function PageTracker() {
   const pathname = usePathname();
   useEffect(() => {
+    const initial = firstPage;
+    firstPage = false;
     if (SKIP.test(pathname)) return;
     const path = window.location.pathname;
     track("page_view");
-    let visibleSince = document.visibilityState === "visible" ? Date.now() : null;
+    // performance.timeOrigin = het moment waarop de link werd geopend (in ms, net als Date.now()).
+    const openedAt = initial && performance.timeOrigin > 0 && performance.timeOrigin <= Date.now() ? performance.timeOrigin : Date.now();
+    let visibleSince = document.visibilityState === "visible" ? openedAt : null;
     let total = 0;
     let deepest = 0;
     const measure = () => {

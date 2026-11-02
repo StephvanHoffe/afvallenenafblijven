@@ -6,7 +6,7 @@ import { Mail, TriangleAlert } from "lucide-react";
 import { sendCheckoutReminderNow } from "@/app/beheer/actions";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { ColumnChart, Heatmap } from "@/components/beheer/Charts";
-import { Badge, EmptyRow, Meter, NeedsDatabase, Notice, PageTitle, Panel, QueryTabs, StatTile, pct, table } from "@/components/beheer/ui";
+import { Badge, EmptyRow, Meter, NeedsDatabase, Notice, PageTitle, Panel, QueryTabs, RobotsNote, StatTile, pct, table } from "@/components/beheer/ui";
 import { durations, isDurationId, isProductId, products } from "@/config/pricing";
 import { adminDataAvailable } from "@/lib/admin/data";
 import { isDemoMode, requireAdmin } from "@/lib/admin/auth";
@@ -122,6 +122,7 @@ async function Funnel({ searchParams }: Pick<PageProps<"/beheer/funnel">, "searc
           options={[{ label: "Alle bronnen" }, ...r.sources.map((s) => ({ value: s, label: s })), { value: "direct", label: "Direct" }]}
         />
       </div>
+      <RobotsNote robots={r.robots} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Bezoeken" value={formatNumber(top)} hint={`Laatste ${days} dagen`} />

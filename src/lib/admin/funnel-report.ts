@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { isDemoMode } from "@/lib/admin/auth";
 import { demoFunnelReport } from "@/lib/admin/demo-reports";
+import { datacenterVisits, notFromDatacenter } from "@/lib/admin/robots";
 import type { Campaign } from "@/lib/campaign";
 import { QUIZ_STEPS, STAGE_DEFS } from "@/lib/admin/funnel-steps";
 
@@ -9,7 +10,8 @@ export { QUIZ_STEPS, STAGE_DEFS };
 
 /**
  * Funnel voor het beheer, op basis van de anonieme meting (src/lib/track.ts)
- * plus de begonnen betalingen en bestellingen uit de database.
+ * plus de begonnen betalingen en bestellingen uit de database. Bezoek uit de
+ * datacenters van Meta, Google, Amazon en Microsoft telt niet mee (src/lib/admin/robots.ts).
  */
 
 export interface FunnelFilters {
@@ -71,6 +73,8 @@ export interface FunnelReport {
   ordersTotal: number;
   abandoned: AbandonedCheckout[];
   sources: string[];
+  /** Niet meegeteld: bezoeken uit datacenters (robots die advertenties en links controleren). */
+  robots: { visits: number; places: string[] };
 }
 
 export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport> {
@@ -98,7 +102,7 @@ export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport
       min(created_at) filter (where event = 'purchase') as purchase_at,
       max(array_position(${order}::text[], step)) filter (where event = 'quiz_step') as last_step
     from funnel_events
-    where created_at >= ${from} and visit_id is not null
+    where created_at >= ${from} and visit_id is not null and ${notFromDatacenter(sql)}
     group by visit_id`;
   // Wie een latere stap haalde, telt ook mee bij de eerdere (bijv. een vooraf gekozen plan zonder klik op "kies").
   const visits = sql`
@@ -208,6 +212,7 @@ export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport
 
   const sources = await sql<{ source: string }[]>`
     select distinct source from funnel_events where created_at >= ${from} and source is not null order by 1 limit 30`;
+  const robots = await datacenterVisits(sql, from);
 
   return {
     filters,
@@ -234,5 +239,6 @@ export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport
       campaign: r.campaign,
     })),
     sources: sources.map((r) => r.source),
+    robots,
   };
 }

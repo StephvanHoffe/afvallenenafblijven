@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { isDemoMode } from "@/lib/admin/auth";
 import { CHANNELS, channelFor, type Channel } from "@/lib/admin/channels";
 import { demoVisitorsReport } from "@/lib/admin/demo-reports";
+import { datacenterVisits, notFromDatacenter } from "@/lib/admin/robots";
 import { amsterdamDay, amsterdamHour, amsterdamWeekday } from "@/lib/dates";
 
 /**
@@ -10,6 +11,7 @@ import { amsterdamDay, amsterdamHour, amsterdamWeekday } from "@/lib/dates";
  * bekijken, hoe lang en hoe ver ze scrollen, welke route ze nemen, waar ze
  * vandaan komen (kanaal, website, campagne, plaats) en waar ze de site verlaten.
  * Uit de eigen anonieme meting (zie src/lib/track.ts); zonder cookies, bots tellen niet mee.
+ * Bezoek uit de datacenters van Meta, Google, Amazon en Microsoft ook niet (zie src/lib/admin/robots.ts).
  */
 
 export interface VisitorKpis {
@@ -120,6 +122,8 @@ export interface VisitorsReport {
   /** Weekdag (0 = zondag) × uur in Nederlandse tijd; "orders" = bezoeken die betaalden. */
   heatmap: { weekday: number; hour: number; visits: number; orders: number }[];
   live: { visitors: number; pages: { path: string; visitors: number }[] };
+  /** Niet meegeteld: bezoeken uit datacenters (robots die advertenties en links controleren). */
+  robots: { visits: number; places: string[] };
 }
 
 interface VisitRow {
@@ -210,6 +214,7 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
   const now = new Date();
   const from = new Date(now.getTime() - days * DAY);
   const prevFrom = new Date(from.getTime() - days * DAY);
+  const human = notFromDatacenter(sql);
 
   const visitRows = (start: Date, end: Date) => sql<VisitRow[]>`
     select visit_id,
@@ -234,11 +239,11 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
       (array_agg(city order by created_at) filter (where city is not null))[1] as city,
       array_agg(path order by created_at) filter (where event = 'page_view') as page_seq
     from funnel_events
-    where created_at >= ${start} and created_at < ${end} and visit_id is not null
+    where created_at >= ${start} and created_at < ${end} and visit_id is not null and ${human}
     group by visit_id
     having count(*) filter (where event = 'page_view') > 0`;
 
-  const [rows, prevRows, pageRows, scrollRows, recentEvents, live, livePages] = await Promise.all([
+  const [rows, prevRows, pageRows, scrollRows, recentEvents, live, livePages, robots] = await Promise.all([
     visitRows(from, now),
     visitRows(prevFrom, from),
     sql<{ path: string; views: number; visits: number; seconds: number | null; timed: number }[]>`
@@ -248,34 +253,35 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
         sum(seconds) filter (where event = 'page_leave')::int as seconds,
         count(distinct visit_id) filter (where event = 'page_leave')::int as timed
       from funnel_events
-      where created_at >= ${from} and event in ('page_view', 'page_leave') and path is not null
+      where created_at >= ${from} and event in ('page_view', 'page_leave') and path is not null and ${human}
       group by path order by views desc limit 40`,
     // Per bezoek en pagina de verste scrollpositie, daarna het gemiddelde per pagina.
     sql<{ path: string; scroll: number; measured: number; bottom: number }[]>`
       select path, avg(s)::float as scroll, count(*)::int as measured, count(*) filter (where s >= 90)::int as bottom
       from (
         select visit_id, path, max(scroll) as s from funnel_events
-        where created_at >= ${from} and event = 'page_leave' and scroll is not null and path is not null
+        where created_at >= ${from} and event = 'page_leave' and scroll is not null and path is not null and ${human}
         group by visit_id, path
       ) t group by path`,
     // De pagina's (met tijd en scroll) van de 30 laatste bezoeken.
     sql<{ visit_id: string; event: string; path: string | null; seconds: number | null; scroll: number | null }[]>`
       with latest as (
         select visit_id, min(created_at) as first_at from funnel_events
-        where created_at >= ${from} and visit_id is not null
+        where created_at >= ${from} and visit_id is not null and ${human}
         group by visit_id having count(*) filter (where event = 'page_view') > 0
         order by first_at desc limit 30
       )
       select e.visit_id, e.event, e.path, e.seconds, e.scroll from funnel_events e join latest l on l.visit_id = e.visit_id
       where e.event in ('page_view', 'page_leave') and e.created_at >= ${from}
       order by e.created_at, e.id`,
-    sql<{ n: number }[]>`select count(distinct visit_id)::int as n from funnel_events where created_at > now() - interval '30 minutes'`,
+    sql<{ n: number }[]>`select count(distinct visit_id)::int as n from funnel_events where created_at > now() - interval '30 minutes' and ${human}`,
     sql<{ path: string; n: number }[]>`
       select path, count(*)::int as n from (
         select distinct on (visit_id) visit_id, path from funnel_events
-        where created_at > now() - interval '30 minutes' and event = 'page_view' and visit_id is not null
+        where created_at > now() - interval '30 minutes' and event = 'page_view' and visit_id is not null and ${human}
         order by visit_id, created_at desc
       ) t group by path order by n desc limit 5`,
+    datacenterVisits(sql, from),
   ]);
 
   const entries = new Map<string, number>();
@@ -432,6 +438,7 @@ export async function visitorsReport({ days }: { days: number }): Promise<Visito
     devices: segment(rows, (v) => v.device ?? "onbekend"),
     languages: segment(rows, (v) => (v.locale === "en" ? "en" : "nl")),
     heatmap,
+    robots,
     live: { visitors: live[0]?.n ?? 0, pages: livePages.map((p) => ({ path: p.path, visitors: p.n })) },
   };
 }
