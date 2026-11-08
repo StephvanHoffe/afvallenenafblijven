@@ -63,8 +63,8 @@ const copy = defineCopy({
         ],
       },
     ],
-    foodsTitle: "Hoeveel eiwit zit erin?",
-    foodsIntro: "Zo kom je aan je eiwit met gewone producten uit de supermarkt.",
+    foodsTitle: "Eiwitrijke voeding: hoeveel eiwit zit erin?",
+    foodsIntro: "Eiwitrijke voeding vind je gewoon in de supermarkt. Zo kom je aan je eiwit met producten die je al kent.",
     foodsCols: ["Product", "Portie", "Eiwit"],
     foods: [
       ["Magere kwark", "250 g", 21],
@@ -173,8 +173,8 @@ const copy = defineCopy({
         ],
       },
     ],
-    foodsTitle: "How much protein is in it?",
-    foodsIntro: "This is how to reach your protein with ordinary supermarket products.",
+    foodsTitle: "High-protein foods: how much protein is in them?",
+    foodsIntro: "High-protein foods are easy to find in the supermarket. This is how to reach your protein with products you already know.",
     foodsCols: ["Product", "Portion", "Protein"],
     foods: [
       ["Low-fat quark", "250 g", 21],
