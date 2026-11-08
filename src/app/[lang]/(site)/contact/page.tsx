@@ -6,7 +6,7 @@ import { FaqJsonLd, FaqList, SectionHeading } from "@/components/marketing";
 import { site } from "@/config/site";
 import { faqFor } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
   const t = copy[l];
   return {
-    title: t.metaTitle,
+    title: pageTitle(t.metaTitle),
     description: t.metaDescription(site.responseTimeDays),
     alternates: alternates(l, "/contact"),
   };

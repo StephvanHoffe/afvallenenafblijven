@@ -30,6 +30,7 @@ import {
 import { nutritionTargets, weightProjection } from "@/lib/calculations";
 import { checkSafety } from "@/lib/safety";
 import { euro, formatNumber } from "@/lib/format";
+import { readPrefill } from "@/lib/calculator-prefill";
 import { trackEvent, trackEventOnce } from "@/lib/consent";
 import { deviceType, track, visitId } from "@/lib/track";
 import type { PromoView } from "@/lib/promotion";
@@ -731,7 +732,27 @@ export function Quiz({
     if (resume) return;
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
+      if (!saved) {
+        // Net de rekenhulp ingevuld? Dan staan geslacht, leeftijd, lengte, gewicht en activiteit al klaar.
+        const pre = readPrefill();
+        if (pre) {
+          // Opslag in de browser kan alleen na het laden worden gelezen.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setS((prev) => ({
+            ...prev,
+            answers: {
+              ...prev.answers,
+              sex: pre.sex,
+              age: String(pre.age),
+              heightCm: String(pre.heightCm),
+              weightKg: String(pre.weightKg),
+              activity: pre.activity,
+              pace: pre.pace,
+            },
+          }));
+        }
+        return;
+      }
       const parsed = JSON.parse(saved) as QuizState;
       const next: QuizState = {
         ...parsed,
@@ -740,8 +761,7 @@ export function Quiz({
         duration: presetProduct ? initialDuration : parsed.duration,
         step: startAtPlan && parsed.answered.includes("gezondheid") ? "plan" : parsed.answered.length ? parsed.step : "doel",
       };
-      // Opslag in de browser kan alleen na het laden worden gelezen.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      // Opslag in de browser kan alleen na het laden worden gelezen (zie boven).
       setS(next);
     } catch {
       /* geen opgeslagen voortgang */

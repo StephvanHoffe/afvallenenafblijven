@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
 import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
   nl: {
     meta: {
-      title: "Persoonlijk voedingsschema om af te vallen",
+      title: "Voedingsschema afvallen met weekmenu en boodschappenlijst",
       description:
-        "Een persoonlijk voedingsschema met weekmenu, recepten en boodschappenlijst. Afgestemd op jouw calorie- en eiwitdoel, smaak, allergieën en kooktijd.",
+        "Persoonlijk voedingsschema (eetschema) om af te vallen: weekmenu met recepten en boodschappenlijst op jouw calorie- en eiwitdoel, smaak en allergieën.",
     },
     content: {
-      eyebrow: "Voedingsschema",
+      eyebrow: "Voedingsschema om af te vallen",
       title: (
         <>
           Afvallen met eten dat je <span className="text-brand-600">écht lekker</span> vindt
@@ -50,12 +50,12 @@ const copy = defineCopy({
   },
   en: {
     meta: {
-      title: "Personal nutrition plan for weight loss",
+      title: "Weight loss nutrition plan: weekly menu and shopping list",
       description:
-        "A personal nutrition plan with a weekly meal plan, recipes and a shopping list. Tailored to your calorie and protein targets, taste, allergies and cooking time.",
+        "A personal nutrition plan for weight loss: a weekly menu with recipes and a shopping list based on your calorie and protein targets, taste and allergies.",
     },
     content: {
-      eyebrow: "Nutrition plan",
+      eyebrow: "Nutrition plan for weight loss",
       title: (
         <>
           Lose weight with food you <span className="text-brand-600">actually love</span>
@@ -94,7 +94,7 @@ const copy = defineCopy({
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { ...copy[l].meta, alternates: alternates(l, "/voedingsschema") };
+  return { ...copy[l].meta, title: pageTitle(copy[l].meta.title), alternates: alternates(l, "/voedingsschema") };
 }
 
 export default async function VoedingsschemaPage() {

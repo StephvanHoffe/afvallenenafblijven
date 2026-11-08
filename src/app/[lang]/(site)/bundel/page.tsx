@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
 import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -13,7 +13,7 @@ const copy = defineCopy({
         "Voeding en training op elkaar afgestemd, zodat ze elkaar versterken. Voordeliger dan los.",
     },
     content: {
-      eyebrow: "Bundel · Meest gekozen",
+      eyebrow: "Voedings- en trainingsschema · Meest gekozen",
       title: (
         <>
           Minder eten én sporten, <span className="text-brand-600">maar het schiet niet op</span>?
@@ -51,7 +51,7 @@ const copy = defineCopy({
         "Nutrition and training aligned with each other, so they reinforce each other. Better value than buying them separately.",
     },
     content: {
-      eyebrow: "Bundle · Most popular",
+      eyebrow: "Nutrition and workout plan · Most popular",
       title: (
         <>
           Eating less and working out, <span className="text-brand-600">but getting nowhere</span>?
@@ -86,7 +86,7 @@ const copy = defineCopy({
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { ...copy[l].meta, alternates: alternates(l, "/bundel") };
+  return { ...copy[l].meta, title: pageTitle(copy[l].meta.title), alternates: alternates(l, "/bundel") };
 }
 
 export default async function BundelPage() {

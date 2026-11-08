@@ -188,7 +188,7 @@ export async function TrustRow({ light = false }: { light?: boolean }) {
 
 const stepIcons = [ListChecks, Target, CalendarDays];
 
-export async function Steps() {
+export async function Steps({ as: Heading = "h3" }: { as?: "h2" | "h3" } = {}) {
   const steps = copy[await getLocale()].steps.map((s, i) => ({ ...s, icon: stepIcons[i] }));
   return (
     <ol className="grid gap-5 md:grid-cols-3">
@@ -196,7 +196,7 @@ export async function Steps() {
         <li key={s.title} className="card relative p-6">
           <span className="absolute top-6 right-6 text-5xl leading-none font-extrabold text-brand-100">{i + 1}</span>
           <s.icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600" aria-hidden />
-          <h3 className="mt-5 text-lg font-bold">{s.title}</h3>
+          <Heading className="mt-5 text-lg font-bold">{s.title}</Heading>
           <p className="mt-2 text-muted">{s.text}</p>
         </li>
       ))}
@@ -325,8 +325,12 @@ export function PageHero({
   return (
     <section className="container-page grid items-center gap-10 py-12 md:grid-cols-2 md:py-16">
       <div>
-        <p className="eyebrow mb-3">{eyebrow}</p>
-        <h1 className="heading-xl">{title}</h1>
+        {/* Het label hoort bij de kop: zo staat het zoekwoord (bijv. "Voedingsschema om af te vallen") in de H1. */}
+        <h1 className="heading-xl">
+          <span className="eyebrow mb-3 block">{eyebrow}</span>
+          <span className="sr-only">: </span>
+          {title}
+        </h1>
         <p className="mt-5 text-lg leading-relaxed text-muted">{intro}</p>
         {children}
       </div>

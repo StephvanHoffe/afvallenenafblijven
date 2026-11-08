@@ -17,6 +17,15 @@ const organizationJsonLd = {
   logo: `${site.url}/icon.svg`,
 };
 
+/** De sitenaam die Google boven de zoekresultaten toont (ook bij titels zonder " | Afvallen & Afblijven"). */
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: site.name,
+  alternateName: "Afvallen en Afblijven",
+  url: site.url,
+};
+
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const l = await getLocale();
   const promo = await currentPromotion(l);
@@ -40,6 +49,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       </Suspense>
       <CookieConsent />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
     </>
   );
 }

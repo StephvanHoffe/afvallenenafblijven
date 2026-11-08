@@ -25,6 +25,8 @@ import { euro } from "@/lib/format";
 
 const copy = defineCopy<{
   badge: string;
+  /** Klein label boven de kop, onderdeel van de H1 (het zoekwoord). */
+  h1Label: string;
   title: [string, string, string];
   intro: string;
   startQuiz: string;
@@ -79,6 +81,7 @@ const copy = defineCopy<{
 }>({
   nl: {
     badge: "In 2 minuten ingevuld · binnen 2 uur je schema",
+    h1Label: "Persoonlijk voedings- en trainingsschema",
     title: ["De kilo's gaan eraf, en komen ", "steeds weer terug", "?"],
     intro:
       "Tijd voor een aanpak die wél bij je leven past: een persoonlijk voedings- en trainingsschema op jouw lichaam, smaak en agenda, elke week bijgestuurd, met daarna een plan om op gewicht te blijven. Zonder crashdieet of honger, en binnen enkele minuten in je mailbox.",
@@ -147,6 +150,7 @@ const copy = defineCopy<{
   },
   en: {
     badge: "2 minutes to fill in · your plan within 2 hours",
+    h1Label: "Personal nutrition and workout plan",
     title: ["The kilos come off, then ", "keep coming back", "?"],
     intro:
       "Time for an approach that actually fits your life: a personal nutrition and workout plan built around your body, taste and schedule, adjusted every week, followed by a plan to keep the weight off. No crash diet, no going hungry, and in your inbox within minutes.",
@@ -242,6 +246,8 @@ export default async function HomePage() {
               <span className="size-2 rounded-full bg-brand-500" aria-hidden /> {c.badge}
             </p>
             <h1 className="heading-xl">
+              <span className="eyebrow mb-3 block">{c.h1Label}</span>
+              <span className="sr-only">: </span>
               {c.title[0]}
               <span className="text-brand-600">{c.title[1]}</span>
               {c.title[2]}

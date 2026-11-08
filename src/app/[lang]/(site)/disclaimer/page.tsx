@@ -3,7 +3,7 @@ import Link from "@/i18n/Link";
 import { LegalPage } from "@/components/LegalPage";
 import { site } from "@/config/site";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const PATH = "/disclaimer";
@@ -11,17 +11,19 @@ const PATH = "/disclaimer";
 const copy = defineCopy({
   nl: {
     title: "Disclaimer",
+    metaTitle: "Disclaimer: leefstijladvies, geen medisch advies",
     description: `Disclaimer van ${site.name}: onze schema's zijn leefstijladvies, geen medisch advies en geen garantie op resultaat.`,
   },
   en: {
     title: "Disclaimer",
+    metaTitle: "Disclaimer: lifestyle advice, not medical advice",
     description: `Disclaimer of ${site.name}: our plans are lifestyle advice, not medical advice and not a guarantee of results.`,
   },
 });
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { title: copy[l].title, description: copy[l].description, alternates: alternates(l, PATH) };
+  return { title: pageTitle(copy[l].metaTitle), description: copy[l].description, alternates: alternates(l, PATH) };
 }
 
 export default async function DisclaimerPage() {

@@ -147,8 +147,10 @@ function Nl() {
     <>
       <p>
         Daarnaast slaan we tijdens het invullen van de vragenlijst je antwoorden tijdelijk op in je browser (sessionStorage),
-        zodat je verder kunt waar je gebleven was. Deze gegevens verdwijnen als je het tabblad sluit en worden pas naar ons
-        verstuurd als je een plan bestelt.
+        zodat je verder kunt waar je gebleven was. Klik je in de rekenhulp (caloriebehoefte berekenen) op &quot;Maak er een
+        persoonlijk plan van&quot;, dan zetten we die antwoorden op dezelfde manier klaar voor de vragenlijst
+        (<code>afb_rekenhulp</code>). Deze gegevens verdwijnen als je het tabblad sluit en worden pas naar ons verstuurd als je
+        een plan bestelt.
       </p>
       <p>
         Om te zien waar bezoekers afhaken, slaan we in hetzelfde tabblad een willekeurig bezoeknummer op
@@ -182,8 +184,9 @@ function En() {
     <>
       <p>
         In addition, while you are filling in the questionnaire, we temporarily store your answers in your browser
-        (sessionStorage), so that you can continue where you left off. This data disappears when you close the tab and is
-        only sent to us when you order a plan.
+        (sessionStorage), so that you can continue where you left off. If you click &quot;Turn this into a personal plan&quot; in the
+        calorie calculator, we prepare those answers for the questionnaire in the same way (<code>afb_rekenhulp</code>). This
+        data disappears when you close the tab and is only sent to us when you order a plan.
       </p>
       <p>
         To see where visitors drop off, we store a random visit number in the same tab (<code>afb_bezoek</code>,

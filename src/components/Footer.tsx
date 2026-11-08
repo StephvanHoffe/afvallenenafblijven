@@ -20,6 +20,8 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundel" },
           { href: "/prijzen", label: "Prijzen & abonnementen" },
           { href: "/voorbeeld", label: "Bekijk een voorbeeld" },
+          { href: "/caloriebehoefte-berekenen", label: "Caloriebehoefte berekenen" },
+          { href: "/afvallen-in-de-overgang", label: "Afvallen in de overgang" },
         ],
       },
       {
@@ -63,6 +65,8 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundle" },
           { href: "/prijzen", label: "Pricing & subscriptions" },
           { href: "/voorbeeld", label: "See an example" },
+          { href: "/caloriebehoefte-berekenen", label: "Calorie calculator" },
+          { href: "/afvallen-in-de-overgang", label: "Losing weight during menopause" },
         ],
       },
       {

@@ -6,7 +6,7 @@ import { NutritionPlanView } from "@/components/plan/NutritionPlanView";
 import { TrainingPlanView } from "@/components/plan/TrainingPlanView";
 import { samplePlansFor } from "@/content/sample-plans";
 import { defineCopy, localePath } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -54,7 +54,7 @@ const copy = defineCopy({
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
   const c = copy[l];
-  return { title: c.metaTitle, description: c.metaDescription, alternates: alternates(l, "/voorbeeld") };
+  return { title: pageTitle(c.metaTitle), description: c.metaDescription, alternates: alternates(l, "/voorbeeld") };
 }
 
 export default async function VoorbeeldPage() {

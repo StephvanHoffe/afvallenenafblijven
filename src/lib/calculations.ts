@@ -57,7 +57,13 @@ export function minimumCalories(intake: Pick<Intake, "sex">): number {
   return intake.sex === "man" ? 1500 : 1200;
 }
 
-export function nutritionTargets(intake: Intake): NutritionTargets {
+/** Wat nutritionTargets nodig heeft (de vragenlijst geeft een volledige intake, de rekenhulp alleen dit). */
+export type TargetsInput = Pick<
+  Intake,
+  "sex" | "age" | "heightCm" | "weightKg" | "activity" | "goal" | "pace" | "experience" | "trainingDays" | "product"
+>;
+
+export function nutritionTargets(intake: TargetsInput): NutritionTargets {
   const b = bmr(intake);
   const tdee = b * activityFactor(intake);
   const minCalories = minimumCalories(intake);

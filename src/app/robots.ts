@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/config/site";
 
-const privatePaths = ["/account", "/schema/", "/bedankt", "/inloggen", "/voorbeeld/mijn-schemas"];
+// /voorbeeld/pdf: het voorbeeld als pdf-download (traag en geen zoekpagina; de pagina /voorbeeld zelf wel).
+const privatePaths = ["/account", "/schema/", "/bedankt", "/inloggen", "/voorbeeld/mijn-schemas", "/voorbeeld/pdf/"];
 
 export default function robots(): MetadataRoute.Robots {
   return {

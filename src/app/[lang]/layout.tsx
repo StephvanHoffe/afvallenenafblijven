@@ -15,7 +15,7 @@ export function generateStaticParams() {
 
 const copy = {
   nl: {
-    title: `${site.name} – Persoonlijk voedings- en trainingsschema`,
+    title: `${site.name} – Voedings- en trainingsschema op maat`,
     description: site.description,
     ogAlt: "Gezonde maaltijden",
     ogLocale: "nl_NL",
