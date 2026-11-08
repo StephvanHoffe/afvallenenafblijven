@@ -60,15 +60,15 @@ export const site = {
    */
   promotions: [
     {
-      // Black Week tot en met Cyber Monday: korting op de eerste 3 maanden, oplopend
-      // met de looptijd. 12 maanden krijgt het maximum (50%); de rest staat in
+      // Black Friday, vervroegd gestart op 8 november, tot en met Cyber Monday:
+      // korting op de eerste 3 maanden, oplopend met de looptijd. 12 maanden krijgt het maximum (50%); de rest staat in
       // verhouding: 50% × √(looptijd / 12), afgerond op 5%. Zo levert een langere
       // looptijd steeds meer op, zonder dat korte looptijden de helft krijgen.
       id: "blackfriday-2026",
       enabled: true,
       label: "Black Friday",
       labelEn: "Black Friday",
-      startsAt: "2026-11-23T00:00:00+01:00",
+      startsAt: "2026-11-08T00:00:00+01:00",
       endsAt: "2026-11-30T23:59:59+01:00",
       percentOff: { "1m": 15, "3m": 25, "6m": 35, "12m": 50, eenmalig: 15 },
       months: 3,
