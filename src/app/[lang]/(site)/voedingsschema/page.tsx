@@ -8,12 +8,12 @@ import { getLocale } from "@/i18n/server";
 const copy = defineCopy({
   nl: {
     meta: {
-      title: "Persoonlijk voedingsschema om af te vallen",
+      title: "Voedingsschema afvallen met weekmenu en boodschappenlijst",
       description:
-        "Een persoonlijk voedingsschema met weekmenu, recepten en boodschappenlijst. Afgestemd op jouw calorie- en eiwitdoel, smaak, allergieën en kooktijd.",
+        "Persoonlijk voedingsschema (eetschema) om af te vallen: een weekmenu met recepten en boodschappenlijst op jouw calorie- en eiwitdoel, smaak, allergieën en kooktijd.",
     },
     content: {
-      eyebrow: "Voedingsschema",
+      eyebrow: "Voedingsschema om af te vallen",
       title: (
         <>
           Afvallen met eten dat je <span className="text-brand-600">écht lekker</span> vindt
@@ -50,12 +50,12 @@ const copy = defineCopy({
   },
   en: {
     meta: {
-      title: "Personal nutrition plan for weight loss",
+      title: "Weight loss nutrition plan with weekly menu and shopping list",
       description:
         "A personal nutrition plan with a weekly meal plan, recipes and a shopping list. Tailored to your calorie and protein targets, taste, allergies and cooking time.",
     },
     content: {
-      eyebrow: "Nutrition plan",
+      eyebrow: "Nutrition plan for weight loss",
       title: (
         <>
           Lose weight with food you <span className="text-brand-600">actually love</span>

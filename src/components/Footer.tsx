@@ -20,6 +20,7 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundel" },
           { href: "/prijzen", label: "Prijzen & abonnementen" },
           { href: "/voorbeeld", label: "Bekijk een voorbeeld" },
+          { href: "/caloriebehoefte-berekenen", label: "Caloriebehoefte berekenen" },
         ],
       },
       {
@@ -63,6 +64,7 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundle" },
           { href: "/prijzen", label: "Pricing & subscriptions" },
           { href: "/voorbeeld", label: "See an example" },
+          { href: "/caloriebehoefte-berekenen", label: "Calorie calculator" },
         ],
       },
       {

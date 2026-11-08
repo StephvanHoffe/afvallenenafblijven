@@ -8,12 +8,12 @@ import { getLocale } from "@/i18n/server";
 const copy = defineCopy({
   nl: {
     meta: {
-      title: "Persoonlijk trainingsschema voor thuis of de sportschool",
+      title: "Trainingsschema afvallen: thuis of in de sportschool",
       description:
-        "Een persoonlijk trainingsschema met progressie over 4 weken. Afgestemd op je doel, niveau, materiaal, tijd en eventuele blessures.",
+        "Een persoonlijk trainingsschema om af te vallen, strakker te worden of sterker te worden, thuis of in de sportschool. Met progressie over 4 weken, afgestemd op je niveau, materiaal en tijd.",
     },
     content: {
-      eyebrow: "Trainingsschema",
+      eyebrow: "Trainingsschema voor thuis of de sportschool",
       title: (
         <>
           Stop met trainen <span className="text-brand-600">zonder plan</span>
@@ -50,12 +50,12 @@ const copy = defineCopy({
   },
   en: {
     meta: {
-      title: "Personal workout plan for home or the gym",
+      title: "Workout plan for weight loss: at home or in the gym",
       description:
-        "A personal workout plan with progression over 4 weeks. Tailored to your goal, level, equipment, time and any injuries.",
+        "A personal workout plan to lose weight, tone up or get stronger, at home or in the gym. With progression over 4 weeks, tailored to your level, equipment and time.",
     },
     content: {
-      eyebrow: "Workout plan",
+      eyebrow: "Workout plan for home or the gym",
       title: (
         <>
           Stop training <span className="text-brand-600">without a plan</span>

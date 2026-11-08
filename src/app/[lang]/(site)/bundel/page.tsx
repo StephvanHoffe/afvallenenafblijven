@@ -13,7 +13,7 @@ const copy = defineCopy({
         "Voeding en training op elkaar afgestemd, zodat ze elkaar versterken. Voordeliger dan los.",
     },
     content: {
-      eyebrow: "Bundel · Meest gekozen",
+      eyebrow: "Voedings- en trainingsschema · Meest gekozen",
       title: (
         <>
           Minder eten én sporten, <span className="text-brand-600">maar het schiet niet op</span>?
@@ -51,7 +51,7 @@ const copy = defineCopy({
         "Nutrition and training aligned with each other, so they reinforce each other. Better value than buying them separately.",
     },
     content: {
-      eyebrow: "Bundle · Most popular",
+      eyebrow: "Nutrition and workout plan · Most popular",
       title: (
         <>
           Eating less and working out, <span className="text-brand-600">but getting nowhere</span>?
