@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Image from "next/image";
 import { Suspense } from "react";
-import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Tag, Target, TrendingDown, X } from "lucide-react";
-import { BlackFridayDeal, BlackFridayStrip, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
+import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Tag, Target, TrendingDown, Utensils, X } from "lucide-react";
+import { BlackFridayDeal, BlackFridayOffer, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
 import { StoryChart, storyCopy } from "@/components/campaign/Story";
 import { FutureSection } from "@/components/conversion";
 import { FaqList, Guarantee, SectionHeading, TrustRow } from "@/components/marketing";
@@ -79,17 +79,35 @@ async function codeOffer(code: string, l: Locale): Promise<string | null> {
   return offerText(termsOf(row), l);
 }
 
+/**
+ * De korting, als eerste in beeld: wat je krijgt en dat het vanzelf in je
+ * winkelwagen zit. Dat klopt: een actie rekent de checkout zelf uit, en een
+ * code uit de advertentielink gaat via CampaignLinks mee naar de vragenlijst
+ * en wordt daar automatisch toegepast.
+ */
+function OfferBanner({ title, note }: { title: string; note: string }) {
+  return (
+    <div className="mb-3 flex max-w-xl items-start gap-3 rounded-2xl bg-lime-glow px-3.5 py-2.5 text-brand-950 shadow-[var(--shadow-soft)] sm:mb-4 sm:px-4 sm:py-3">
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-brand-950 text-lime-glow">
+        <Tag className="size-4" aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[1.0625rem] leading-tight font-extrabold sm:text-lg">{title}</span>
+        <span className="mt-0.5 flex items-start gap-1.5 text-[0.8125rem] leading-snug font-semibold sm:text-sm">
+          <Check className="mt-px size-4 shrink-0" aria-hidden /> {note}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 /** Bovenaan: de korting uit de advertentielink (?code=), anders de lopende actie. */
 async function OfferLine({ searchParams, l, fallback }: { searchParams: Promise<SearchParams>; l: Locale; fallback: React.ReactNode }) {
   const sp = await searchParams;
   const code = typeof sp.code === "string" ? normalizeCode(sp.code) : "";
   const offer = code ? await codeOffer(code, l) : null;
   if (!offer) return fallback;
-  return (
-    <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-lime-glow px-3.5 py-1.5 text-[0.9375rem] font-extrabold text-brand-950 sm:mb-4">
-      <Tag className="size-4 shrink-0" aria-hidden /> {landingCopy[l].shared.codeOffer(offer, code)}
-    </p>
-  );
+  return <OfferBanner title={offer} note={landingCopy[l].shared.offerAutoCode(code)} />;
 }
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -124,13 +142,12 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
   const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
-  const promoBadge =
-    promo && !bf ? (
-      <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800 sm:mb-4">
-        <span className="size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-        {c.launchBadge(promo.label, promotionSummary(promo.percentOff, promo.months, l), promo.endsLabel)}
-      </p>
-    ) : null;
+  // De korting bovenaan: tijdens Black Friday in de Black Friday-stijl, anders de gewone actie. Een code uit de link gaat voor (die vervangt de actiekorting).
+  const promoBadge = bf ? (
+    <BlackFridayOffer promo={bf} l={l} note={`${c.offerAuto} · ${c.offerUntil(bf.endsLabel)}`} />
+  ) : promo ? (
+    <OfferBanner title={c.launchOffer(promo.label, promotionSummary(promo.percentOff, promo.months, l))} note={`${c.offerAuto} · ${c.offerUntil(promo.endsLabel)}`} />
+  ) : null;
 
   return (
     <>
@@ -139,11 +156,6 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
         <div className="absolute inset-x-0 top-0 -z-10 h-[46rem] bg-gradient-to-b from-sand to-cream" />
         <div className="container-page grid items-center gap-10 pt-4 pb-14 sm:pt-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-14 lg:pb-20">
           <div className="min-w-0">
-            {bf && (
-              <div className="mb-5">
-                <BlackFridayStrip promo={bf} l={l} />
-              </div>
-            )}
             {searchParams ? (
               <Suspense fallback={promoBadge}>
                 <OfferLine searchParams={searchParams} l={l} fallback={promoBadge} />
@@ -152,7 +164,7 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
               promoBadge
             )}
             <p className="eyebrow mb-2">{v.heroEyebrow}</p>
-            <h1 className="text-[2rem] leading-[1.08] font-extrabold tracking-[-0.025em] text-balance sm:text-5xl lg:text-6xl">
+            <h1 className="text-[2rem] leading-[1.08] font-extrabold tracking-[-0.025em] text-balance sm:text-5xl lg:text-[3.25rem]">
               {v.heroTitle.start}
               <span className="text-brand-600">{v.heroTitle.accent}</span>
             </h1>
@@ -160,6 +172,23 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
             <p className="mt-3 max-w-xl text-[1.0625rem] leading-relaxed text-ink/80 sm:mt-4 sm:text-lg max-sm:[@media(max-height:760px)]:hidden">
               {v.heroLead}
             </p>
+            {/* Waar het over gaat, in één oogopslag: blijft ook op een lage telefoon staan. */}
+            {v.pillars && (
+              <ul className="mt-3 grid max-w-xl grid-cols-2 gap-2 sm:mt-4 sm:gap-2.5">
+                {v.pillars.map((p) => {
+                  const Icon = p.icon === "voeding" ? Utensils : Dumbbell;
+                  return (
+                    <li key={p.title} className="flex items-start gap-2 rounded-2xl border border-line bg-white/80 px-2.5 py-2 sm:px-3">
+                      <Icon className="mt-0.5 size-[1.125rem] shrink-0 text-brand-600" aria-hidden />
+                      <span className="min-w-0 leading-tight">
+                        <span className="block text-[0.9375rem] font-extrabold">{p.title}</span>
+                        <span className="block text-xs leading-snug text-ink/75 sm:text-[0.8125rem]">{p.text}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             {/* De eerste vraag van de vragenlijst: één tik op je doel en je gaat in /start verder bij vraag 2. */}
             <div className="mt-4 max-w-xl rounded-[1.5rem] border-2 border-brand-600 bg-white p-3.5 shadow-[var(--shadow-lift)] sm:mt-6 sm:p-5">
               <p className="flex items-center justify-between gap-3 text-xs font-bold tracking-wide text-brand-700 uppercase">

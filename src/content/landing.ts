@@ -63,6 +63,8 @@ interface VariantCopy {
   heroEyebrow: string;
   heroTitle: { start: string; accent: string };
   heroLead: string;
+  /** Optioneel: twee pijlers direct onder de kop (bijv. voeding én beweging), altijd zichtbaar, ook op een lage telefoon. */
+  pillars?: { icon: "voeding" | "beweging"; title: string; text: string }[];
   /** Kop van het blok "Herken je dit?" (anders die van het onderwerp in src/content/pains.ts). */
   painTitle?: string;
   /** Wat je krijgt, in vier korte punten. */
@@ -72,7 +74,13 @@ interface VariantCopy {
 }
 
 interface SharedCopy {
-  launchBadge: (label: string, discount: string, until: string) => string;
+  /** De lopende actie bovenaan, bijv. "Goede voornemens-actie: 20% korting op je eerste betaling". */
+  launchOffer: (label: string, discount: string) => string;
+  /** Onder de korting: dat die vanzelf in de winkelwagen zit (de checkout rekent hem zelf uit). */
+  offerAuto: string;
+  /** Idem voor de kortingscode uit de advertentielink (die wordt in de vragenlijst automatisch toegepast). */
+  offerAutoCode: (code: string) => string;
+  offerUntil: (until: string) => string;
   pickTitle: string;
   /** Bovenaan: de eerste vraag van de vragenlijst, zodat je meteen begint. */
   quizEyebrow: string;
@@ -84,8 +92,6 @@ interface SharedCopy {
   guaranteeText: (days: number) => string;
   /** Korte zekerheden onder de garantie. */
   heroPoints: string[];
-  /** De kortingscode uit de advertentielink, bijv. "20% korting op je eerste 3 maanden". */
-  codeOffer: (offer: string, code: string) => string;
   sampleTitle: string;
   sampleDay: string;
   sampleWorkout: string;
@@ -110,7 +116,10 @@ interface SharedCopy {
 export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<LandingVariant, VariantCopy> }>({
   nl: {
     shared: {
-      launchBadge: (label, discount, until) => `${label}: ${discount}, t/m ${until}`,
+      launchOffer: (label, discount) => `${label}: ${discount}`,
+      offerAuto: "Wordt automatisch toegepast in je winkelwagen",
+      offerAutoCode: (code) => `Code ${code} wordt automatisch toegepast in je winkelwagen`,
+      offerUntil: (until) => `t/m ${until}`,
       pickTitle: "Waar wil je aan werken?",
       quizEyebrow: "Gratis vragenlijst · ± 3 minuten",
       quizStep: "Vraag 1",
@@ -120,7 +129,6 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       guaranteeText: (days) =>
         `Niet tevreden? Vraag binnen ${days} dagen je eerste betaling terug; een abonnement stopt dan direct. Zonder opgaaf van reden.`,
       heroPoints: ["Persoonlijk schema binnen 2 uur", "Maandelijks opzegbaar of vaste looptijd"],
-      codeOffer: (offer, code) => `${offer} · code ${code}`,
       sampleTitle: "Zo ziet een schema eruit",
       sampleDay: "Voorbeeld van één dag",
       sampleWorkout: "Training",
@@ -147,9 +155,13 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
         metaDescription:
           "Je persoonlijke voedings- en trainingsschema, afgestemd op jouw lichaam, smaak en agenda, en elke week bijgestuurd. Binnen 2 uur in je mailbox.",
         heroAlt: "Vrouw doet thuis een oefening op een yogamat",
-        heroEyebrow: "Persoonlijk voedings- en trainingsschema",
-        heroTitle: { start: "Een plan dat past bij ", accent: "jouw dag en jouw eten." },
-        heroLead: "Afgestemd op jouw doel, je agenda en wat je lekker vindt, en elke week bijgestuurd.",
+        heroEyebrow: "Persoonlijk voedings- én trainingsschema",
+        heroTitle: { start: "Voeding én beweging, ", accent: "afgestemd op jouw dag." },
+        heroLead: "Een weekmenu met recepten en een trainingsschema voor thuis of de sportschool, afgestemd op jouw doel en elke week bijgestuurd.",
+        pillars: [
+          { icon: "voeding", title: "Voeding", text: "Weekmenu, recepten en boodschappenlijst" },
+          { icon: "beweging", title: "Beweging", text: "Training voor thuis of de sportschool" },
+        ],
         painTitle: "Weer een dieet. Weer gestopt. Weer terug bij af.",
         gets: [
           { title: "Jouw dagdoelen", text: "Calorieën en eiwit, berekend voor jouw lichaam en doel." },
@@ -198,7 +210,10 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
   },
   en: {
     shared: {
-      launchBadge: (label, discount, until) => `${label}: ${discount}, until ${until}`,
+      launchOffer: (label, discount) => `${label}: ${discount}`,
+      offerAuto: "Applied automatically in your basket",
+      offerAutoCode: (code) => `Code ${code} is applied automatically in your basket`,
+      offerUntil: (until) => `until ${until}`,
       pickTitle: "What would you like to work on?",
       quizEyebrow: "Free questionnaire · about 3 minutes",
       quizStep: "Question 1",
@@ -208,7 +223,6 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       guaranteeText: (days) =>
         `Not satisfied? Ask for your first payment back within ${days} days; a subscription then stops straight away. No questions asked.`,
       heroPoints: ["Personal plan within 2 hours", "Cancel monthly or choose a fixed term"],
-      codeOffer: (offer, code) => `${offer} · code ${code}`,
       sampleTitle: "What a plan looks like",
       sampleDay: "Sample of one day",
       sampleWorkout: "Workout",
@@ -236,8 +250,12 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
           "Your personal nutrition and workout plan, tailored to your body, taste and schedule, and adjusted every week. In your inbox within 2 hours.",
         heroAlt: "Woman doing an exercise on a yoga mat at home",
         heroEyebrow: "Personal nutrition and workout plan",
-        heroTitle: { start: "A plan that fits ", accent: "your day and your food." },
-        heroLead: "Tailored to your goal, your schedule and what you enjoy eating, and adjusted every week.",
+        heroTitle: { start: "Nutrition and exercise, ", accent: "tailored to your day." },
+        heroLead: "A weekly menu with recipes and a workout plan for home or the gym, tailored to your goal and adjusted every week.",
+        pillars: [
+          { icon: "voeding", title: "Nutrition", text: "Weekly menu, recipes and shopping list" },
+          { icon: "beweging", title: "Exercise", text: "Workouts for home or the gym" },
+        ],
         painTitle: "Another diet. Stopped again. Back to square one.",
         gets: [
           { title: "Your daily targets", text: "Calories and protein, calculated for your body and goal." },
