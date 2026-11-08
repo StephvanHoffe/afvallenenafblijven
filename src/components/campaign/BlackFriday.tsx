@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { Countdown } from "@/components/promo/Countdown";
 import { durations, type DurationId } from "@/config/pricing";
 import { defineCopy, type Locale } from "@/i18n/config";
@@ -65,19 +65,26 @@ export const bfGlow = {
     "radial-gradient(48rem 26rem at 85% -10%, rgb(200 241 105 / 0.16), transparent 60%), radial-gradient(36rem 22rem at -5% 105%, rgb(244 93 34 / 0.14), transparent 60%)",
 };
 
-/** Eén regel in de hero: de actie en hoe lang hij nog loopt. */
-export function BlackFridayStrip({ promo, l }: { promo: PromoView; l: Locale }) {
+/**
+ * Bovenaan de landingspagina's: het Black Friday-aanbod als eerste in beeld,
+ * met de aftelklok en dat de korting vanzelf in je winkelwagen zit (de
+ * checkout rekent de actiekorting zelf uit).
+ */
+export function BlackFridayOffer({ promo, l, note }: { promo: PromoView; l: Locale; note: string }) {
   const c = bfCopy[l];
   return (
-    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-black py-2 pr-4 pl-2 text-sm font-semibold text-white">
-      <span className="inline-flex items-center gap-1.5 rounded-xl bg-lime-glow px-2.5 py-1 font-extrabold text-brand-950">
-        <Zap className="size-4" aria-hidden /> {c.label}
-      </span>
-      <span>{c.deal(promoPercent(promo), promo.months, promoHasTiers(promo))}</span>
-      <span className="text-lime-glow">
-        <Countdown endsAt={promo.endsAt} variant="inline" />
-      </span>
-    </p>
+    <div className="mb-3 max-w-xl rounded-2xl px-3.5 py-3 text-white shadow-[var(--shadow-soft)] ring-1 ring-lime-glow/25 sm:mb-4 sm:px-4" style={bfGlow}>
+      <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span className="inline-flex items-center gap-1.5 rounded-lg bg-lime-glow px-2 py-0.5 text-sm font-extrabold text-brand-950">
+          <Zap className="size-4" aria-hidden /> {c.label}
+        </span>
+        <Countdown endsAt={promo.endsAt} variant="inline" className="text-sm font-semibold text-lime-glow" />
+      </p>
+      <p className="mt-2 text-[1.0625rem] leading-tight font-extrabold sm:text-lg">{c.pricingTitle(promoPercent(promo), promo.months, promoHasTiers(promo))}</p>
+      <p className="mt-1 flex items-start gap-1.5 text-[0.8125rem] leading-snug font-semibold text-white/85 sm:text-sm">
+        <Check className="mt-px size-4 shrink-0 text-lime-glow" aria-hidden /> {note}
+      </p>
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { cacheLife } from "next/cache";
 import Image from "next/image";
 import { Suspense } from "react";
 import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Tag, Target, TrendingDown, Utensils, X } from "lucide-react";
-import { BlackFridayDeal, BlackFridayStrip, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
+import { BlackFridayDeal, BlackFridayOffer, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
 import { StoryChart, storyCopy } from "@/components/campaign/Story";
 import { FutureSection } from "@/components/conversion";
 import { FaqList, Guarantee, SectionHeading, TrustRow } from "@/components/marketing";
@@ -142,10 +142,12 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
   const mainHref = startHref(variant);
   const n = (x: number) => formatNumber(x, 0, l);
   const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
-  const promoBadge =
-    promo && !bf ? (
-      <OfferBanner title={c.launchOffer(promo.label, promotionSummary(promo.percentOff, promo.months, l))} note={`${c.offerAuto} · ${c.offerUntil(promo.endsLabel)}`} />
-    ) : null;
+  // De korting bovenaan: tijdens Black Friday in de Black Friday-stijl, anders de gewone actie. Een code uit de link gaat voor (die vervangt de actiekorting).
+  const promoBadge = bf ? (
+    <BlackFridayOffer promo={bf} l={l} note={`${c.offerAuto} · ${c.offerUntil(bf.endsLabel)}`} />
+  ) : promo ? (
+    <OfferBanner title={c.launchOffer(promo.label, promotionSummary(promo.percentOff, promo.months, l))} note={`${c.offerAuto} · ${c.offerUntil(promo.endsLabel)}`} />
+  ) : null;
 
   return (
     <>
@@ -154,14 +156,6 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
         <div className="absolute inset-x-0 top-0 -z-10 h-[46rem] bg-gradient-to-b from-sand to-cream" />
         <div className="container-page grid items-center gap-10 pt-4 pb-14 sm:pt-10 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-14 lg:pb-20">
           <div className="min-w-0">
-            {bf && (
-              <div className="mb-5">
-                <BlackFridayStrip promo={bf} l={l} />
-                <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-ink/80">
-                  <Check className="size-4 shrink-0 text-brand-600" aria-hidden /> {c.offerAuto}
-                </p>
-              </div>
-            )}
             {searchParams ? (
               <Suspense fallback={promoBadge}>
                 <OfferLine searchParams={searchParams} l={l} fallback={promoBadge} />
