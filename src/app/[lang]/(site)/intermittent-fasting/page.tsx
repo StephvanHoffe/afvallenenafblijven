@@ -72,9 +72,9 @@ const copy = defineCopy({
       title: "De bekendste vormen: 16:8, 5:2 en om de dag vasten",
       head: ["Vorm", "Vasten", "Eten"],
       rows: [
-        ["16:8", "16 uur per dag", "binnen 8 uur, bijv. 12:00-20:00"],
-        ["14:10", "14 uur per dag", "binnen 10 uur, bijv. 9:00-19:00"],
-        ["5:2", "2 dagen per week ± 500-600 kcal", "5 dagen normaal"],
+        ["16:8", "16 uur per dag", "binnen 8 uur, bijv. 12:00–20:00"],
+        ["14:10", "14 uur per dag", "binnen 10 uur, bijv. 9:00–19:00"],
+        ["5:2", "2 dagen per week ± 500–600 kcal", "5 dagen normaal"],
         ["Om de dag vasten", "om de dag niets of ± 500 kcal", "de andere dagen normaal"],
       ],
       bullets: [
@@ -216,9 +216,9 @@ const copy = defineCopy({
       title: "The best-known forms: 16:8, 5:2 and alternate-day fasting",
       head: ["Form", "Fasting", "Eating"],
       rows: [
-        ["16:8", "16 hours a day", "within 8 hours, e.g. 12:00-20:00"],
-        ["14:10", "14 hours a day", "within 10 hours, e.g. 9:00-19:00"],
-        ["5:2", "2 days a week ± 500-600 kcal", "5 days as normal"],
+        ["16:8", "16 hours a day", "within 8 hours, e.g. 12:00–20:00"],
+        ["14:10", "14 hours a day", "within 10 hours, e.g. 9:00–19:00"],
+        ["5:2", "2 days a week ± 500–600 kcal", "5 days as normal"],
         ["Alternate-day fasting", "every other day nothing or ± 500 kcal", "the other days as normal"],
       ],
       bullets: [
