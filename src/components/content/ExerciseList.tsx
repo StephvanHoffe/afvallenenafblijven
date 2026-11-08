@@ -88,6 +88,17 @@ export function Paragraphs({ items }: { items: string[] }) {
   );
 }
 
+/** Extra opsomming binnen een <Section>, na een tabel of alinea (zelfde opmaak als Section). */
+export function Bullets({ items }: { items: string[] }) {
+  return (
+    <ul className="list-disc space-y-2 pl-6 text-lg leading-relaxed text-muted marker:text-brand-600">
+      {items.map((b) => (
+        <li key={b.slice(0, 48)}>{b}</li>
+      ))}
+    </ul>
+  );
+}
+
 /** Opvallend blok voor veiligheidsadvies (warming-up, pijn, huisarts of fysiotherapeut). */
 export function SafetyNote({ title, items }: { title: string; items: string[] }) {
   return (

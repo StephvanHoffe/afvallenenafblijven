@@ -115,7 +115,7 @@ export function RecipeCard({ recipe, l }: { recipe: Recipe; l: Locale }) {
           <h4 className="font-bold">{c.method}</h4>
           <ol className="mt-2 list-decimal space-y-2 pl-5 leading-relaxed marker:font-bold marker:text-brand-600">
             {recipe.steps.map((s) => (
-              <li key={s.nl.slice(0, 40)}>{s[l]}</li>
+              <li key={s.nl.slice(0, 48)}>{s[l]}</li>
             ))}
           </ol>
         </div>
