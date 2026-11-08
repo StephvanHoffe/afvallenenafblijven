@@ -1,5 +1,6 @@
 import { foods, nutrientsFor, roundNutrients, sumNutrients, type FoodKey, type Nutrients } from "@/content/nutrition";
 import { intlLocale, type Locale } from "@/i18n/config";
+import { calorieProductSlugs, type CalorieProductSlug } from "@/content/calorie-slugs";
 
 /**
  * De pagina's "calorieën per product" (/calorieen/<slug>) en de groepen van de
@@ -94,7 +95,7 @@ export interface CalorieFaq {
 }
 
 export interface CalorieProduct {
-  slug: string;
+  slug: CalorieProductSlug;
   /** Het hoofdproduct eerst; de andere zijn varianten (bijv. gekookt, alcoholvrij). */
   foods: FoodKey[];
   /** Belangrijkste Nederlandse zoekwoord. */
@@ -2249,6 +2250,11 @@ export const calorieProducts: CalorieProduct[] = [
 
 /** Paden van alle productpagina's, voor de sitemap. */
 export const calorieProductPaths: string[] = calorieProducts.map((p) => `/calorieen/${p.slug}`);
+
+// Elk adres in calorie-slugs.ts hoort bij precies één product (de proxy vertrouwt op die lijst).
+if (calorieProductSlugs.length !== calorieProducts.length || calorieProductSlugs.some((s) => !calorieProducts.some((p) => p.slug === s))) {
+  throw new Error("calorie-slugs.ts en calorieProducts lopen niet gelijk");
+}
 
 export function calorieProductBySlug(slug: string): CalorieProduct | undefined {
   return calorieProducts.find((p) => p.slug === slug);

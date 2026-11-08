@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isCalorieProductSlug } from "@/content/calorie-slugs";
 import { ADMIN_COOKIE, isDemoMode, looksLikeAdminCookie } from "@/lib/admin/session-cookie";
 
 /**
@@ -8,6 +9,9 @@ import { ADMIN_COOKIE, isDemoMode, looksLikeAdminCookie } from "@/lib/admin/sess
  *   herschreven naar /nl/prijzen; Engels staat onder /en. Adressen met /nl
  *   sturen we door naar de versie zonder voorvoegsel. De header x-taal geeft
  *   Server Actions en Route Handlers de taal van het verzoek.
+ * - Calorieën per product: een onbekend product (/calorieen/xyz) gaat naar de
+ *   404-pagina, met een echte 404-status (de pagina zelf streamt achter een
+ *   Suspense-grens en zou anders status 200 geven).
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -27,6 +31,13 @@ export function proxy(request: NextRequest) {
   const english = pathname === "/en" || pathname.startsWith("/en/");
   const headers = new Headers(request.headers);
   headers.set("x-taal", english ? "en" : "nl");
+
+  const product = /^(?:\/en)?\/calorieen\/([^/]+)\/?$/.exec(pathname)?.[1];
+  if (product !== undefined && !isCalorieProductSlug(product)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${english ? "en" : "nl"}/calorieen-onbekend`;
+    return NextResponse.rewrite(url, { request: { headers } });
+  }
   if (english) return NextResponse.next({ request: { headers } });
 
   const url = request.nextUrl.clone();
