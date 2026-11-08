@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Image from "next/image";
 import { Suspense } from "react";
-import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Tag, Target, TrendingDown, Utensils, X } from "lucide-react";
-import { BlackFridayDeal, BlackFridayOffer, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
+import { ArrowDown, ArrowRight, Check, Dumbbell, Flame, Scale, ShieldCheck, Target, TrendingDown, Utensils, X } from "lucide-react";
+import { BlackFridayDeal, bfCopy, bfGlow } from "@/components/campaign/BlackFriday";
 import { StoryChart, storyCopy } from "@/components/campaign/Story";
 import { FutureSection } from "@/components/conversion";
 import { FaqList, Guarantee, SectionHeading, TrustRow } from "@/components/marketing";
 import { Countdown } from "@/components/promo/Countdown";
+import { OfferBanner, PromoOffer } from "@/components/promo/PromoOffer";
 import { PricingTable } from "@/components/pricing/PricingTable";
-import { promotionSummary, site } from "@/config/site";
+import { site } from "@/config/site";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { faqInOrder } from "@/content/faq";
 import { landingCopy, variantSettings, type LandingVariant } from "@/content/landing";
@@ -79,28 +80,6 @@ async function codeOffer(code: string, l: Locale): Promise<string | null> {
   return offerText(termsOf(row), l);
 }
 
-/**
- * De korting, als eerste in beeld: wat je krijgt en dat het vanzelf in je
- * winkelwagen zit. Dat klopt: een actie rekent de checkout zelf uit, en een
- * code uit de advertentielink gaat via CampaignLinks mee naar de vragenlijst
- * en wordt daar automatisch toegepast.
- */
-function OfferBanner({ title, note }: { title: string; note: string }) {
-  return (
-    <div className="mb-3 flex max-w-xl items-start gap-3 rounded-2xl bg-lime-glow px-3.5 py-2.5 text-brand-950 shadow-[var(--shadow-soft)] sm:mb-4 sm:px-4 sm:py-3">
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-brand-950 text-lime-glow">
-        <Tag className="size-4" aria-hidden />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[1.0625rem] leading-tight font-extrabold sm:text-lg">{title}</span>
-        <span className="mt-0.5 flex items-start gap-1.5 text-[0.8125rem] leading-snug font-semibold sm:text-sm">
-          <Check className="mt-px size-4 shrink-0" aria-hidden /> {note}
-        </span>
-      </span>
-    </div>
-  );
-}
-
 /** Bovenaan: de korting uit de advertentielink (?code=), anders de lopende actie. */
 async function OfferLine({ searchParams, l, fallback }: { searchParams: Promise<SearchParams>; l: Locale; fallback: React.ReactNode }) {
   const sp = await searchParams;
@@ -143,11 +122,7 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
   const n = (x: number) => formatNumber(x, 0, l);
   const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
   // De korting bovenaan: tijdens Black Friday in de Black Friday-stijl, anders de gewone actie. Een code uit de link gaat voor (die vervangt de actiekorting).
-  const promoBadge = bf ? (
-    <BlackFridayOffer promo={bf} l={l} note={`${c.offerAuto} · ${c.offerUntil(bf.endsLabel)}`} />
-  ) : promo ? (
-    <OfferBanner title={c.launchOffer(promo.label, promotionSummary(promo.percentOff, promo.months, l))} note={`${c.offerAuto} · ${c.offerUntil(promo.endsLabel)}`} />
-  ) : null;
+  const promoBadge = <PromoOffer promo={promo} l={l} />;
 
   return (
     <>

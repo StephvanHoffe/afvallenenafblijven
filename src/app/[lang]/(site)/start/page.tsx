@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PromoPill } from "@/components/promo/PromoOffer";
 import { Quiz, type QuizResume } from "@/components/quiz/Quiz";
 import { DEFAULT_DURATION, isDurationId, isProductId } from "@/config/pricing";
 import { defineCopy } from "@/i18n/config";
@@ -28,9 +29,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: copy[l].title, description: copy[l].description, alternates: alternates(l, "/start") };
 }
 
-export default function StartPage({ searchParams }: PageProps<"/[lang]/start">) {
+export default async function StartPage({ searchParams }: PageProps<"/[lang]/start">) {
+  const l = await getLocale();
+  const promo = await currentPromotion(l);
   return (
     <section className="container-page py-10 sm:py-14">
+      {/* De lopende actie, compact boven de vragenlijst: de korting zit vanzelf in de winkelwagen. */}
+      <PromoPill promo={promo} l={l} className="mx-auto mb-6 max-w-2xl" />
       <Suspense fallback={<QuizSkeleton />}>
         <QuizLoader searchParams={searchParams} />
       </Suspense>
