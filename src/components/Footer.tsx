@@ -22,6 +22,7 @@ const copy = defineCopy({
           { href: "/voorbeeld", label: "Bekijk een voorbeeld" },
           { href: "/caloriebehoefte-berekenen", label: "Caloriebehoefte berekenen" },
           { href: "/afvallen-in-de-overgang", label: "Afvallen in de overgang" },
+          { href: "/eiwitten-per-dag", label: "Eiwitten per dag" },
         ],
       },
       {
@@ -67,6 +68,7 @@ const copy = defineCopy({
           { href: "/voorbeeld", label: "See an example" },
           { href: "/caloriebehoefte-berekenen", label: "Calorie calculator" },
           { href: "/afvallen-in-de-overgang", label: "Losing weight during menopause" },
+          { href: "/eiwitten-per-dag", label: "Protein per day" },
         ],
       },
       {

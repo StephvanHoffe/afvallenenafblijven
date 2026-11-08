@@ -356,6 +356,9 @@ export default async function OvergangPage() {
         <section className="space-y-4">
           <h2 className="heading-md">{s.protein.title}</h2>
           <Prose paragraphs={s.protein.paragraphs} />
+          <Link href="/eiwitten-per-dag" className="inline-flex items-center gap-1.5 font-bold text-brand-700 underline">
+            {l === "en" ? "How much protein do you need a day?" : "Hoeveel eiwitten per dag heb je nodig?"} <ArrowRight className="size-4" aria-hidden />
+          </Link>
         </section>
 
         <section className="space-y-4">

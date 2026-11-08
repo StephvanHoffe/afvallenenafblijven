@@ -64,6 +64,7 @@ const copy = defineCopy({
       },
       {
         title: "Hoeveel eiwitten per dag?",
+        link: { href: "/eiwitten-per-dag", label: "Meer over eiwitten: tabel per gewicht, producten en eiwitrijk ontbijt" },
         paragraphs: [
           "Voor gezonde volwassenen adviseert de Gezondheidsraad 0,83 gram eiwit per kilo lichaamsgewicht per dag. Dat is de hoeveelheid om tekorten te voorkomen.",
           "Wie afvalt of aan krachttraining doet, heeft baat bij meer eiwit: het helpt je spiermassa te behouden en geeft een vol gevoel. In sportvoedingsonderzoek wordt vaak 1,6 gram per kilo of meer gebruikt. In de rekenhulp en in onze schema's rekenen we met 1,6 gram per kilo om op gewicht te blijven, 1,8 gram om af te vallen en 2,0 gram om spieren op te bouwen. Bij overgewicht rekenen we niet met je volle gewicht, maar met het gewicht dat bij een BMI van 25 hoort.",
@@ -142,6 +143,7 @@ const copy = defineCopy({
       },
       {
         title: "How much protein a day?",
+        link: { href: "/eiwitten-per-dag", label: "More about protein: table by weight, foods and high-protein breakfasts" },
         paragraphs: [
           "For healthy adults, the Dutch Health Council recommends 0.83 grams of protein per kilo of body weight a day. That's the amount needed to prevent deficiencies.",
           "If you're losing weight or doing strength training, more protein helps: it helps you keep your muscle and keeps you feeling full. Sports nutrition research often uses 1.6 grams per kilo or more. The calculator and our plans use 1.6 grams per kilo to maintain your weight, 1.8 grams to lose weight and 2.0 grams to build muscle. If you're overweight, we don't use your full weight, but the weight that matches a BMI of 25.",
@@ -278,6 +280,11 @@ export default async function CaloriebehoeftePage() {
                 {p}
               </p>
             ))}
+            {"link" in s && s.link && (
+              <Link href={s.link.href} className="inline-flex items-center gap-1.5 font-bold text-brand-700 underline">
+                {s.link.label} <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            )}
           </section>
         ))}
         <section className="rounded-[2rem] bg-brand-900 p-6 text-white sm:p-8">
