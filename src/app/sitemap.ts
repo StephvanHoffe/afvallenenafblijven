@@ -1,8 +1,10 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/config/site";
+import { calorieProductPaths } from "@/content/calorie-products";
+import { knowledgePages } from "@/content/knowledge";
 import { localeUrl, locales } from "@/i18n/config";
 
-const pages: { path: string; priority: number }[] = [
+const basePages: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
   { path: "/start", priority: 0.9 },
   { path: "/voedingsschema", priority: 0.9 },
@@ -11,9 +13,7 @@ const pages: { path: string; priority: number }[] = [
   { path: "/prijzen", priority: 0.8 },
   { path: "/voorbeeld", priority: 0.7 },
   { path: "/hoe-werkt-het", priority: 0.7 },
-  { path: "/caloriebehoefte-berekenen", priority: 0.8 },
-  { path: "/afvallen-in-de-overgang", priority: 0.7 },
-  { path: "/eiwitten-per-dag", priority: 0.7 },
+  { path: "/kennis", priority: 0.7 },
   { path: "/over-ons", priority: 0.5 },
   { path: "/contact", priority: 0.5 },
   { path: "/algemene-voorwaarden", priority: 0.3 },
@@ -22,6 +22,13 @@ const pages: { path: string; priority: number }[] = [
   { path: "/disclaimer", priority: 0.2 },
   { path: "/abonnement-opzeggen", priority: 0.2 },
   { path: "/herroepen", priority: 0.2 },
+];
+
+/** De vaste pagina's, alle kennispagina's (rekenhulpen 0,8, de rest 0,7) en de calorieën per product (0,6). */
+const pages = [
+  ...basePages,
+  ...knowledgePages.map((k) => ({ path: k.path, priority: k.category === "rekenhulpen" ? 0.8 : 0.7 })),
+  ...calorieProductPaths.map((path) => ({ path, priority: 0.6 })),
 ];
 
 /** Elke pagina in beide talen, met de andere taal als alternatief (hreflang). */

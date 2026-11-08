@@ -20,9 +20,18 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundel" },
           { href: "/prijzen", label: "Prijzen & abonnementen" },
           { href: "/voorbeeld", label: "Bekijk een voorbeeld" },
+        ],
+      },
+      {
+        title: "Kennis en rekenhulpen",
+        links: [
+          { href: "/kennis", label: "Alle artikelen en rekenhulpen" },
           { href: "/caloriebehoefte-berekenen", label: "Caloriebehoefte berekenen" },
-          { href: "/afvallen-in-de-overgang", label: "Afvallen in de overgang" },
+          { href: "/bmi-berekenen", label: "BMI berekenen" },
           { href: "/eiwitten-per-dag", label: "Eiwitten per dag" },
+          { href: "/recepten", label: "Gezonde recepten" },
+          { href: "/calorieen", label: "Calorietabel" },
+          { href: "/afvallen-in-de-overgang", label: "Afvallen in de overgang" },
         ],
       },
       {
@@ -66,9 +75,18 @@ const copy = defineCopy({
           { href: "/bundel", label: "Bundle" },
           { href: "/prijzen", label: "Pricing & subscriptions" },
           { href: "/voorbeeld", label: "See an example" },
+        ],
+      },
+      {
+        title: "Knowledge and calculators",
+        links: [
+          { href: "/kennis", label: "All articles and calculators" },
           { href: "/caloriebehoefte-berekenen", label: "Calorie calculator" },
-          { href: "/afvallen-in-de-overgang", label: "Losing weight during menopause" },
+          { href: "/bmi-berekenen", label: "BMI calculator" },
           { href: "/eiwitten-per-dag", label: "Protein per day" },
+          { href: "/recepten", label: "Healthy recipes" },
+          { href: "/calorieen", label: "Calorie table" },
+          { href: "/afvallen-in-de-overgang", label: "Losing weight during menopause" },
         ],
       },
       {
@@ -116,7 +134,7 @@ export async function Footer() {
   const c = site.company;
   return (
     <footer className="no-print mt-auto bg-brand-950 text-white/80">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-[1.3fr_repeat(3,1fr)]">
+      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,1fr)]">
         <div className="space-y-4">
           <Logo light />
           <p className="max-w-xs text-sm leading-relaxed text-white/70">{t.intro}</p>
