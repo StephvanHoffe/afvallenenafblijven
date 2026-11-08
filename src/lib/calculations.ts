@@ -52,6 +52,21 @@ function roundTo(n: number, step: number) {
   return Math.round(n / step) * step;
 }
 
+/**
+ * "Referentiegewicht" voor het eiwitdoel: bij overgewicht (BMI boven 27)
+ * rekenen we niet met het volle lichaamsgewicht, maar met het gewicht bij
+ * BMI 25. Spiermassa groeit niet mee met vetmassa.
+ */
+export function referenceWeight(weightKg: number, heightCm: number): number {
+  return bmi(weightKg, heightCm) > 27 ? 25 * (heightCm / 100) ** 2 : weightKg;
+}
+
+/** Eiwit per kilo (referentie)gewicht per doel, zoals in de schema's. */
+export const PROTEIN_PER_KG = { afblijven: 1.6, afvallen: 1.8, sterker: 2.0 } as const;
+
+/** Advies van de Gezondheidsraad voor gezonde volwassenen (minimum om tekorten te voorkomen). */
+export const PROTEIN_MINIMUM_PER_KG = 0.83;
+
 /** Ondergrens voor de energie-inname; daaronder gaan we nooit. */
 export function minimumCalories(intake: Pick<Intake, "sex">): number {
   return intake.sex === "man" ? 1500 : 1200;
@@ -89,8 +104,9 @@ export function nutritionTargets(intake: TargetsInput): NutritionTargets {
   // Eiwit op basis van een "referentiegewicht": bij overgewicht rekenen we niet
   // met het volle lichaamsgewicht, maar met het gewicht bij BMI 25.
   const currentBmi = bmi(intake.weightKg, intake.heightCm);
-  const refWeight = currentBmi > 27 ? 25 * (intake.heightCm / 100) ** 2 : intake.weightKg;
-  const proteinPerKg = intake.goal === "afblijven" ? 1.6 : intake.goal === "afvallen" ? 1.8 : 2.0;
+  const refWeight = referenceWeight(intake.weightKg, intake.heightCm);
+  const proteinPerKg =
+    intake.goal === "afblijven" ? PROTEIN_PER_KG.afblijven : intake.goal === "afvallen" ? PROTEIN_PER_KG.afvallen : PROTEIN_PER_KG.sterker;
   const proteinG = roundTo(refWeight * proteinPerKg, 5);
 
   // Vet: 28% van de energie, met een ondergrens van 0,7 g per kg referentiegewicht.
