@@ -11,13 +11,13 @@ const PATH = "/privacybeleid";
 const copy = defineCopy({
   nl: {
     title: "Privacybeleid",
-    description: `Hoe ${site.name} omgaat met je persoonsgegevens en gezondheidsgegevens.`,
+    description: `Hoe ${site.name} omgaat met je persoonsgegevens en gezondheidsgegevens: wat we verwerken, waarom, hoe lang en welke rechten je hebt.`,
     intro:
       "Om een persoonlijk schema voor je te maken, hebben we gegevens over jou nodig, waaronder gezondheidsgegevens. Daar gaan we zorgvuldig mee om. In dit privacybeleid lees je welke gegevens we verwerken, waarom, hoe lang en welke rechten je hebt.",
   },
   en: {
     title: "Privacy policy",
-    description: `How ${site.name} handles your personal data and health data.`,
+    description: `How ${site.name} handles your personal data and health data: what we collect, why, how long we keep it and what your rights are.`,
     intro:
       "To create a personal plan for you, we need information about you, including health data. We handle it with care. In this privacy policy you can read which data we process, why, for how long and what rights you have.",
   },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
 import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -10,7 +10,7 @@ const copy = defineCopy({
     meta: {
       title: "Trainingsschema afvallen: thuis of in de sportschool",
       description:
-        "Een persoonlijk trainingsschema om af te vallen, strakker te worden of sterker te worden, thuis of in de sportschool. Met progressie over 4 weken, afgestemd op je niveau, materiaal en tijd.",
+        "Persoonlijk trainingsschema om af te vallen, strakker of sterker te worden, thuis of in de sportschool. Met 4 weken progressie, op jouw niveau en in jouw tijd.",
     },
     content: {
       eyebrow: "Trainingsschema voor thuis of de sportschool",
@@ -52,7 +52,7 @@ const copy = defineCopy({
     meta: {
       title: "Workout plan for weight loss: at home or in the gym",
       description:
-        "A personal workout plan to lose weight, tone up or get stronger, at home or in the gym. With progression over 4 weeks, tailored to your level, equipment and time.",
+        "A personal workout plan to lose weight, tone up or get stronger, at home or in the gym. With 4 weeks of progression, at your level and within your time.",
     },
     content: {
       eyebrow: "Workout plan for home or the gym",
@@ -94,7 +94,7 @@ const copy = defineCopy({
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { ...copy[l].meta, alternates: alternates(l, "/trainingsschema") };
+  return { ...copy[l].meta, title: pageTitle(copy[l].meta.title), alternates: alternates(l, "/trainingsschema") };
 }
 
 export default async function TrainingsschemaPage() {

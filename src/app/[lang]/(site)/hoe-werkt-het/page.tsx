@@ -95,7 +95,7 @@ export default async function HoeWerktHetPage() {
             title={c.title}
             intro={c.intro}
           />
-          <Steps />
+          <Steps as="h2" />
         </div>
       </section>
       <section className="container-page space-y-16 py-16">

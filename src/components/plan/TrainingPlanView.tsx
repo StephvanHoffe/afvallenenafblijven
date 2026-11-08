@@ -139,7 +139,7 @@ function WorkoutPanel({ workout, plan, c }: { workout: Workout; plan: TrainingPl
                   <p>
                     <strong>{c.intensity}</strong> {e.intensity}
                   </p>
-                  <h4 className="mt-3 font-bold">{c.howTo}</h4>
+                  <h3 className="mt-3 font-bold">{c.howTo}</h3>
                   <ul className="mt-1 list-disc space-y-1 pl-5">
                     {e.cues.map((cue) => (
                       <li key={cue}>{cue}</li>
@@ -239,7 +239,8 @@ export async function TrainingPlanView({
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="heading-lg">{plan.title}</h1>
+        {/* In het voorbeeld (/voorbeeld) heeft de pagina zelf de H1. */}
+        {preview ? <h2 className="heading-lg">{plan.title}</h2> : <h1 className="heading-lg">{plan.title}</h1>}
         <p className="max-w-3xl text-lg leading-relaxed text-muted">{plan.intro}</p>
       </header>
 

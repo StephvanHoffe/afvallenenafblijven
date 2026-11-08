@@ -5,7 +5,7 @@ import { CtaBanner, FaqJsonLd, FaqList, SectionHeading } from "@/components/mark
 import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy, type Locale } from "@/i18n/config";
 import Link from "@/i18n/Link";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { intakeLabels } from "@/i18n/options";
 import { getLocale } from "@/i18n/server";
 import { nutritionTargets } from "@/lib/calculations";
@@ -39,7 +39,7 @@ const copy = defineCopy({
   nl: {
     metaTitle: "Caloriebehoefte berekenen: hoeveel calorieën per dag?",
     metaDescription:
-      "Bereken gratis hoeveel calorieën en eiwitten je per dag nodig hebt om af te vallen of op gewicht te blijven. Met je ruststofwisseling (BMR) en dagelijks verbruik (TDEE).",
+      "Bereken gratis hoeveel calorieën en eiwitten je per dag nodig hebt om af te vallen of op gewicht te blijven, met je ruststofwisseling (BMR) en verbruik (TDEE).",
     eyebrow: "Gratis rekenhulp",
     h1: "Caloriebehoefte berekenen",
     h1Accent: "hoeveel calorieën per dag heb jij nodig?",
@@ -52,6 +52,7 @@ const copy = defineCopy({
     ageCol: "Leeftijd",
     years: (n: number) => `${n} jaar`,
     tableNote: "Calorieën per dag om op gewicht te blijven, afgerond op 10. Je eigen uitkomst bereken je hierboven.",
+    menopause: "In de overgang? Lees waarom afvallen dan lastiger is en wat wél werkt",
     sections: [
       {
         title: "Hoeveel calorieën per dag om af te vallen?",
@@ -116,7 +117,7 @@ const copy = defineCopy({
   en: {
     metaTitle: "Calorie calculator: how many calories do you need a day?",
     metaDescription:
-      "Work out for free how many calories and how much protein you need a day to lose weight or maintain your weight. Including your basal metabolic rate (BMR) and daily energy use (TDEE).",
+      "Work out for free how many calories and how much protein you need a day to lose weight or maintain it, including your BMR and daily energy use (TDEE).",
     eyebrow: "Free calculator",
     h1: "Calorie calculator",
     h1Accent: "how many calories a day do you need?",
@@ -129,6 +130,7 @@ const copy = defineCopy({
     ageCol: "Age",
     years: (n: number) => `${n} years`,
     tableNote: "Calories a day to maintain your weight, rounded to 10. Work out your own number above.",
+    menopause: "Going through menopause? Read why losing weight is harder then and what does work",
     sections: [
       {
         title: "How many calories a day to lose weight?",
@@ -195,7 +197,7 @@ const copy = defineCopy({
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
   const c = copy[l];
-  return { title: c.metaTitle, description: c.metaDescription, alternates: alternates(l, "/caloriebehoefte-berekenen") };
+  return { title: pageTitle(c.metaTitle), description: c.metaDescription, alternates: alternates(l, "/caloriebehoefte-berekenen") };
 }
 
 function MaintenanceTable({ sex, l }: { sex: Intake["sex"]; l: Locale }) {
@@ -237,6 +239,11 @@ function MaintenanceTable({ sex, l }: { sex: Intake["sex"]; l: Locale }) {
         </table>
       </div>
       <p className="text-sm text-muted">{c.tableNote}</p>
+      {sex === "vrouw" && (
+        <Link href="/afvallen-in-de-overgang" className="inline-flex items-center gap-1.5 font-bold text-brand-700 underline">
+          {c.menopause} <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      )}
     </section>
   );
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
 import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -10,7 +10,7 @@ const copy = defineCopy({
     meta: {
       title: "Voedingsschema afvallen met weekmenu en boodschappenlijst",
       description:
-        "Persoonlijk voedingsschema (eetschema) om af te vallen: een weekmenu met recepten en boodschappenlijst op jouw calorie- en eiwitdoel, smaak, allergieën en kooktijd.",
+        "Persoonlijk voedingsschema (eetschema) om af te vallen: weekmenu met recepten en boodschappenlijst op jouw calorie- en eiwitdoel, smaak en allergieën.",
     },
     content: {
       eyebrow: "Voedingsschema om af te vallen",
@@ -50,9 +50,9 @@ const copy = defineCopy({
   },
   en: {
     meta: {
-      title: "Weight loss nutrition plan with weekly menu and shopping list",
+      title: "Weight loss nutrition plan: weekly menu and shopping list",
       description:
-        "A personal nutrition plan with a weekly meal plan, recipes and a shopping list. Tailored to your calorie and protein targets, taste, allergies and cooking time.",
+        "A personal nutrition plan for weight loss: a weekly menu with recipes and a shopping list based on your calorie and protein targets, taste and allergies.",
     },
     content: {
       eyebrow: "Nutrition plan for weight loss",
@@ -94,7 +94,7 @@ const copy = defineCopy({
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { ...copy[l].meta, alternates: alternates(l, "/voedingsschema") };
+  return { ...copy[l].meta, title: pageTitle(copy[l].meta.title), alternates: alternates(l, "/voedingsschema") };
 }
 
 export default async function VoedingsschemaPage() {

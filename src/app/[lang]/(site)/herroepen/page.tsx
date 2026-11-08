@@ -12,12 +12,12 @@ const PATH = "/herroepen";
 const copy = defineCopy({
   nl: {
     title: "Overeenkomst herroepen",
-    description: "Herroep je overeenkomst online met onze herroepingsfunctie.",
+    description: "Herroep je overeenkomst binnen 14 dagen online met onze herroepingsfunctie, ook als je schema al klaarstaat. Zo werkt het.",
     eyebrow: "Herroepingsrecht",
   },
   en: {
     title: "Withdraw from the contract",
-    description: "Withdraw from your contract online using our withdrawal function.",
+    description: "Withdraw from your contract online within 14 days using our withdrawal function, even if your plan is already ready. This is how it works.",
     eyebrow: "Right of withdrawal",
   },
 });

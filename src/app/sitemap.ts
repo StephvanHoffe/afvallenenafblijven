@@ -12,6 +12,7 @@ const pages: { path: string; priority: number }[] = [
   { path: "/voorbeeld", priority: 0.7 },
   { path: "/hoe-werkt-het", priority: 0.7 },
   { path: "/caloriebehoefte-berekenen", priority: 0.8 },
+  { path: "/afvallen-in-de-overgang", priority: 0.7 },
   { path: "/over-ons", priority: 0.5 },
   { path: "/contact", priority: 0.5 },
   { path: "/algemene-voorwaarden", priority: 0.3 },

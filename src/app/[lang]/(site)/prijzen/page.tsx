@@ -150,6 +150,7 @@ export default async function PrijzenPage() {
             title={c.title}
             intro={c.intro(maxSavingsPercent())}
           />
+          <h2 className="sr-only">{l === "en" ? "All plans and prices" : "Alle plannen en prijzen"}</h2>
           <PricingTable promo={promo} />
           <div className="mx-auto mt-14 max-w-5xl">
             <h2 className="heading-md text-center">{c.whyTitle}</h2>

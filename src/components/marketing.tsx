@@ -188,7 +188,7 @@ export async function TrustRow({ light = false }: { light?: boolean }) {
 
 const stepIcons = [ListChecks, Target, CalendarDays];
 
-export async function Steps() {
+export async function Steps({ as: Heading = "h3" }: { as?: "h2" | "h3" } = {}) {
   const steps = copy[await getLocale()].steps.map((s, i) => ({ ...s, icon: stepIcons[i] }));
   return (
     <ol className="grid gap-5 md:grid-cols-3">
@@ -196,7 +196,7 @@ export async function Steps() {
         <li key={s.title} className="card relative p-6">
           <span className="absolute top-6 right-6 text-5xl leading-none font-extrabold text-brand-100">{i + 1}</span>
           <s.icon className="size-9 rounded-xl bg-brand-50 p-2 text-brand-600" aria-hidden />
-          <h3 className="mt-5 text-lg font-bold">{s.title}</h3>
+          <Heading className="mt-5 text-lg font-bold">{s.title}</Heading>
           <p className="mt-2 text-muted">{s.text}</p>
         </li>
       ))}

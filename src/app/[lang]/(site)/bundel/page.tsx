@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ProductLanding } from "@/components/ProductLanding";
 import { faqInOrder } from "@/content/faq";
 import { defineCopy } from "@/i18n/config";
-import { alternates } from "@/i18n/metadata";
+import { alternates, pageTitle } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
 
 const copy = defineCopy({
@@ -86,7 +86,7 @@ const copy = defineCopy({
 
 export async function generateMetadata(): Promise<Metadata> {
   const l = await getLocale();
-  return { ...copy[l].meta, alternates: alternates(l, "/bundel") };
+  return { ...copy[l].meta, title: pageTitle(copy[l].meta.title), alternates: alternates(l, "/bundel") };
 }
 
 export default async function BundelPage() {

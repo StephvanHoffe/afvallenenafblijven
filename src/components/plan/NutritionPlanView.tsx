@@ -395,7 +395,8 @@ export async function NutritionPlanView({
   return (
     <div className="space-y-8">
       <header className="space-y-3">
-        <h1 className="heading-lg">{plan.title}</h1>
+        {/* In het voorbeeld (/voorbeeld) heeft de pagina zelf de H1. */}
+        {preview ? <h2 className="heading-lg">{plan.title}</h2> : <h1 className="heading-lg">{plan.title}</h1>}
         <p className="max-w-3xl text-lg leading-relaxed text-muted">{plan.intro}</p>
       </header>
 
