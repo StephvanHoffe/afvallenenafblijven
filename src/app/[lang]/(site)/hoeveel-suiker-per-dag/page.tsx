@@ -17,7 +17,8 @@ const IDEAL_SHARE = 0.05;
 const GRAMS_PER_CUBE = 4;
 const KCAL_TABLE = [1500, 1800, 2000, 2200, 2500];
 
-const sugarLimit = (kcal: number, share: number) => Math.round((kcal * share) / 4);
+/** Naar beneden afgerond: het is een bovengrens. */
+const sugarLimit = (kcal: number, share: number) => Math.floor((kcal * share) / 4);
 
 /** Producten voor de suikertabel (standaardportie uit nutrition.ts) en of het om vrije suikers gaat. */
 const SUGAR_ROWS: { key: FoodKey; free: boolean }[] = [
@@ -58,7 +59,7 @@ const copy = defineCopy({
     ],
     tableHead: ["Calorieën per dag", "Maximaal (10 %)", "Liefst (5 %)"],
     cell: (g: string, cubes: string) => `< ${g} g (≈ ${cubes} klontjes)`,
-    tableNote: "Gram vrije suikers per dag. Klontjes naar beneden afgerond, omdat het om een bovengrens gaat.",
+    tableNote: "Gram vrije suikers per dag. Naar beneden afgerond, omdat het om een bovengrens gaat.",
     freeTitle: "Wat zijn vrije suikers?",
     freeIntro: "Het advies van de WHO gaat niet over alle suikers, maar over vrije suikers. Dat zijn:",
     freeBullets: [
@@ -154,7 +155,7 @@ const copy = defineCopy({
     ],
     tableHead: ["Calories a day", "Maximum (10%)", "Ideally (5%)"],
     cell: (g: string, cubes: string) => `< ${g} g (≈ ${cubes} cubes)`,
-    tableNote: "Grams of free sugars a day. Cubes rounded down, because it's an upper limit.",
+    tableNote: "Grams of free sugars a day. Rounded down, because it's an upper limit.",
     freeTitle: "What are free sugars?",
     freeIntro: "The WHO advice isn't about all sugars, but about free sugars. These are:",
     freeBullets: [
@@ -273,7 +274,10 @@ export default async function SuikerPage() {
   const sugarRows = SUGAR_ROWS.map(({ key, free }) => {
     const food = foods[key];
     const portion = food.portions[0];
-    return [food.name[l], `${portion.label[l]} · ${n(portion.amount)} ${food.unit}`, g(perPortion(key).sugars ?? 0), free ? c.yes : c.no];
+    // "1 blikje (33 cl)" noemt de hoeveelheid al; anders zetten we die erachter.
+    const named = food.unit === "ml" && portion.label[l].includes(`${portion.amount / 10} cl`);
+    const size = named ? portion.label[l] : `${portion.label[l]} · ${n(portion.amount)} ${food.unit}`;
+    return [food.name[l], size, g(perPortion(key).sugars ?? 0), free ? c.yes : c.no];
   });
 
   return (

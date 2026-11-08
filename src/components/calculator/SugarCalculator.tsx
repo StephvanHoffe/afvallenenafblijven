@@ -66,13 +66,13 @@ export function SugarCalculator() {
     const k = num(kcal);
     if (!k) return { state: "empty" as const };
     if (k < 1000 || k > 5000) return { state: "range" as const };
-    const max = Math.round((k * MAX_SHARE) / KCAL_PER_GRAM);
-    const ideal = Math.round((k * IDEAL_SHARE) / KCAL_PER_GRAM);
+    // Naar beneden afgerond: het is een bovengrens.
+    const max = Math.floor((k * MAX_SHARE) / KCAL_PER_GRAM);
+    const ideal = Math.floor((k * IDEAL_SHARE) / KCAL_PER_GRAM);
     return {
       state: "ok" as const,
       max,
       ideal,
-      // Afgerond naar beneden: het is een bovengrens.
       maxCubes: Math.floor(max / GRAMS_PER_CUBE),
       idealCubes: Math.floor(ideal / GRAMS_PER_CUBE),
       colaShare: Math.round((COLA_SUGAR / max) * 100),

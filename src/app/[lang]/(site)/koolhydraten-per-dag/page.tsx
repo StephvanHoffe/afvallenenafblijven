@@ -50,6 +50,8 @@ const PORTION_ROWS: { key: FoodKey; amount?: number; portion?: Record<Locale, st
   { key: "appel" },
 ];
 
+type Facts = { low1600: string; high1600: string; example: string; broccoli: string; apple: string };
+
 const copy = defineCopy({
   nl: {
     metaTitle: "Hoeveel koolhydraten per dag? Met gratis rekenhulp",
@@ -109,14 +111,14 @@ const copy = defineCopy({
       "In je persoonlijke voedingsschema rekenen we je calorieën, eiwit, vet en koolhydraten voor je uit. Je krijgt een weekmenu met recepten en een boodschappenlijst dat daar precies op uitkomt.",
     boxCta: "Maak mijn persoonlijke plan",
     boxNote: "± 3 minuten · je betaalt pas als je een plan kiest",
-    faq: [
+    faq: (f: Facts) => [
       {
         q: "Hoeveel koolhydraten per dag heb ik nodig?",
-        a: "De Gezondheidsraad adviseert 40 tot 70 procent van je energie uit koolhydraten. Bij 2.000 kcal per dag is dat 200 tot 350 gram. Bij 1.600 kcal is het 160 tot 280 gram.",
+        a: `De Gezondheidsraad adviseert 40 tot 70 procent van je energie uit koolhydraten. Bij 2.000 kcal per dag is dat 200 tot 350 gram. Bij 1.600 kcal is het ${f.low1600} tot ${f.high1600} gram.`,
       },
       {
         q: "Hoeveel koolhydraten per dag om af te vallen?",
-        a: "Daar is geen vast getal voor: je valt af als je minder calorieën eet dan je verbruikt. In onze schema's komen eerst eiwit en vet, en de rest is voor koolhydraten. Bij 70 kilo en 1.600 kcal is dat ongeveer 165 gram per dag.",
+        a: `Daar is geen vast getal voor: je valt af als je minder calorieën eet dan je verbruikt. In onze schema's komen eerst eiwit en vet, en de rest is voor koolhydraten. Bij 70 kilo en 1.600 kcal is dat ongeveer ${f.example} gram per dag.`,
       },
       {
         q: "Wanneer eet je koolhydraatarm?",
@@ -128,7 +130,7 @@ const copy = defineCopy({
       },
       {
         q: "Tellen groente en fruit mee als koolhydraten?",
-        a: "Ja, maar groente bevat er weinig. Een portie broccoli van 200 gram heeft zo'n 8 gram koolhydraten, een appel ongeveer 17 gram. Je krijgt er wel veel vezels en vitamines bij.",
+        a: `Ja, maar groente bevat er weinig. Een portie broccoli van 200 gram heeft zo'n ${f.broccoli} gram koolhydraten, een appel ongeveer ${f.apple} gram. Je krijgt er wel veel vezels en vitamines bij.`,
       },
       {
         q: "Wat is het verschil tussen koolhydraten en suikers?",
@@ -194,14 +196,14 @@ const copy = defineCopy({
       "In your personal nutrition plan, we work out your calories, protein, fat and carbs for you. You get a weekly menu with recipes and a shopping list that adds up to exactly that.",
     boxCta: "Create my personal plan",
     boxNote: "About 3 minutes · you only pay once you choose a plan",
-    faq: [
+    faq: (f: Facts) => [
       {
         q: "How many carbs do I need a day?",
-        a: "The Dutch Health Council advises getting 40 to 70 per cent of your energy from carbohydrates. At 2,000 kcal a day, that's 200 to 350 grams. At 1,600 kcal, it's 160 to 280 grams.",
+        a: `The Dutch Health Council advises getting 40 to 70 per cent of your energy from carbohydrates. At 2,000 kcal a day, that's 200 to 350 grams. At 1,600 kcal, it's ${f.low1600} to ${f.high1600} grams.`,
       },
       {
         q: "How many carbs a day to lose weight?",
-        a: "There's no fixed number: you lose weight when you eat fewer calories than you use. In our plans, protein and fat come first, and the rest goes to carbs. At 70 kilos and 1,600 kcal, that's around 165 grams a day.",
+        a: `There's no fixed number: you lose weight when you eat fewer calories than you use. In our plans, protein and fat come first, and the rest goes to carbs. At 70 kilos and 1,600 kcal, that's around ${f.example} grams a day.`,
       },
       {
         q: "When is a diet low-carb?",
@@ -213,7 +215,7 @@ const copy = defineCopy({
       },
       {
         q: "Do vegetables and fruit count as carbs?",
-        a: "Yes, but vegetables contain few. A 200-gram portion of broccoli has around 8 grams of carbs, an apple around 17 grams. You do get plenty of fibre and vitamins with them.",
+        a: `Yes, but vegetables contain few. A 200-gram portion of broccoli has around ${f.broccoli} grams of carbs, an apple around ${f.apple} grams. You do get plenty of fibre and vitamins with them.`,
       },
       {
         q: "What's the difference between carbs and sugars?",
@@ -237,6 +239,14 @@ export default async function KoolhydratenPage() {
   const g = (x: number) => `${formatNumber(x, Number.isInteger(x) ? 0 : 1, l)} g`;
 
   const split = planSplit(EXAMPLE.kcal, EXAMPLE.kg);
+  const carbsOf = (key: FoodKey, amount: number) => formatNumber(roundNutrients(nutrientsFor(key, amount)).carbs, 0, l);
+  const facts: Facts = {
+    low1600: n(carbGrams(EXAMPLE.kcal, LOW)),
+    high1600: n(carbGrams(EXAMPLE.kcal, HIGH)),
+    example: n(split.carbs),
+    broccoli: carbsOf("broccoli", 200),
+    apple: carbsOf("appel", foods.appel.portions[0].amount),
+  };
   const kcalRows = KCAL_TABLE.map((kcal) => [`${n(kcal)} kcal`, ...[LOW, MID, HIGH].map((s) => `${n(carbGrams(kcal, s))} g`)]);
   const portionRows = PORTION_ROWS.map(({ key, amount, portion }) => {
     const food = foods[key];
@@ -293,7 +303,7 @@ export default async function KoolhydratenPage() {
         <RelatedPages l={l} paths={["/caloriebehoefte-berekenen", "/eiwitten-per-dag", "/vezels-per-dag", "/hoeveel-suiker-per-dag"]} />
       </ArticleBody>
 
-      <FaqAndClose l={l} items={c.faq} />
+      <FaqAndClose l={l} items={c.faq(facts)} />
     </>
   );
 }

@@ -117,10 +117,10 @@ const copy = defineCopy({
     foodsNote: "Afgeronde waarden; per merk verschilt het wat.",
     dayTitle: "Voorbeelddag: zo kom je aan 30 gram vezels of meer",
     dayIntro: "Met gewone producten kom je makkelijk aan je vezels. Zo kan een dag eruitzien:",
-    dayHead: ["Moment", "Wat je eet", "Vezels"],
     moments: { breakfast: "Ontbijt", lunch: "Lunch", snack: "Tussendoor", dinner: "Avondeten" } as Record<Moment, string>,
-    total: "Totaal",
-    dayNote: "Een voorbeeld om te laten zien hoe je aan je vezels komt, geen compleet dagmenu. Pasta en vlees zijn ongekookt gewogen.",
+    gram: (g: string) => `± ${g} g vezels`,
+    total: (g: string) => `Totaal: ± ${g} gram vezels`,
+    dayNote: "Een voorbeeld om te laten zien hoe je aan je vezels komt, geen compleet dagmenu.",
     tipsTitle: "Zo eet je meer vezels",
     tips: [
       "Kies volkoren brood, volkoren pasta en zilvervliesrijst in plaats van de witte varianten.",
@@ -171,7 +171,7 @@ const copy = defineCopy({
   en: {
     metaTitle: "How much fibre a day? Table and example day",
     metaDescription:
-      "How much fibre do you need a day? The advice is 30 to 40 grams. See which foods contain the most fibre, why it fills you up and an example day that gets you there.",
+      "How much fibre do you need a day? The advice is 30 to 40 grams. See which foods contain the most fibre, why it fills you up and an example day.",
     eyebrow: "Nutrition",
     h1: "How much fibre",
     h1Accent: "do you need a day?",
@@ -203,10 +203,10 @@ const copy = defineCopy({
     foodsNote: "Rounded values; they vary a little by brand.",
     dayTitle: "Example day: how to reach 30 grams of fibre or more",
     dayIntro: "With ordinary products, it's easy to reach your fibre. This is what a day could look like:",
-    dayHead: ["Moment", "What you eat", "Fibre"],
     moments: { breakfast: "Breakfast", lunch: "Lunch", snack: "Snack", dinner: "Dinner" } as Record<Moment, string>,
-    total: "Total",
-    dayNote: "An example to show how to reach your fibre, not a complete daily menu. Pasta and meat are weighed uncooked.",
+    gram: (g: string) => `± ${g} g fibre`,
+    total: (g: string) => `Total: around ${g} grams of fibre`,
+    dayNote: "An example to show how to reach your fibre, not a complete daily menu.",
     tipsTitle: "How to eat more fibre",
     tips: [
       "Choose wholemeal bread, wholewheat pasta and brown rice instead of the white versions.",
@@ -291,14 +291,11 @@ export default async function VezelsPage() {
     const v = roundNutrients(nutrientsFor(key, size));
     return [food.name[l], `${portion?.[l] ?? food.portions[0].label[l]} · ${n(size)} ${food.unit}`, `${dec(v.fiber)} g`, `${n(v.kcal)} kcal`];
   });
-  const dayRows = [
-    ...SAMPLE_DAY.map(({ moment, items }) => {
-      const text = list.format(items.map((i) => i.text?.[l] ?? `${n(i.amount)} ${foods[i.key].unit} ${foods[i.key].name[l].toLowerCase()}`));
-      const total = roundNutrients(sumNutrients(items.map((i): [FoodKey, number] => [i.key, i.amount]))).fiber;
-      return [c.moments[moment], text, `${dec(total)} g`];
-    }),
-    [c.total, "", `± ${n(dayTotal)} g`],
-  ];
+  const dayMeals = SAMPLE_DAY.map(({ moment, items }) => ({
+    moment,
+    text: list.format(items.map((i) => i.text?.[l] ?? `${n(i.amount)} ${foods[i.key].unit} ${foods[i.key].name[l].toLowerCase()}`)),
+    fibre: roundNutrients(sumNutrients(items.map((i): [FoodKey, number] => [i.key, i.amount]))).fiber,
+  }));
 
   return (
     <>
@@ -319,7 +316,17 @@ export default async function VezelsPage() {
         </Section>
 
         <Section title={c.dayTitle} paragraphs={[c.dayIntro]}>
-          <DataTable head={c.dayHead} rows={dayRows} note={c.dayNote} minWidth="36rem" />
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {dayMeals.map((m) => (
+              <li key={m.moment} className="card p-4">
+                <p className="font-extrabold">{c.moments[m.moment]}</p>
+                <p className="mt-1 text-muted">{m.text}</p>
+                <p className="mt-2 text-sm font-bold text-brand-700">{c.gram(dec(m.fibre))}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="rounded-[var(--radius-card)] bg-brand-50 p-4 text-lg font-extrabold text-brand-900">{c.total(n(dayTotal))}</p>
+          <p className="text-sm text-muted">{c.dayNote}</p>
         </Section>
 
         <Section title={c.tipsTitle} bullets={c.tips} />
