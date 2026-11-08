@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/config/site";
+import { calorieProductPaths } from "@/content/calorie-products";
 import { knowledgePages } from "@/content/knowledge";
 import { localeUrl, locales } from "@/i18n/config";
 
@@ -23,10 +24,11 @@ const basePages: { path: string; priority: number }[] = [
   { path: "/herroepen", priority: 0.2 },
 ];
 
-/** De vaste pagina's plus alle kennispagina's (rekenhulpen 0,8, de rest 0,7). */
+/** De vaste pagina's, alle kennispagina's (rekenhulpen 0,8, de rest 0,7) en de calorieën per product (0,6). */
 const pages = [
   ...basePages,
   ...knowledgePages.map((k) => ({ path: k.path, priority: k.category === "rekenhulpen" ? 0.8 : 0.7 })),
+  ...calorieProductPaths.map((path) => ({ path, priority: 0.6 })),
 ];
 
 /** Elke pagina in beide talen, met de andere taal als alternatief (hreflang). */
