@@ -2,7 +2,7 @@
 
 import Link from "@/i18n/Link";
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Zap } from "lucide-react";
 import {
   SUBSCRIPTION_DURATIONS,
   applyPercentOff,
@@ -48,8 +48,12 @@ const copy = defineCopy({
     savePercent: (n: number) => `${n}% voordeliger dan per maand`,
     bundleOneOff: (amount: string) => `${amount} goedkoper dan los`,
     bundleMonthly: (amount: string) => `Bespaar ${amount} p/m t.o.v. los`,
-    launch: (label: string, oneOff: boolean, months: number, price: string, regular: string) =>
-      `${label}: ${oneOff ? "nu" : months > 1 ? `eerste ${months} maanden` : "eerste maand"} ${price}${!oneOff && months > 1 ? " p/m" : ""} in plaats van ${regular}`,
+    promoBadge: (label: string, pct: number) => `${label} −${pct}%`,
+    insteadOf: "in plaats van",
+    promoPeriod: (oneOff: boolean, months: number, regular: string) =>
+      oneOff ? `Eenmalig, normaal ${regular}` : months > 1 ? `De eerste ${months} maanden, daarna ${regular} per maand` : `De eerste maand, daarna ${regular} per maand`,
+    termNotePromo: (term: string, total: string) =>
+      `Maandelijks afgeschreven via automatische incasso. Minimaal ${term} (samen ${total}, korting meegerekend), daarna maandelijks opzegbaar.`,
     promoTiers: (label: string, until: string, months: number) =>
       `${label} t/m ${until}: hoe langer je kiest, hoe meer korting op je eerste ${months > 1 ? `${months} maanden` : "maand"}`,
     promoAll: (label: string, summary: string, until: string) => `${label}: ${summary}, op elk pakket. Alleen t/m ${until}.`,
@@ -81,8 +85,12 @@ const copy = defineCopy({
     savePercent: (n: number) => `${n}% cheaper than monthly`,
     bundleOneOff: (amount: string) => `${amount} cheaper than buying separately`,
     bundleMonthly: (amount: string) => `Save ${amount} a month vs. buying separately`,
-    launch: (label: string, oneOff: boolean, months: number, price: string, regular: string) =>
-      `${label}: ${oneOff ? "now" : months > 1 ? `first ${months} months` : "first month"} ${price}${!oneOff && months > 1 ? " a month" : ""} instead of ${regular}`,
+    promoBadge: (label: string, pct: number) => `${label} −${pct}%`,
+    insteadOf: "instead of",
+    promoPeriod: (oneOff: boolean, months: number, regular: string) =>
+      oneOff ? `One-off, normally ${regular}` : months > 1 ? `For your first ${months} months, then ${regular} a month` : `For your first month, then ${regular} a month`,
+    termNotePromo: (term: string, total: string) =>
+      `Billed monthly by direct debit. Minimum ${term} (${total} in total, discount included), then cancel any month.`,
     promoTiers: (label: string, until: string, months: number) =>
       `${label} until ${until}: the longer you choose, the bigger the discount on your first ${months > 1 ? `${months} months` : "month"}`,
     promoAll: (label: string, summary: string, until: string) => `${label}: ${summary}, on every plan. Only until ${until}.`,
@@ -307,6 +315,10 @@ function PriceCard({
   const oneOff = d.months === 0;
   const promoPercent = promo ? (promo.percentOff[duration] ?? 0) : 0;
   const launchPrice = promo && promoPercent > 0 ? applyPercentOff(perMonth, promoPercent) : null;
+  // Zoveel betalingen hebben korting (zoals de checkout rekent: src/lib/billing.ts); de rest van de looptijd het gewone bedrag.
+  const promoPayments = promo && launchPrice !== null ? (oneOff ? 1 : Math.max(1, promo.months)) : 0;
+  const promoTotal = launchPrice !== null && d.months > 1 ? launchPrice * Math.min(promoPayments, d.months) + perMonth * Math.max(0, d.months - promoPayments) : null;
+  const bfTheme = promo?.theme === "blackfriday";
 
   const cta = c.choose[product];
   const href = `/start?plan=${product}&looptijd=${duration}`;
@@ -327,14 +339,43 @@ function PriceCard({
       <h3 className={`text-xl font-extrabold ${featured ? "text-white" : ""}`}>{p.name}</h3>
       <p className={`mt-1 text-sm ${featured ? "text-white/75" : "text-muted"}`}>{p.tagline}</p>
 
-      <div className="mt-6 flex items-end gap-1.5">
-        <span className="text-[2.75rem] leading-none font-extrabold tracking-tight">€{euroAmount(perMonth, l)}</span>
-        <span className={`pb-1 text-sm font-semibold ${featured ? "text-white/70" : "text-muted"}`}>
-          {oneOff ? c.oneOff : c.perMonth}
-        </span>
-      </div>
+      {launchPrice !== null ? (
+        // Tijdens een actie: de prijs mét korting groot, de gewone prijs doorgestreept ernaast.
+        <div className="mt-5">
+          <span
+            className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-extrabold ${
+              featured ? "bg-lime-glow text-brand-950" : bfTheme ? "bg-black text-lime-glow" : "bg-accent-500 text-white"
+            }`}
+          >
+            <Zap className="size-3.5" aria-hidden /> {c.promoBadge(promo!.label, promoPercent)}
+          </span>
+          <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
+            <span className="text-[2.75rem] leading-none font-extrabold tracking-tight">€{euroAmount(launchPrice, l)}</span>
+            <s className={`pb-1 text-xl font-bold ${featured ? "text-white/55" : "text-muted"}`}>
+              <span className="sr-only">{c.insteadOf} </span>€{euroAmount(perMonth, l)}
+            </s>
+            <span className={`pb-1 text-sm font-semibold ${featured ? "text-white/70" : "text-muted"}`}>{oneOff ? c.oneOff : c.perMonth}</span>
+          </div>
+          <p className={`mt-1.5 text-sm font-bold ${featured ? "text-lime-glow" : bfTheme ? "text-ink" : "text-accent-600"}`}>
+            {c.promoPeriod(oneOff, promoPayments, euro(perMonth, l))}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 flex items-end gap-1.5">
+          <span className="text-[2.75rem] leading-none font-extrabold tracking-tight">€{euroAmount(perMonth, l)}</span>
+          <span className={`pb-1 text-sm font-semibold ${featured ? "text-white/70" : "text-muted"}`}>
+            {oneOff ? c.oneOff : c.perMonth}
+          </span>
+        </div>
+      )}
       <p className={`mt-2 min-h-10 text-sm ${featured ? "text-white/75" : "text-muted"}`}>
-        {oneOff ? c.oneOffNote : d.months === 1 ? c.monthlyNote : c.termNote(d.label, euro(total, l))}
+        {oneOff
+          ? c.oneOffNote
+          : d.months === 1
+            ? c.monthlyNote
+            : promoTotal !== null
+              ? c.termNotePromo(d.label, euro(promoTotal, l))
+              : c.termNote(d.label, euro(total, l))}
       </p>
 
       <div className="mt-3 flex min-h-7 flex-wrap gap-2">
@@ -349,12 +390,6 @@ function PriceCard({
           </span>
         )}
       </div>
-
-      {launchPrice !== null && (
-        <p className={`mt-3 rounded-2xl px-3 py-2 text-sm font-semibold ${featured ? "bg-lime-glow/15 text-lime-glow" : "bg-accent-50 text-accent-600"}`}>
-          {c.launch(promo!.label, oneOff, promo!.months, euro(launchPrice, l), euro(perMonth, l))}
-        </p>
-      )}
 
       <ul className="mt-6 space-y-2.5 text-[0.9375rem]">
         {p.features.map((f) => (

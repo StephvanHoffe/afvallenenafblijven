@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { PromoOffer } from "@/components/promo/PromoOffer";
 import Link from "@/i18n/Link";
 import { ArrowRight, Check } from "lucide-react";
 import { FixSection, FutureSection, PainSection } from "@/components/conversion";
@@ -89,6 +90,7 @@ export async function ProductLanding({ content }: { content: ProductLandingConte
     <>
       <div className="bg-gradient-to-b from-brand-50 to-cream">
         <PageHero eyebrow={content.eyebrow} title={content.title} intro={content.intro} image={content.heroImage} imageAlt={content.heroAlt}>
+          <PromoOffer promo={promo} l={l} className="mt-6" />
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href={startHref} className="btn-primary text-lg">
               {c.start[content.product]} <ArrowRight className="size-5" aria-hidden />

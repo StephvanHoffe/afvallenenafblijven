@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PromoOffer } from "@/components/promo/PromoOffer";
 import Image from "next/image";
 import Link from "@/i18n/Link";
 import { ArrowRight, Check, Clock, Dumbbell, Flame, Salad, ShoppingCart, X } from "lucide-react";
@@ -17,7 +18,7 @@ import { FutureSection, PainSection } from "@/components/conversion";
 import { faqInOrder } from "@/content/faq";
 import { currentPromotion } from "@/lib/promotion";
 import { site } from "@/config/site";
-import { lowestMonthlyPrice, productFor, type ProductId } from "@/config/pricing";
+import { PRODUCT_IDS, SUBSCRIPTION_DURATIONS, applyPercentOff, lowestMonthlyPrice, monthlyPrice, productFor, type ProductId } from "@/config/pricing";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
 import { getLocale } from "@/i18n/server";
@@ -34,6 +35,9 @@ const copy = defineCopy<{
   priceFrom: string;
   perMonth: (price: string, perWeek: string) => string;
   priceNote: string;
+  insteadOf: string;
+  promoPerMonth: (price: string) => string;
+  promoPeriod: (months: number) => string;
   heroAlt: string;
   mealLabel: string;
   mealName: string;
@@ -90,6 +94,9 @@ const copy = defineCopy<{
     priceFrom: "Al vanaf",
     perMonth: (price, perWeek) => `${price} per maand (${perWeek} per week)`,
     priceNote: "maandelijks via automatische incasso",
+    insteadOf: "in plaats van",
+    promoPerMonth: (price) => `${price} per maand`,
+    promoPeriod: (months) => (months > 1 ? `de eerste ${months} maanden` : "de eerste maand"),
     heroAlt: "Vrouw doet thuis een buikspieroefening op een yogamat",
     mealLabel: "Lunch · 10 min",
     mealName: "Zalmbowl met ei & groente",
@@ -159,6 +166,9 @@ const copy = defineCopy<{
     priceFrom: "From just",
     perMonth: (price, perWeek) => `${price} a month (${perWeek} a week)`,
     priceNote: "paid monthly by direct debit",
+    insteadOf: "instead of",
+    promoPerMonth: (price) => `${price} a month`,
+    promoPeriod: (months) => (months > 1 ? `for your first ${months} months` : "for your first month"),
     heroAlt: "Woman doing an ab exercise on a yoga mat at home",
     mealLabel: "Lunch · 10 min",
     mealName: "Salmon bowl with egg & veg",
@@ -234,6 +244,10 @@ export default async function HomePage() {
   // De twijfels die het afsluiten tegenhouden eerst.
   const faq = faqInOrder(l, ["opzeggen", "garantie", "abonnement", "persoonlijk", "niet-afvallen", "resultaat", "snel"]);
   const price = lowestMonthlyPrice();
+  // De laagste prijs mét actiekorting (zelfde regels als de checkout), voor de "vanaf"-regel.
+  const promoPrice = promo
+    ? Math.min(...PRODUCT_IDS.flatMap((p) => SUBSCRIPTION_DURATIONS.map((d) => applyPercentOff(monthlyPrice(p, d), promo.percentOff[d] ?? 0))))
+    : null;
 
   return (
     <>
@@ -242,9 +256,13 @@ export default async function HomePage() {
         <div className="absolute inset-x-0 top-0 -z-10 h-[38rem] bg-gradient-to-b from-brand-50 to-cream" />
         <div className="container-page grid items-center gap-12 pt-10 pb-16 lg:grid-cols-[1.05fr_1fr] lg:pt-16 lg:pb-24">
           <div>
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
-              <span className="size-2 rounded-full bg-brand-500" aria-hidden /> {c.badge}
-            </p>
+            {promo ? (
+              <PromoOffer promo={promo} l={l} className="mb-5" />
+            ) : (
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-brand-800">
+                <span className="size-2 rounded-full bg-brand-500" aria-hidden /> {c.badge}
+              </p>
+            )}
             <h1 className="heading-xl">
               <span className="eyebrow mb-3 block">{c.h1Label}</span>
               <span className="sr-only">: </span>
@@ -263,10 +281,22 @@ export default async function HomePage() {
                 {c.sample}
               </Link>
             </div>
-            <p className="mt-4 text-[0.9375rem] font-semibold text-ink/80">
-              {c.priceFrom} <span className="text-brand-700">{c.perMonth(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> ·{" "}
-              {c.priceNote}
-            </p>
+            {promoPrice !== null ? (
+              // Tijdens een actie: de laagste prijs mét korting, de gewone doorgestreept.
+              <p className="mt-4 text-[0.9375rem] font-semibold text-ink/80">
+                {c.priceFrom}{" "}
+                <s className="text-muted">
+                  <span className="sr-only">{c.insteadOf} </span>
+                  {euro(price, l)}
+                </s>{" "}
+                <span className="font-extrabold text-brand-700">{c.promoPerMonth(euro(promoPrice, l))}</span> · {c.promoPeriod(promo!.months)}
+              </p>
+            ) : (
+              <p className="mt-4 text-[0.9375rem] font-semibold text-ink/80">
+                {c.priceFrom} <span className="text-brand-700">{c.perMonth(euro(price, l), euro(Math.round((price * 12) / 52), l))}</span> ·{" "}
+                {c.priceNote}
+              </p>
+            )}
             <div className="mt-8">
               <TrustRow />
             </div>
