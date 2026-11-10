@@ -82,11 +82,15 @@ interface SharedCopy {
   offerAutoCode: (code: string) => string;
   offerUntil: (until: string) => string;
   /** Prijzen direct bij de eerste vraag: "vanaf"-prijs per product, met de actie verrekend. */
-  priceFromPerMonth: string;
+  /** In elke doelknop: "vanaf € 4,48 p/m" (de laagste maandprijs, met de lopende actie verrekend). */
+  priceFrom: string;
+  pricePerMonth: string;
+  priceInsteadOf: string;
   priceAll: string;
   priceLabels: Record<ProductId, string>;
-  priceNote: string;
-  priceNotePromo: (label: string, months: number) => string;
+  /** Onder de keuzes: de prijs per product en waar die voor geldt. */
+  priceNote: (list: string) => string;
+  priceNotePromo: (list: string, label: string, months: number) => string;
   pickTitle: string;
   /** Bovenaan: de eerste vraag van de vragenlijst, zodat je meteen begint. */
   quizEyebrow: string;
@@ -126,11 +130,13 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       offerAuto: "Wordt automatisch toegepast in je winkelwagen",
       offerAutoCode: (code) => `Code ${code} wordt automatisch toegepast in je winkelwagen`,
       offerUntil: (until) => `t/m ${until}`,
-      priceFromPerMonth: "Vanaf, per maand:",
+      priceFrom: "vanaf",
+      pricePerMonth: "p/m",
+      priceInsteadOf: "in plaats van",
       priceAll: "Alle prijzen",
-      priceLabels: { voeding: "Voeding", training: "Training", bundel: "Voeding + training" },
-      priceNote: "Prijzen per maand bij 12 maanden; maandelijks opzegbaar kan ook.",
-      priceNotePromo: (label, months) => `Prijzen per maand bij 12 maanden, met ${label}-korting op de eerste ${months} maanden; maandelijks opzegbaar kan ook.`,
+      priceLabels: { voeding: "voeding", training: "training", bundel: "voeding + training" },
+      priceNote: (list) => `Per maand bij 12 maanden: ${list}. Maandelijks opzegbaar kan ook.`,
+      priceNotePromo: (list, label, months) => `Per maand bij 12 maanden: ${list}, met ${label}-korting op de eerste ${months} maanden. Maandelijks opzegbaar kan ook.`,
       pickTitle: "Waar wil je aan werken?",
       quizEyebrow: "Gratis vragenlijst · ± 3 minuten",
       quizStep: "Vraag 1",
@@ -225,11 +231,13 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       offerAuto: "Applied automatically in your basket",
       offerAutoCode: (code) => `Code ${code} is applied automatically in your basket`,
       offerUntil: (until) => `until ${until}`,
-      priceFromPerMonth: "From, per month:",
+      priceFrom: "from",
+      pricePerMonth: "/mo",
+      priceInsteadOf: "instead of",
       priceAll: "All prices",
-      priceLabels: { voeding: "Nutrition", training: "Training", bundel: "Nutrition + training" },
-      priceNote: "Prices per month with 12 months; monthly cancellation is also possible.",
-      priceNotePromo: (label, months) => `Prices per month with 12 months, with the ${label} discount on your first ${months} months; monthly cancellation is also possible.`,
+      priceLabels: { voeding: "nutrition", training: "training", bundel: "nutrition + training" },
+      priceNote: (list) => `Per month with 12 months: ${list}. Monthly cancellation is also possible.`,
+      priceNotePromo: (list, label, months) => `Per month with 12 months: ${list}, with the ${label} discount on your first ${months} months. Monthly cancellation is also possible.`,
       pickTitle: "What would you like to work on?",
       quizEyebrow: "Free questionnaire · about 3 minutes",
       quizStep: "Question 1",

@@ -90,43 +90,37 @@ async function OfferLine({ searchParams, l, fallback }: { searchParams: Promise<
   return <OfferBanner title={offer} note={landingCopy[l].shared.offerAutoCode(code)} />;
 }
 
-/**
- * Wat een plan kost, direct onder de eerste vraag: de vanaf-prijs per product
- * (bij 12 maanden), met een lopende actie de actieprijs en de gewone prijs
- * doorgestreept. Compact, zodat de keuzes zelf in beeld blijven.
- */
-function PriceChips({ products, promo, l }: { products: readonly ProductId[]; promo: PromoView | null; l: Locale }) {
+/** De vanaf-prijs voor de doelknoppen: de laagste maandprijs van de producten op deze pagina, met de lopende actie verrekend. */
+function lowestFromPrice(products: readonly ProductId[], promo: PromoView | null): { now: number; regular: number } {
+  return products.map((p) => fromPrice(p, promo?.percentOff)).reduce((a, b) => (b.now < a.now ? b : a));
+}
+
+/** In een doelknop: "vanaf € 8,95 € 4,48 p/m" (met actie de gewone prijs doorgestreept). */
+function ButtonPrice({ price, l }: { price: { now: number; regular: number }; l: Locale }) {
   const c = landingCopy[l].shared;
-  const items = products.map((p) => ({ p, ...fromPrice(p, promo?.percentOff) }));
   return (
-    <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[0.8125rem] leading-snug">
-      <span className="font-semibold text-muted">{c.priceFromPerMonth}</span>
-      {items.map((i) => (
-        <span key={i.p} className="whitespace-nowrap">
-          <span className="font-semibold text-ink/80">{c.priceLabels[i.p]}</span>{" "}
-          {i.now < i.regular && (
-            <s className="text-muted tabular-nums">
-              <span className="sr-only">{l === "en" ? "instead of " : "in plaats van "}</span>
-              {euro(i.regular, l)}
-            </s>
-          )}{" "}
-          <strong className="font-extrabold text-brand-700 tabular-nums">{euro(i.now, l)}</strong>
-        </span>
-      ))}
-    </p>
+    <span className="mt-0.5 block text-xs leading-tight font-semibold text-muted">
+      {c.priceFrom}{" "}
+      {price.now < price.regular && (
+        <s className="tabular-nums">
+          <span className="sr-only">{c.priceInsteadOf} </span>
+          {euro(price.regular, l)}
+        </s>
+      )}{" "}
+      <span className="font-extrabold text-brand-700 tabular-nums">{euro(price.now, l)}</span> {c.pricePerMonth}
+    </span>
   );
 }
 
-/** Onder de keuzes: waar de vanaf-prijs voor geldt, en een link naar alle prijzen. */
+/** Onder de keuzes: de prijs per product en waar die voor geldt, met een link naar alle prijzen. */
 function PriceNote({ products, promo, l }: { products: readonly ProductId[]; promo: PromoView | null; l: Locale }) {
   const c = landingCopy[l].shared;
-  const discounted = products.some((p) => {
-    const f = fromPrice(p, promo?.percentOff);
-    return f.now < f.regular;
-  });
+  const items = products.map((p) => ({ p, ...fromPrice(p, promo?.percentOff) }));
+  const list = items.map((i) => `${c.priceLabels[i.p]} ${euro(i.now, l)}`).join(", ");
+  const discounted = items.some((i) => i.now < i.regular);
   return (
     <p className="mt-1.5 text-xs leading-snug text-muted">
-      {discounted && promo ? c.priceNotePromo(promo.label, promo.months) : c.priceNote}{" "}
+      {discounted && promo ? c.priceNotePromo(list, promo.label, promo.months) : c.priceNote(list)}{" "}
       <a href="#prijzen" className="font-semibold text-brand-700 underline underline-offset-2">
         {c.priceAll}
       </a>
@@ -168,6 +162,8 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
   const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
   // De korting bovenaan: tijdens Black Friday in de Black Friday-stijl, anders de gewone actie. Een code uit de link gaat voor (die vervangt de actiekorting).
   const promoBadge = <PromoOffer promo={promo} l={l} />;
+  const priceProducts = settings.product ? [settings.product] : (settings.pricing.only ?? PRODUCT_IDS);
+  const goalPrice = lowestFromPrice(priceProducts, promo);
 
   return (
     <>
@@ -218,8 +214,6 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
               <h2 id="lp-eerste-vraag" className="mt-2 text-xl leading-tight font-extrabold sm:text-2xl">
                 {c.quizTitle}
               </h2>
-              {/* Meteen zichtbaar wat een plan kost (met de lopende actie verrekend). */}
-              <PriceChips products={settings.pricing.only ?? PRODUCT_IDS} promo={promo} l={l} />
               <div role="group" aria-labelledby="lp-eerste-vraag" className="mt-3 grid grid-cols-2 gap-2 sm:gap-2.5">
                 {settings.goals.map((goal) => {
                   const Icon = goalIcons[goal];
@@ -233,7 +227,11 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
                       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
                         <Icon className="size-[1.125rem]" aria-hidden />
                       </span>
-                      <span className="min-w-0">{labels.goal[goal].label}</span>
+                      <span className="min-w-0">
+                        <span className="block">{labels.goal[goal].label}</span>
+                        {/* Meteen zichtbaar wat een plan kost. */}
+                        <ButtonPrice price={goalPrice} l={l} />
+                      </span>
                     </Link>
                   );
                 })}
