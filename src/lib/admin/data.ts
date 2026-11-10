@@ -110,7 +110,8 @@ export interface AdminCustomerDetail {
   orders: AdminOrderRow[];
   payments: AdminPaymentRow[];
   plans: AdminPlanRow[];
-  intake: { data: Intake; consents: Record<string, unknown>; createdAt: Date } | null;
+  /** detailsPending: korte route, de klant heeft de vragenlijst na het betalen nog niet aangevuld (nog geen schema). */
+  intake: { data: Intake; consents: Record<string, unknown>; createdAt: Date; detailsPending?: boolean } | null;
   checkins: { data: CheckinData; forSeq: number | null; createdAt: Date }[];
   weekly: { seq: number; week: number; data: WeeklyData; adjustment: WeeklyAdjustment | null; status: string; createdAt: Date }[];
 }
@@ -415,8 +416,8 @@ const dbAdminData: AdminData = {
              c.name as customer_name, c.email as customer_email
       from plans p join customers c on c.id = p.customer_id
       where p.customer_id = ${id} order by p.created_at desc, p.type`;
-    const [intake] = await sql<{ data: Intake; consents: Record<string, unknown>; created_at: Date }[]>`
-      select data, consents, created_at from intakes where customer_id = ${id} order by created_at desc limit 1`;
+    const [intake] = await sql<{ data: Intake; consents: Record<string, unknown>; created_at: Date; details_pending: boolean }[]>`
+      select data, consents, created_at, details_pending from intakes where customer_id = ${id} order by created_at desc limit 1`;
     const checkins = await sql<{ data: CheckinData; order_id: string | null; for_seq: number | null; created_at: Date }[]>`
       select data, order_id, for_seq, created_at from checkins where customer_id = ${id} order by created_at desc`;
     const payments = await sql<
@@ -456,7 +457,7 @@ const dbAdminData: AdminData = {
         };
       }),
       plans: plans.map(toPlan),
-      intake: intake ? { data: intake.data, consents: intake.consents, createdAt: intake.created_at } : null,
+      intake: intake ? { data: intake.data, consents: intake.consents, createdAt: intake.created_at, detailsPending: intake.details_pending } : null,
       checkins: checkins.map((r) => ({ data: r.data, forSeq: r.for_seq, createdAt: r.created_at })),
       weekly: (await weeklyLogsForCustomer(id))
         .reverse()

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PromoPill } from "@/components/promo/PromoOffer";
-import { Quiz, type QuizResume } from "@/components/quiz/Quiz";
+import { Quiz, type QuizFlow, type QuizResume } from "@/components/quiz/Quiz";
+import { site } from "@/config/site";
 import { DEFAULT_DURATION, isDurationId, isProductId } from "@/config/pricing";
 import { defineCopy } from "@/i18n/config";
 import { alternates } from "@/i18n/metadata";
@@ -51,9 +52,14 @@ async function QuizLoader({ searchParams }: Pick<PageProps<"/[lang]/start">, "se
   const promo = await currentPromotion(await getLocale());
   const code = typeof sp.code === "string" ? normalizeCode(sp.code) || null : null;
   const resume = typeof sp.hervat === "string" ? await loadResume(sp.hervat) : null;
+  // Korte route voor bezoekers via een landingspagina (?lp=, meegegeven door de links op /lp), of voor iedereen.
+  const fromLanding = typeof sp.lp === "string" && sp.lp.length > 0;
+  const mode = site.shortCheckout;
+  const flow: QuizFlow = resume ? (resume.short ? "kort" : "volledig") : mode === "alle" || (mode === "lp" && fromLanding) ? "kort" : "volledig";
   return (
     <Quiz
-      key={`${plan ?? "geen"}-${duration}-${goal ?? ""}-${resume ? "hervat" : ""}`}
+      key={`${plan ?? "geen"}-${duration}-${goal ?? ""}-${resume ? "hervat" : ""}-${flow}`}
+      flow={flow}
       initialProduct={plan}
       initialDuration={duration}
       initialGoal={goal}
@@ -81,7 +87,7 @@ function QuizSkeleton() {
 }
 
 /** Een begonnen bestelling uit de herinneringsmail (?hervat=), als die nog geldig is. */
-async function loadResume(id: string): Promise<{ quiz: QuizResume; code: string | null } | null> {
+async function loadResume(id: string): Promise<{ quiz: QuizResume; code: string | null; short: boolean } | null> {
   if (!isDatabaseConfigured()) return null;
   try {
     const row = await resumableIntake(id);
@@ -96,6 +102,7 @@ async function loadResume(id: string): Promise<{ quiz: QuizResume; code: string 
         duration: row.duration && isDurationId(row.duration) ? row.duration : null,
       },
       code: row.discount_code,
+      short: row.details_pending,
     };
   } catch {
     return null;

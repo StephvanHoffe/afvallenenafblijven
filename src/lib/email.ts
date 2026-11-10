@@ -803,6 +803,11 @@ const orderCopy = defineCopy({
       `Op je bestelling zijn onze <a href="${termsHref}" style="color:#1c7a45;">algemene voorwaarden</a> van toepassing. Opzeggen kan altijd online via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. Je factuur vind je in Mijn schema's, onder Betalingen.`,
     textTerms: "Algemene voorwaarden",
     textCancel: "Opzeggen",
+    detailsTitle: "Nog één stap: maak je schema compleet",
+    detailsText:
+      "Beantwoord nog een paar vragen over wat je lekker vindt, je maaltijden en je training (± 2 minuten). Zodra je dat hebt gedaan, maken we je schema; binnen 2 uur staat het klaar.",
+    detailsButton: "Maak mijn schema compleet",
+    detailsTextLink: (link: string) => `Maak je schema compleet: ${link}`,
   },
   en: {
     subject: (orderNumber: string) => `Order confirmation ${orderNumber}`,
@@ -819,6 +824,11 @@ const orderCopy = defineCopy({
       `Our <a href="${termsHref}" style="color:#1c7a45;">terms and conditions</a> apply to your order. You can cancel online at any time via <a href="${cancelHref}" style="color:#1c7a45;">${cancelLabel}</a>. You'll find your invoice in My plans, under Payments.`,
     textTerms: "Terms and conditions",
     textCancel: "Cancel",
+    detailsTitle: "One more step: complete your plan",
+    detailsText:
+      "Answer a few more questions about what you like to eat, your meals and your workouts (about 2 minutes). As soon as you've done that, we'll create your plan; it will be ready within 2 hours.",
+    detailsButton: "Complete my plan",
+    detailsTextLink: (link: string) => `Complete your plan: ${link}`,
   },
 });
 
@@ -836,11 +846,22 @@ export function orderConfirmationEmail(
     paidAt?: Date;
     /** Begin van de eerste periode (de gekozen startdatum). */
     startsAt?: Date;
+    /** Korte route: link om de vragenlijst aan te vullen (het schema volgt daarna). */
+    detailsLink?: string;
     locale?: Locale;
   },
   l: Locale = input.locale ?? "nl",
 ): Mail {
   const c = orderCopy[l];
+  const details = input.detailsLink
+    ? `<div style="margin:0 0 20px;padding:16px 18px;border-radius:14px;background:#eef8e3;">
+<p style="margin:0 0 6px;font-weight:bold;">${escapeHtml(c.detailsTitle)}</p>
+<p style="margin:0;">${escapeHtml(c.detailsText)}</p>
+${button(input.detailsLink, c.detailsButton)}
+</div>
+`
+    : "";
+  const detailsText = input.detailsLink ? `${c.detailsTitle}\n${c.detailsText}\n${c.detailsTextLink(input.detailsLink)}\n\n` : "";
   const consent = c.consent(formatDate(dayAsDate(withdrawalLastDay(input.paidAt ?? new Date())), l));
   const g = common[l];
   const rows: [string, string][] = [
@@ -860,7 +881,7 @@ export function orderConfirmationEmail(
     html: layout(
     t.subject,
     `<p>${g.hi(escapeHtml(input.name))}</p>
-${paragraphs(t.intro)}
+${details}${paragraphs(t.intro)}
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:15px;">
 ${rows.map(([k, v]) => `<tr><td style="padding:6px 0;color:#5b6b62;">${escapeHtml(k)}</td><td style="padding:6px 0;text-align:right;font-weight:bold;">${escapeHtml(v)}</td></tr>`).join("")}
 </table>
@@ -870,8 +891,51 @@ ${input.incassoNote ? `<p style="font-size:14px;color:#5b6b62;">${escapeHtml(inp
 <p>${g.team(escapeHtml(site.name))}</p>`,
     l,
     ),
-    text: `${g.hi(input.name)}\n\n${t.intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`,
+    text: `${g.hi(input.name)}\n\n${detailsText}${t.intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\n${input.incassoNote ? `${input.incassoNote}\n\n` : ""}${consent}\n\n${c.textTerms}: ${termsHref}\n${c.textCancel}: ${cancelHref}\n\n${g.team(site.name)}`,
   }));
+}
+
+const detailsReminderCopy = defineCopy({
+  nl: {
+    subject: (n: number): string => (n >= 2 ? "Laatste herinnering: je schema wacht nog op een paar antwoorden" : "Je schema wacht nog op een paar antwoorden"),
+    intro:
+      "Bedankt voor je bestelling! Om je persoonlijke schema te maken, hebben we nog een paar antwoorden van je nodig: wat je lekker vindt, je maaltijden en je training. Dat kost ongeveer 2 minuten. Daarna staat je schema binnen 2 uur klaar.",
+    button: "Maak mijn schema compleet",
+    note: "Lukt het niet of heb je een vraag? Beantwoord deze e-mail, dan helpen we je.",
+    textLink: (link: string) => `Maak je schema compleet: ${link}`,
+  },
+  en: {
+    subject: (n: number): string => (n >= 2 ? "Final reminder: your plan is waiting for a few answers" : "Your plan is waiting for a few answers"),
+    intro:
+      "Thank you for your order! To create your personal plan, we still need a few answers from you: what you like to eat, your meals and your workouts. It takes about 2 minutes. After that, your plan will be ready within 2 hours.",
+    button: "Complete my plan",
+    note: "Having trouble or got a question? Just reply to this email and we'll help you.",
+    textLink: (link: string) => `Complete your plan: ${link}`,
+  },
+});
+
+/** Korte route: herinnering om de vragenlijst na het betalen aan te vullen (servicemail, geen marketing). */
+export function detailsReminderEmail(
+  input: { to: string; name: string; link: string; reminder: number; locale?: Locale },
+  l: Locale = input.locale ?? "nl",
+): Mail {
+  const c = detailsReminderCopy[l];
+  const g = common[l];
+  const subject = c.subject(input.reminder);
+  return {
+    to: input.to,
+    subject,
+    html: layout(
+      subject,
+      `<p>${g.hi(escapeHtml(input.name))}</p>
+${paragraphs(c.intro)}
+${button(input.link, c.button)}
+<p style="font-size:14px;color:#5b6b62;">${escapeHtml(c.note)}</p>
+<p>${g.team(escapeHtml(site.name))}</p>`,
+      l,
+    ),
+    text: `${g.hi(input.name)}\n\n${c.intro}\n\n${c.textLink(input.link)}\n\n${c.note}\n\n${g.team(site.name)}`,
+  };
 }
 
 const checkoutReminderCopy = defineCopy({

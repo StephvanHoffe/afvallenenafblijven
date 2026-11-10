@@ -99,6 +99,15 @@ export const site = {
   /** Bij het afrekenen kiest de klant de startdatum: vandaag of tot zoveel dagen later. */
   startChoiceDays: 7,
 
+  /**
+   * Korte route (zie README): vóór het betalen alleen doel, keuze, lengte/gewicht
+   * en de gezondheidscheck; de rest van de vragenlijst vult de klant na het
+   * betalen in, en dan pas maken we het schema. Voor wie: "lp" = bezoekers die
+   * via een landingspagina (/lp, /lp/voeding, /lp/training) binnenkomen,
+   * "alle" = iedereen, "uit" = niemand (de hele vragenlijst vóór het betalen).
+   */
+  shortCheckout: "lp" as "lp" | "alle" | "uit",
+
   checkin: {
     /** Zoveel dagen voor de start van de nieuwe periode opent de check-in (4 = donderdag). */
     opensDaysBefore: 4,

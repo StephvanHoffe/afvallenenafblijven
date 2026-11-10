@@ -140,6 +140,14 @@ async function Funnel({ searchParams }: Pick<PageProps<"/beheer/funnel">, "searc
         />
       </div>
 
+      {r.shortRoute && r.shortRoute.paid > 0 && (
+        <p className="mt-6 rounded-2xl border border-line bg-white px-5 py-4 text-sm">
+          <strong>Korte route</strong> (vóór het betalen alleen doel, keuze, lengte/gewicht en gezondheidscheck):{" "}
+          {formatNumber(r.shortRoute.paid)} betaald, waarvan {formatNumber(r.shortRoute.completed)} de vragenlijst daarna hebben aangevuld (
+          {pct(r.shortRoute.completed, r.shortRoute.paid)}). Wie dat nog niet deed, krijgt herinneringen; zonder aanvullen is er geen schema.
+        </p>
+      )}
+
       <Panel title="Van bezoek tot betaling" className="mt-6">
         <ol className="divide-y divide-line">
           {r.stages.map((s, i) => {

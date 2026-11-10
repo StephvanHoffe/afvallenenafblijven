@@ -75,6 +75,8 @@ export interface FunnelReport {
   sources: string[];
   /** Niet meegeteld: bezoeken uit datacenters (robots die advertenties en links controleren). */
   robots: { visits: number; places: string[] };
+  /** Korte route: bestellingen in de periode, en hoeveel daarvan de vragenlijst na het betalen hebben aangevuld. */
+  shortRoute?: { paid: number; completed: number };
 }
 
 export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport> {
@@ -210,6 +212,11 @@ export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport
       and not exists (select 1 from orders o join customers c on c.id = o.customer_id where lower(c.email) = lower(i.email) and o.created_at > i.created_at)
     order by i.created_at desc limit 100`;
 
+  const [shortRoute] = await sql<{ paid: number; completed: number }[]>`
+    select count(*)::int as paid, count(*) filter (where i.details_completed_at is not null)::int as completed
+    from orders o join intakes i on i.id = o.intake_id
+    where o.created_at >= ${from} and (i.details_pending or i.details_completed_at is not null)`;
+
   const sources = await sql<{ source: string }[]>`
     select distinct source from funnel_events where created_at >= ${from} and source is not null order by 1 limit 30`;
   const robots = await datacenterVisits(sql, from);
@@ -240,5 +247,6 @@ export async function funnelReport(filters: FunnelFilters): Promise<FunnelReport
     })),
     sources: sources.map((r) => r.source),
     robots,
+    shortRoute: shortRoute ? { paid: shortRoute.paid, completed: shortRoute.completed } : undefined,
   };
 }

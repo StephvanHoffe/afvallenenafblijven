@@ -34,7 +34,7 @@ const copy = defineCopy({
 
 /** Pagina's zonder zwevende knop: de vragenlijst zelf, de klantomgeving en de juridische teksten. */
 const HIDDEN =
-  /^\/(start|account|bedankt|inloggen|schema|herroepen|abonnement-opzeggen|algemene-voorwaarden|privacybeleid|cookiebeleid|disclaimer)(\/|$)/;
+  /^\/(start|account|bedankt|inloggen|schema|schema-aanvullen|herroepen|abonnement-opzeggen|algemene-voorwaarden|privacybeleid|cookiebeleid|disclaimer)(\/|$)/;
 
 /** Productpagina's en campagnevarianten starten de vragenlijst met dat plan al gekozen. */
 const PRODUCT_PAGES: Record<string, ProductId> = {

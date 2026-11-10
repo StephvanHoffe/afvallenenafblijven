@@ -22,6 +22,13 @@ export const ADMIN_TOPICS = [
     trigger: "Direct na een gelukte eerste betaling: een afgesloten abonnement of een los schema.",
   },
   {
+    id: "vragenlijst-niet-aangevuld",
+    group: "Bestellingen en abonnementen",
+    label: "Vragenlijst na betaling niet aangevuld",
+    trigger:
+      "Korte route: als een klant 3 dagen na het betalen de rest van de vragenlijst nog niet heeft ingevuld (na 3 herinneringen). Er is dan nog geen schema; neem contact op of bied terugbetaling aan.",
+  },
+  {
     id: "opgezegd",
     group: "Bestellingen en abonnementen",
     label: "Abonnement opgezegd",

@@ -122,6 +122,22 @@ Website voor het verkopen van persoonlijke **voedingsschema's**, **trainingssche
 - Veiligheidscheck: geen schema bij zwangerschap of borstvoeding, een eetstoornis, ondergewicht of een ongezond streefgewicht. Bij medische aandoeningen moet de klant eerst bevestigen dat er met een arts is overlegd.
 - Automatisch opschonen van gegevens volgens de bewaartermijnen uit het privacybeleid.
 
+### Korte route (eerst betalen, daarna de rest van de vragenlijst)
+
+Voor bezoekers via een landingspagina (`/lp`, `/lp/voeding`, `/lp/training`; de links geven `?lp=` mee) is de weg naar de prijs korter:
+
+1. **Doel** (al gekozen op de landingspagina) → **voeding, training of beide** → **lengte, gewicht en streefgewicht** → **korte gezondheidscheck**: 18 jaar of ouder (vinkje), zwanger/borstvoeding, eetstoornis, medische aandoening (met akkoord van de arts).
+2. **Prijzen en betalen**, met naam en e-mail in het afrekenblok.
+3. Na het betalen: **"Maak je schema compleet"** (`/schema-aanvullen?bestelling=…`, ± 2 minuten): geslacht, leeftijd, tempo, activiteit, eten en training, en daarna het persoonlijke dagdoel. Pas dan maken we het eerste schema; "binnen 2 uur" telt vanaf dat moment.
+
+Waarom deze vragen vóór het betalen: daarmee is de hele veiligheidscheck (`src/lib/safety.ts`) al gedaan, dus niemand betaalt voor een schema dat we daarna moeten weigeren. Geslacht, leeftijd en activiteit staan tot het aanvullen als tijdelijke waarden in de intake (`intakeFromShort` in `src/lib/intake.ts`); zolang `intakes.details_pending` aanstaat, wordt er geen schema gemaakt (`src/lib/fulfillment.ts`, `src/lib/details.ts`).
+
+- **Instellen voor wie**: `shortCheckout` in `src/config/site.ts`: `"lp"` (standaard), `"alle"` (iedereen) of `"uit"`.
+- **Bedankpagina** toont "Nog één stap: maak je schema compleet"; de orderbevestiging heeft dezelfde knop; in Mijn schema's staat een melding tot het is ingevuld.
+- **Herinneringen** (servicemails): na 2 uur, na 1 dag en na 3 dagen. Bij de laatste krijg jij de melding "Vragenlijst na betaling niet aangevuld" (Beheer → E-mails → Meldingen aan jou), want dan is er nog geen schema: neem contact op of bied terugbetaling aan.
+- **Beheer**: bij de klant staat "Korte route: nog niet aangevuld" boven de antwoorden; de funnel toont hoeveel betalers de vragenlijst daarna hebben aangevuld (event `details_complete`).
+- Een niet-afgeronde betaling uit de korte route gaat bij "verder waar je was" (`?hervat=`) ook weer via de korte route.
+
 ## Techniek
 
 Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind CSS 4 · Mollie (API v2) · Anthropic SDK (Claude Opus 5.5, structured outputs) · PostgreSQL · SMTP (nodemailer).

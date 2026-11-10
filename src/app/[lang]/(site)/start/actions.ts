@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DURATION_IDS, PRODUCT_IDS, isSubscription, type DurationId, type ProductId } from "@/config/pricing";
-import { consentSchema, customerSchema, intakeMessage, intakeSchema } from "@/lib/intake";
+import { consentSchema, customerSchema, intakeFromShort, intakeMessage, intakeSchema, shortIntakeSchema, type Intake } from "@/lib/intake";
 import { campaignSchema } from "@/lib/campaign";
 import { checkSafety } from "@/lib/safety";
 import { isDatabaseConfigured, loadStoredConfig } from "@/lib/db";
@@ -71,6 +71,8 @@ const payloadSchema = z.object({
   discountCode: z.string().max(40).nullish().catch(null),
   /** Gekozen startdatum (JJJJ-MM-DD); ontbreekt of ongeldig = vandaag. */
   startDay: z.string().max(10).nullish().catch(null),
+  /** "kort": alleen de gezondheidscheck vóór het betalen, de rest van de vragenlijst daarna (zie README → Korte route). */
+  flow: z.enum(["volledig", "kort"]).nullish().catch(null),
 });
 
 export type DiscountCheck = { ok: true; code: string; label: string; terms: DiscountTerms } | { ok: false; error: string };
@@ -107,11 +109,21 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
     return { error: intakeMessage(payload.error.issues[0]?.message ?? c.checkDetails, locale) };
   }
   const { customer, consents, product, duration } = payload.data;
-  const intake = intakeSchema.safeParse({ ...(payload.data.intake as object), product });
-  if (!intake.success) {
-    return { error: intakeMessage(intake.error.issues[0]?.message ?? c.checkAnswers, locale) };
+  const short = payload.data.flow === "kort";
+  let intakeData: Intake;
+  if (short) {
+    // Korte route: de gezondheidscheck nu, de rest van de vragenlijst na het betalen.
+    const parsed = shortIntakeSchema.safeParse({ ...(payload.data.intake as object), product });
+    if (!parsed.success) return { error: intakeMessage(parsed.error.issues[0]?.message ?? c.checkAnswers, locale) };
+    intakeData = intakeFromShort(parsed.data);
+  } else {
+    const parsed = intakeSchema.safeParse({ ...(payload.data.intake as object), product });
+    if (!parsed.success) return { error: intakeMessage(parsed.error.issues[0]?.message ?? c.checkAnswers, locale) };
+    intakeData = parsed.data;
   }
+  const intake = { data: intakeData };
 
+  // Ook bij de korte route volledig: alles wat tot een weigering kan leiden, is al gevraagd.
   const safety = checkSafety(intake.data, locale);
   if (!safety.ok) return { error: safety.reason };
 
@@ -130,6 +142,8 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
     discount = row;
   }
 
+  // Alleen vandaag t/m 7 dagen later; anders beginnen we vandaag.
+  const startDay = payload.data.startDay && startDayOptions().includes(payload.data.startDay) ? payload.data.startDay : null;
   let url: string;
   try {
     const intakeId = await createIntake({
@@ -143,9 +157,9 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
       device: payload.data.device ?? null,
       discountCode: discount?.code ?? null,
       duration,
+      detailsPending: short,
+      startDay,
     });
-    // Alleen vandaag t/m 7 dagen later; anders beginnen we vandaag.
-    const startDay = payload.data.startDay && startDayOptions().includes(payload.data.startDay) ? payload.data.startDay : null;
     url = await createCheckout({ intakeId, product, duration, email: customer.email, name: customer.name, locale, discount, startDay });
     await recordFunnelEvent({
       visitId: payload.data.visitId,

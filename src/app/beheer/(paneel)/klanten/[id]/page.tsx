@@ -466,6 +466,13 @@ async function CustomerDetail({ params, searchParams }: PageProps<"/beheer/klant
           </Panel>
 
           <Panel title="Antwoorden vragenlijst">
+            {intake?.detailsPending && (
+              <p className="border-b border-line bg-accent-50 px-5 py-3 text-sm font-semibold text-accent-600">
+                Korte route: de klant heeft betaald maar de vragenlijst nog niet aangevuld, dus er is nog geen schema. Bekend zijn alleen doel,
+                lengte, gewicht en de gezondheidscheck; geslacht, leeftijd, activiteit, eten en training hieronder zijn tijdelijke waarden. De klant
+                krijgt herinneringen (na 2 uur, 1 dag en 3 dagen).
+              </p>
+            )}
             {intake ? (
               <dl className="divide-y divide-line text-sm">
                 {describeIntake(intake.data).map(([k, v]) => (

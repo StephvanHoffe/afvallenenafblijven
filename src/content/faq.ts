@@ -51,7 +51,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   nl: {
     snel: {
       q: "Hoe snel ontvang ik mijn schema?",
-      a: "Direct na je betaling gaan we aan de slag. Binnen 2 uur staat je schema voor je klaar in Mijn schema's, ook als je een latere startdatum kiest, en ontvang je een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
+      a: "Direct na je betaling gaan we aan de slag. (Beantwoord je na het betalen nog een paar vragen over eten en training, ± 2 minuten, dan beginnen we direct daarna.) Binnen 2 uur staat je schema voor je klaar in Mijn schema's, ook als je een latere startdatum kiest, en ontvang je een e-mail met een persoonlijke link. Je kunt elk schema ook downloaden als PDF, met een aparte boodschappenlijst om af te vinken.",
     },
     persoonlijk: {
       q: "Hoe persoonlijk is het schema?",
@@ -117,7 +117,7 @@ const items = defineCopy<Record<FaqId, FaqItem>>({
   en: {
     snel: {
       q: "How quickly will I get my plan?",
-      a: "We get started the moment you've paid. Within 2 hours, your plan is ready for you in My plans, even if you choose a later start date, and you'll receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
+      a: "We get started the moment you've paid. (If you answer a few questions about food and workouts after paying, about 2 minutes, we get started straight after that.) Within 2 hours, your plan is ready for you in My plans, even if you choose a later start date, and you'll receive an email with a personal link. You can also download every plan as a PDF, with a separate shopping list to tick off.",
     },
     persoonlijk: {
       q: "How personal is the plan?",

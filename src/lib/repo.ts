@@ -47,6 +47,15 @@ export interface IntakeRow {
   /** De laatst gestarte Mollie-betaling en de Mollie-klant. */
   payment_id: string | null;
   mollie_customer_id: string | null;
+  /** Korte route: de klant vult na het betalen de rest van de vragenlijst in; tot die tijd geen schema. */
+  details_pending: boolean;
+  /** Gekozen startdatum (JJJJ-MM-DD) bij het afrekenen; nodig als het schema pas later wordt gemaakt. */
+  start_day: string | null;
+  /** Herinneringen verstuurd om de vragenlijst aan te vullen, en wanneer de laatste. */
+  details_reminders: number;
+  details_reminded_at: Date | null;
+  /** Wanneer de klant de vragenlijst na het betalen heeft aangevuld (korte route). */
+  details_completed_at: Date | null;
   created_at: Date;
 }
 
@@ -139,15 +148,64 @@ export async function createIntake(input: {
   device?: string | null;
   discountCode?: string | null;
   duration?: string | null;
+  /** Korte route: de rest van de vragenlijst volgt na het betalen. */
+  detailsPending?: boolean;
+  startDay?: string | null;
 }): Promise<string> {
   const sql = await db();
   const [row] = await sql<{ id: string }[]>`
-    insert into intakes (email, name, data, consents, locale, campaign, visit_id, device, discount_code, duration)
+    insert into intakes (email, name, data, consents, locale, campaign, visit_id, device, discount_code, duration, details_pending, start_day)
     values (${input.email}, ${input.name}, ${sql.json(input.data as never)}, ${sql.json(input.consents as never)}, ${input.locale},
             ${input.campaign ? sql.json(input.campaign as never) : null}, ${input.visitId ?? null}, ${input.device ?? null},
-            ${input.discountCode ?? null}, ${input.duration ?? null})
+            ${input.discountCode ?? null}, ${input.duration ?? null}, ${input.detailsPending ?? false}, ${input.startDay ?? null})
     returning id`;
   return row.id;
+}
+
+/**
+ * Korte route: slaat de aangevulde vragenlijst op en zet details_pending uit.
+ * Geeft false als dat al gebeurd was (bijv. twee keer verstuurd), zodat er
+ * maar één keer schema's worden gemaakt.
+ */
+export async function completeIntakeDetails(id: string, data: Intake): Promise<boolean> {
+  const sql = await db();
+  const rows = await sql`
+    update intakes set data = ${sql.json(data as never)}, details_pending = false, details_completed_at = now()
+    where id = ${id} and details_pending = true
+    returning id`;
+  return rows.length > 0;
+}
+
+/** Bestellingen (korte route) waarvan de klant de vragenlijst nog moet aanvullen. */
+export async function pendingDetailsForCustomer(customerId: string): Promise<{ intake_id: string; product: string }[]> {
+  const sql = await db();
+  return sql<{ intake_id: string; product: string }[]>`
+    select o.intake_id, o.product from orders o join intakes i on i.id = o.intake_id
+    where o.customer_id = ${customerId} and i.details_pending = true and o.status in ('active', 'completed')
+    order by o.created_at desc`;
+}
+
+/**
+ * Korte route: betaalde bestellingen waarvan de vragenlijst nog niet is
+ * aangevuld en die een (volgende) herinnering krijgen: na 2 uur, na 1 dag en
+ * na 3 dagen. Daarna stoppen we (de beheerder krijgt bij de laatste een melding).
+ */
+export async function intakesNeedingDetailsReminder(): Promise<(IntakeRow & { order_id: string; product: string })[]> {
+  const sql = await db();
+  return sql<(IntakeRow & { order_id: string; product: string })[]>`
+    select i.*, o.id as order_id, o.product from intakes i join orders o on o.intake_id = i.id
+    where i.details_pending = true and o.status in ('active', 'completed')
+      and o.created_at > now() - interval '30 days'
+      and (
+        (i.details_reminders = 0 and o.created_at < now() - interval '2 hours')
+        or (i.details_reminders = 1 and o.created_at < now() - interval '1 day')
+        or (i.details_reminders = 2 and o.created_at < now() - interval '3 days')
+      )`;
+}
+
+export async function markDetailsReminded(id: string): Promise<void> {
+  const sql = await db();
+  await sql`update intakes set details_reminders = details_reminders + 1, details_reminded_at = now() where id = ${id}`;
 }
 
 /**

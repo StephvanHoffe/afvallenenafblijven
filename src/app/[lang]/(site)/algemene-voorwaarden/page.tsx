@@ -143,7 +143,9 @@ function Nl() {
         </li>
         <li>
           We beginnen direct na de betaling aan je schema en streven ernaar het binnen 2 uur te leveren, en in elk geval
-          binnen 2 werkdagen.
+          binnen 2 werkdagen. Vul je een deel van de vragenlijst pas na de betaling in (bij sommige bestellingen beantwoord
+          je vóór de betaling alleen de vragen over je doel, lengte, gewicht en gezondheid), dan maken we je schema zodra
+          je de vragenlijst volledig hebt ingevuld; die termijnen gaan dan in op dat moment.
           Levering vindt plaats via je persoonlijke omgeving &quot;Mijn schema&apos;s&quot; en een e-mail met een link.
         </li>
         <li>
@@ -522,7 +524,9 @@ function En() {
         </li>
         <li>
           We start on your plan straight after payment and aim to deliver it within 2 hours, and in any case within 2
-          working days. Delivery
+          working days. If you complete part of the questionnaire after payment (for some orders, you only answer the
+          questions about your goal, height, weight and health before paying), we create your plan as soon as you&apos;ve
+          completed the questionnaire; those time limits then start at that moment. Delivery
           takes place via your personal environment &quot;My plans&quot; and an email with a link.
         </li>
         <li>

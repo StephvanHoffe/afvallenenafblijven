@@ -21,6 +21,7 @@ import {
   latestIntakeForCustomer,
   nutritionTargetHistory,
   ordersForCustomer,
+  pendingDetailsForCustomer,
   plansForCustomer,
   weeklyLogsForCustomer,
 } from "@/lib/repo";
@@ -37,6 +38,10 @@ const copy = defineCopy({
     example: "Bekijk een voorbeeld",
     noPlan: "Nog geen schema?",
     start: "Start de vragenlijst",
+    detailsTitle: "Nog één stap: maak je schema compleet",
+    detailsText:
+      "Je betaling is binnen. Beantwoord nog een paar vragen over wat je lekker vindt, je maaltijden en je training (± 2 minuten); daarna maken we je schema en staat het binnen 2 uur klaar.",
+    detailsButton: "Maak mijn schema compleet",
   },
   en: {
     noDatabase: "My plans isn't available yet (database not configured).",
@@ -47,6 +52,10 @@ const copy = defineCopy({
     example: "See an example",
     noPlan: "No plan yet?",
     start: "Start the questionnaire",
+    detailsTitle: "One more step: complete your plan",
+    detailsText:
+      "Your payment has come through. Answer a few more questions about what you like to eat, your meals and your workouts (about 2 minutes); then we'll create your plan and it will be ready within 2 hours.",
+    detailsButton: "Complete my plan",
   },
 });
 
@@ -78,7 +87,7 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   // Is het geplande moment van een klaar schema aangebroken, dan ziet de klant het nu meteen (de mail volgt).
   const released = await releaseForCustomer(customer.id);
   if (released.length > 0) after(() => notifyReleased(released));
-  const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest, payments] = await Promise.all([
+  const [orders, plans, checkins, weekly, intake, targets, guaranteeRequest, payments, pendingDetails] = await Promise.all([
     ordersForCustomer(customer.id),
     plansForCustomer(customer.id),
     checkinsForCustomer(customer.id),
@@ -87,6 +96,7 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
     nutritionTargetHistory(customer.id),
     guaranteeRequestForCustomer(customer.id),
     tab === "betalingen" ? paymentsForCustomer(customer.id) : Promise.resolve([]),
+    pendingDetailsForCustomer(customer.id),
   ]);
   // Ingeplande trainingen per week: uit de laatste check-in, anders de vragenlijst (alleen met een trainingsschema).
   const trains = orders.some((o) => products[o.product].includes.includes("training"));
@@ -126,7 +136,22 @@ async function AccountContent({ tab, searchParams }: { tab: AccountTab; searchPa
   const koppeling = sp.koppeling;
   const connectionNotice: ConnectionNotice =
     koppeling === "gekoppeld" || koppeling === "fout" || koppeling === "geannuleerd" ? koppeling : null;
-  return <AccountTabView tab={tab} view={view} base="/account" notice={notice} connectionNotice={connectionNotice} />;
+  const c = copy[l];
+  return (
+    <>
+      {/* Korte route: betaald, maar de vragenlijst is nog niet aangevuld (dus nog geen schema). */}
+      {pendingDetails[0] && (
+        <div className="mb-8 rounded-[var(--radius-card)] border-2 border-brand-600 bg-white p-6 sm:p-7">
+          <h2 className="heading-md">{c.detailsTitle}</h2>
+          <p className="mt-2 text-muted">{c.detailsText}</p>
+          <Link href={`/schema-aanvullen?bestelling=${pendingDetails[0].intake_id}`} className="btn-primary mt-5">
+            {c.detailsButton}
+          </Link>
+        </div>
+      )}
+      <AccountTabView tab={tab} view={view} base="/account" notice={notice} connectionNotice={connectionNotice} />
+    </>
+  );
 }
 
 function NotLoggedIn({ l, note }: { l: Locale; note?: string }) {
