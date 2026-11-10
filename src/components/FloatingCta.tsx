@@ -64,6 +64,15 @@ export function FloatingCta({
   const path = stripLocale(usePathname() ?? "/");
   const [shown, setShown] = useState(false);
   const [cookieOpen, setCookieOpen] = useState(true);
+  // Op de landingspagina staat de eerste vraag (met de prijzen) al in beeld: dan geen knop eroverheen.
+  const [heroQuizVisible, setHeroQuizVisible] = useState(false);
+  useEffect(() => {
+    const card = document.querySelector("[data-lp-quiz]");
+    if (!card || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setHeroQuizVisible(entry.isIntersecting));
+    io.observe(card);
+    return () => io.disconnect();
+  }, [path]);
 
   useEffect(() => {
     const sync = () => setCookieOpen(readConsent() === null);
@@ -89,7 +98,7 @@ export function FloatingCta({
   // Een staffel (korting per looptijd): dan "tot 50%".
   const tiers = promo ? new Set(Object.values(promo.percentOff).filter((v) => v > 0)).size > 1 : false;
   const bf = promo?.theme === "blackfriday";
-  const visible = shown && !cookieOpen;
+  const visible = shown && !cookieOpen && !heroQuizVisible;
 
   const main =
     promo && pct > 0 ? (bf ? c.promoMain(pct, tiers) : c.promoMainOther(pct, promo.label, tiers)) : product ? c.main[product] : c.mainAny;

@@ -81,6 +81,12 @@ interface SharedCopy {
   /** Idem voor de kortingscode uit de advertentielink (die wordt in de vragenlijst automatisch toegepast). */
   offerAutoCode: (code: string) => string;
   offerUntil: (until: string) => string;
+  /** Prijzen direct bij de eerste vraag: "vanaf"-prijs per product, met de actie verrekend. */
+  priceFromPerMonth: string;
+  priceAll: string;
+  priceLabels: Record<ProductId, string>;
+  priceNote: string;
+  priceNotePromo: (label: string, months: number) => string;
   pickTitle: string;
   /** Bovenaan: de eerste vraag van de vragenlijst, zodat je meteen begint. */
   quizEyebrow: string;
@@ -120,6 +126,11 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       offerAuto: "Wordt automatisch toegepast in je winkelwagen",
       offerAutoCode: (code) => `Code ${code} wordt automatisch toegepast in je winkelwagen`,
       offerUntil: (until) => `t/m ${until}`,
+      priceFromPerMonth: "Vanaf, per maand:",
+      priceAll: "Alle prijzen",
+      priceLabels: { voeding: "Voeding", training: "Training", bundel: "Voeding + training" },
+      priceNote: "Prijzen per maand bij 12 maanden; maandelijks opzegbaar kan ook.",
+      priceNotePromo: (label, months) => `Prijzen per maand bij 12 maanden, met ${label}-korting op de eerste ${months} maanden; maandelijks opzegbaar kan ook.`,
       pickTitle: "Waar wil je aan werken?",
       quizEyebrow: "Gratis vragenlijst · ± 3 minuten",
       quizStep: "Vraag 1",
@@ -214,6 +225,11 @@ export const landingCopy = defineCopy<{ shared: SharedCopy; variants: Record<Lan
       offerAuto: "Applied automatically in your basket",
       offerAutoCode: (code) => `Code ${code} is applied automatically in your basket`,
       offerUntil: (until) => `until ${until}`,
+      priceFromPerMonth: "From, per month:",
+      priceAll: "All prices",
+      priceLabels: { voeding: "Nutrition", training: "Training", bundel: "Nutrition + training" },
+      priceNote: "Prices per month with 12 months; monthly cancellation is also possible.",
+      priceNotePromo: (label, months) => `Prices per month with 12 months, with the ${label} discount on your first ${months} months; monthly cancellation is also possible.`,
       pickTitle: "What would you like to work on?",
       quizEyebrow: "Free questionnaire · about 3 minutes",
       quizStep: "Question 1",

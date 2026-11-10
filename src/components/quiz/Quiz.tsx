@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check, Lightbulb, Loader2, Lock, ShieldCheck, Tr
 import {
   applyPercentOff,
   durationFor,
+  fromPrice,
   isSubscription,
   monthlyPrice,
   productFor,
@@ -165,6 +166,12 @@ const copy = defineCopy({
       bundle: { title: "Voeding én training", description: "Alles op elkaar afgestemd: voeding en training versterken elkaar", badge: "Meest gekozen" },
       nutrition: { title: "Alleen voeding", description: "Weekmenu, recepten en boodschappenlijst" },
       training: { title: "Alleen training", description: "Thuis of in de sportschool" },
+      from: "vanaf",
+      perMonth: "per maand",
+      insteadOf: "in plaats van",
+      priceNote: "Per maand, bij 12 maanden. Maandelijks opzegbaar kan ook. Je looptijd kies je straks zelf.",
+      priceNotePromo: (label: string, months: number) =>
+        `Per maand bij 12 maanden, met ${label}-korting op de eerste ${months} maanden. Maandelijks opzegbaar kan ook. Je looptijd kies je straks zelf.`,
     },
     about: {
       title: "Vertel iets over jezelf",
@@ -378,6 +385,12 @@ const copy = defineCopy({
       bundle: { title: "Nutrition and training", description: "Everything aligned: nutrition and training reinforce each other", badge: "Most popular" },
       nutrition: { title: "Nutrition only", description: "Weekly meal plan, recipes and shopping list" },
       training: { title: "Training only", description: "At home or at the gym" },
+      from: "from",
+      perMonth: "a month",
+      insteadOf: "instead of",
+      priceNote: "Per month, with 12 months. Monthly cancellation is also possible. You'll choose your term later.",
+      priceNotePromo: (label: string, months: number) =>
+        `Per month with 12 months, with the ${label} discount on your first ${months} months. Monthly cancellation is also possible. You'll choose your term later.`,
     },
     about: {
       title: "Tell us a bit about yourself",
@@ -1037,6 +1050,15 @@ export function Quiz({
   const detailsPayload = details ? JSON.stringify({ intakeId: details.intakeId, intake: toIntakeInput(s) }) : "";
 
   const a = s.answers;
+  // "Vanaf"-prijzen bij de keuze voeding / training / beide (met de lopende actie verrekend).
+  const productPrice = (p: ProductId) => {
+    const { now, regular } = fromPrice(p, promo?.percentOff);
+    return { from: c.help.from, now: euro(now, l), regular: now < regular ? euro(regular, l) : undefined, insteadOf: c.help.insteadOf, per: c.help.perMonth };
+  };
+  const helpDiscounted = (["voeding", "training", "bundel"] as const).some((p) => {
+    const { now, regular } = fromPrice(p, promo?.percentOff);
+    return now < regular;
+  });
 
   return (
     <div ref={topRef} className="scroll-mt-24">
@@ -1084,20 +1106,24 @@ export function Quiz({
                 title={c.help.bundle.title}
                 description={c.help.bundle.description}
                 badge={c.help.bundle.badge}
+                price={productPrice("bundel")}
               />
               <OptionCard
                 selected={s.product === "voeding"}
                 onClick={() => pickAndNext({ product: "voeding" })}
                 title={c.help.nutrition.title}
                 description={c.help.nutrition.description}
+                price={productPrice("voeding")}
               />
               <OptionCard
                 selected={s.product === "training"}
                 onClick={() => pickAndNext({ product: "training" })}
                 title={c.help.training.title}
                 description={c.help.training.description}
+                price={productPrice("training")}
               />
             </Options>
+            <p className="text-sm text-muted">{helpDiscounted && promo ? c.help.priceNotePromo(promo.label, promo.months) : c.help.priceNote}</p>
           </Step>
         )}
 
@@ -1909,12 +1935,15 @@ function OptionCard({
   title,
   description,
   badge,
+  price,
 }: {
   selected: boolean;
   onClick: () => void;
   title: string;
   description?: string;
   badge?: string;
+  /** "Vanaf"-prijs rechts in de kaart (bij de keuze voeding / training / beide). */
+  price?: { from: string; now: string; regular?: string; insteadOf: string; per: string };
 }) {
   return (
     <button
@@ -1938,6 +1967,19 @@ function OptionCard({
         </span>
         {description && <span className="block text-muted">{description}</span>}
       </span>
+      {price && (
+        <span className="shrink-0 text-right leading-tight">
+          <span className="block text-xs text-muted">{price.from}</span>
+          <span className="block text-lg font-extrabold tabular-nums">{price.now}</span>
+          {price.regular && (
+            <s className="block text-xs font-semibold text-muted tabular-nums">
+              <span className="sr-only">{price.insteadOf} </span>
+              {price.regular}
+            </s>
+          )}
+          <span className="block text-xs text-muted">{price.per}</span>
+        </span>
+      )}
     </button>
   );
 }
