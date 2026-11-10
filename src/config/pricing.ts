@@ -205,6 +205,17 @@ export function commitmentTotal(product: ProductId, duration: DurationId): numbe
   return d.months === 0 ? monthlyPrice(product, duration) : monthlyPrice(product, duration) * d.months;
 }
 
+/**
+ * "Vanaf"-prijs van één product: de laagste maandprijs over alle looptijden
+ * (regular), en dezelfde met de korting van een lopende actie (now; zoals de
+ * checkout die rekent, op de eerste maanden). Zonder actie zijn ze gelijk.
+ */
+export function fromPrice(product: ProductId, percentOff?: Partial<Record<DurationId, number>> | null): { now: number; regular: number } {
+  const regular = Math.min(...SUBSCRIPTION_DURATIONS.map((d) => monthlyPrice(product, d)));
+  const now = Math.min(...SUBSCRIPTION_DURATIONS.map((d) => applyPercentOff(monthlyPrice(product, d), percentOff?.[d] ?? 0)));
+  return { now, regular };
+}
+
 /** De laagste maandprijs op de hele site, voor "vanaf"-teksten. */
 export function lowestMonthlyPrice(): number {
   return Math.min(...PRODUCT_IDS.flatMap((p) => SUBSCRIPTION_DURATIONS.map((d) => monthlyPrice(p, d))));

@@ -11,6 +11,7 @@ import { Countdown } from "@/components/promo/Countdown";
 import { OfferBanner, PromoOffer } from "@/components/promo/PromoOffer";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { site } from "@/config/site";
+import { PRODUCT_IDS, fromPrice, type ProductId } from "@/config/pricing";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { faqInOrder } from "@/content/faq";
 import { landingCopy, variantSettings, type LandingVariant } from "@/content/landing";
@@ -25,7 +26,7 @@ import { normalizeCode, type DiscountTerms } from "@/lib/discounts";
 import { getDiscountCode, termsOf } from "@/lib/discounts-server";
 import { euro, formatNumber } from "@/lib/format";
 import type { Intake } from "@/lib/intake";
-import { currentPromotion } from "@/lib/promotion";
+import { currentPromotion, type PromoView } from "@/lib/promotion";
 
 const goalIcons: Record<Intake["goal"], typeof Target> = {
   afvallen: TrendingDown,
@@ -89,6 +90,44 @@ async function OfferLine({ searchParams, l, fallback }: { searchParams: Promise<
   return <OfferBanner title={offer} note={landingCopy[l].shared.offerAutoCode(code)} />;
 }
 
+/** De vanaf-prijs voor de doelknoppen: de laagste maandprijs van de producten op deze pagina, met de lopende actie verrekend. */
+function lowestFromPrice(products: readonly ProductId[], promo: PromoView | null): { now: number; regular: number } {
+  return products.map((p) => fromPrice(p, promo?.percentOff)).reduce((a, b) => (b.now < a.now ? b : a));
+}
+
+/** In een doelknop: "vanaf € 8,95 € 4,48 p/m" (met actie de gewone prijs doorgestreept). */
+function ButtonPrice({ price, l }: { price: { now: number; regular: number }; l: Locale }) {
+  const c = landingCopy[l].shared;
+  return (
+    <span className="mt-0.5 block text-xs leading-tight font-semibold text-muted">
+      {c.priceFrom}{" "}
+      {price.now < price.regular && (
+        <s className="tabular-nums">
+          <span className="sr-only">{c.priceInsteadOf} </span>
+          {euro(price.regular, l)}
+        </s>
+      )}{" "}
+      <span className="font-extrabold text-brand-700 tabular-nums">{euro(price.now, l)}</span> {c.pricePerMonth}
+    </span>
+  );
+}
+
+/** Onder de keuzes: de prijs per product en waar die voor geldt, met een link naar alle prijzen. */
+function PriceNote({ products, promo, l }: { products: readonly ProductId[]; promo: PromoView | null; l: Locale }) {
+  const c = landingCopy[l].shared;
+  const items = products.map((p) => ({ p, ...fromPrice(p, promo?.percentOff) }));
+  const list = items.map((i) => `${c.priceLabels[i.p]} ${euro(i.now, l)}`).join(", ");
+  const discounted = items.some((i) => i.now < i.regular);
+  return (
+    <p className="mt-1.5 text-xs leading-snug text-muted">
+      {discounted && promo ? c.priceNotePromo(list, promo.label, promo.months) : c.priceNote(list)}{" "}
+      <a href="#prijzen" className="font-semibold text-brand-700 underline underline-offset-2">
+        {c.priceAll}
+      </a>
+    </p>
+  );
+}
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
@@ -123,6 +162,8 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
   const [titleStart, titleAccent] = accentLastSentence(v.painTitle ?? pain.painTitle);
   // De korting bovenaan: tijdens Black Friday in de Black Friday-stijl, anders de gewone actie. Een code uit de link gaat voor (die vervangt de actiekorting).
   const promoBadge = <PromoOffer promo={promo} l={l} />;
+  const priceProducts = settings.product ? [settings.product] : (settings.pricing.only ?? PRODUCT_IDS);
+  const goalPrice = lowestFromPrice(priceProducts, promo);
 
   return (
     <>
@@ -165,7 +206,7 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
               </ul>
             )}
             {/* De eerste vraag van de vragenlijst: één tik op je doel en je gaat in /start verder bij vraag 2. */}
-            <div className="mt-4 max-w-xl rounded-[1.5rem] border-2 border-brand-600 bg-white p-3.5 shadow-[var(--shadow-lift)] sm:mt-6 sm:p-5">
+            <div data-lp-quiz className="mt-4 max-w-xl rounded-[1.5rem] border-2 border-brand-600 bg-white p-3.5 shadow-[var(--shadow-lift)] sm:mt-6 sm:p-5">
               <p className="flex items-center justify-between gap-3 text-xs font-bold tracking-wide text-brand-700 uppercase">
                 <span>{c.quizEyebrow}</span>
                 <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 tracking-normal normal-case">{c.quizStep}</span>
@@ -186,12 +227,17 @@ export async function CampaignLanding({ variant, searchParams }: { variant: Land
                       <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
                         <Icon className="size-[1.125rem]" aria-hidden />
                       </span>
-                      <span className="min-w-0">{labels.goal[goal].label}</span>
+                      <span className="min-w-0">
+                        <span className="block">{labels.goal[goal].label}</span>
+                        {/* Meteen zichtbaar wat een plan kost. */}
+                        <ButtonPrice price={goalPrice} l={l} />
+                      </span>
                     </Link>
                   );
                 })}
               </div>
               <p className="mt-2.5 text-[0.8125rem] leading-snug font-semibold text-muted">{c.quizNote}</p>
+              <PriceNote products={settings.pricing.only ?? PRODUCT_IDS} promo={promo} l={l} />
             </div>
             {/* Direct onder de eerste vraag: niet goed, geld terug (de garantie uit artikel 10 van de voorwaarden) */}
             {site.guarantee.enabled && (
