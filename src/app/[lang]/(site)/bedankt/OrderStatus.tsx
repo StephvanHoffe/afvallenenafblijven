@@ -9,7 +9,7 @@ import { defineCopy } from "@/i18n/config";
 import { useLocale } from "@/i18n/client";
 
 type Status = {
-  state: "ready" | "processing" | "failed" | "awaiting_payment" | "payment_failed" | "unknown";
+  state: "ready" | "processing" | "failed" | "awaiting_payment" | "payment_failed" | "needs_details" | "unknown";
   value?: number;
   orderReference?: string;
   product?: string;
@@ -41,6 +41,12 @@ const copy = defineCopy({
     paymentFailedTitle: "Je betaling is niet gelukt",
     paymentFailedText: "De betaling is afgebroken of niet gelukt, dus er is niets afgeschreven. Je antwoorden zijn bewaard: je kunt het meteen opnieuw proberen.",
     retry: "Opnieuw betalen",
+    detailsEyebrow: "Betaling ontvangen",
+    detailsTitle: "Nog één stap: maak je schema compleet",
+    detailsText:
+      "Beantwoord nog een paar vragen over wat je lekker vindt, je maaltijden en je training. Dat duurt ongeveer 2 minuten. Daarna maken we je schema en staat het binnen 2 uur klaar.",
+    detailsButton: "Maak mijn schema compleet",
+    detailsNote: "Je krijgt deze link ook per e-mail, dus je kunt het ook later doen.",
   },
   en: {
     steps: ["Payment received", "We're putting your plan together and checking it", "Your plan is ready and we'll email you"],
@@ -63,6 +69,12 @@ const copy = defineCopy({
     paymentFailedTitle: "Your payment didn't go through",
     paymentFailedText: "The payment was cancelled or didn't go through, so nothing has been charged. Your answers have been saved, so you can try again straight away.",
     retry: "Try paying again",
+    detailsEyebrow: "Payment received",
+    detailsTitle: "One more step: complete your plan",
+    detailsText:
+      "Answer a few more questions about what you like to eat, your meals and your workouts. It takes about 2 minutes. After that, we'll create your plan and it will be ready within 2 hours.",
+    detailsButton: "Complete my plan",
+    detailsNote: "We've also emailed you this link, so you can do it later too.",
   },
 });
 
@@ -101,6 +113,20 @@ export function OrderStatus({ intakeId }: { intakeId: string }) {
       clearTimeout(timer);
     };
   }, [intakeId]);
+
+  if (status.state === "needs_details") {
+    return (
+      <div className="card border-2 border-brand-600 p-8 text-center">
+        <p className="eyebrow">{c.detailsEyebrow}</p>
+        <h2 className="heading-md mt-2">{c.detailsTitle}</h2>
+        <p className="mt-3 text-muted">{c.detailsText}</p>
+        <Link href={`/schema-aanvullen?bestelling=${encodeURIComponent(intakeId)}`} className="btn-primary mt-6 w-full !whitespace-normal text-base sm:w-auto sm:text-lg" data-cta="schema-aanvullen">
+          {c.detailsButton} <ArrowRight className="size-5" aria-hidden />
+        </Link>
+        <p className="mt-3 text-sm text-muted">{c.detailsNote}</p>
+      </div>
+    );
+  }
 
   if (status.state === "ready") {
     return (

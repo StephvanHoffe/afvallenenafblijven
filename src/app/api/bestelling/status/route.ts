@@ -37,6 +37,21 @@ export async function GET(request: NextRequest) {
     return Response.json({ state: stopped ? "payment_failed" : "awaiting_payment" }, { headers: { "Cache-Control": "no-store" } });
   }
 
+  // Korte route: betaald, maar de klant moet de vragenlijst nog aanvullen; pas dan maken we het schema.
+  const fresh = await getIntake(intakeId);
+  if (fresh?.details_pending) {
+    return Response.json(
+      {
+        state: "needs_details",
+        product: order.product,
+        duration: order.duration,
+        value: order.amount_cents / 100,
+        orderReference: order.id.slice(0, 8).toUpperCase(),
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   await releaseAndNotify({ orderId: order.id });
   const plans = (await plansForOrder(order.id)).filter((p) => p.seq === 1);
   const needsWork = plans.some((p) => p.status === "pending" || (p.status === "failed" && p.attempts < MAX_PLAN_ATTEMPTS));

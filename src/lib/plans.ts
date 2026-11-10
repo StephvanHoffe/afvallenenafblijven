@@ -41,6 +41,7 @@ import { deliveryDeadline } from "@/lib/delivery";
 import { formatDateTime } from "@/lib/format";
 import { planApprovalRequired } from "@/lib/settings";
 import { sendCheckoutReminders } from "@/lib/checkout-reminders";
+import { sendDetailsReminders } from "@/lib/details";
 import { weeklyKcal, weeklyWindow } from "@/lib/weekly";
 import { newPeriodStartsAt } from "@/lib/schedule";
 import { processWeeklyLog } from "@/lib/weekly-server";
@@ -361,6 +362,7 @@ export async function runScheduledWork(
   reminders: number;
   weeklyReminders: number;
   checkoutReminders: number;
+  detailsReminders: number;
   healthSynced: number;
   processed: number;
 }> {
@@ -456,6 +458,12 @@ export async function runScheduledWork(
     return 0;
   });
 
+  // Korte route: herinneren wie na het betalen de vragenlijst nog niet heeft aangevuld.
+  const detailsReminders = await sendDetailsReminders().catch((err) => {
+    console.error("Herinneringen vragenlijst aanvullen mislukt", err);
+    return 0;
+  });
+
   // Gekoppelde gezondheidsapps bijwerken (vangnet naast de meldingen/webhooks).
   const healthSynced = daily
     ? await syncAllConnections(started + Math.min(60_000, budgetMs / 4)).catch((err) => {
@@ -489,7 +497,7 @@ export async function runScheduledWork(
   released += await releaseAndNotify();
   // Vangnet: vrijgegeven schema's waarvan de klaar-mail niet is verstuurd (bijv. na een storing bij het mailen).
   await notifyReleased(await releasedUnmailedPeriods(20));
-  return { released, scheduled, reminders, weeklyReminders, checkoutReminders, healthSynced, processed };
+  return { released, scheduled, reminders, weeklyReminders, checkoutReminders, detailsReminders, healthSynced, processed };
 }
 
 const planTitleCopy = defineCopy({

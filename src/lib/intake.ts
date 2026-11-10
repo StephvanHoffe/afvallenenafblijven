@@ -95,6 +95,7 @@ const messages = defineCopy({
   nl: {
     maxLength: (max: number) => `Maximaal ${max} tekens`,
     minAge: "Je moet minimaal 18 jaar zijn",
+    adult: "Bevestig dat je 18 jaar of ouder bent",
     height: "Vul een geldige lengte in",
     weight: "Vul een geldig gewicht in",
     targetWeight: "Je streefgewicht moet lager zijn dan je huidige gewicht",
@@ -107,6 +108,7 @@ const messages = defineCopy({
   en: {
     maxLength: (max: number) => `Maximum ${max} characters`,
     minAge: "You must be at least 18 years old",
+    adult: "Please confirm that you're 18 or older",
     height: "Please enter a valid height",
     weight: "Please enter a valid weight",
     targetWeight: "Your target weight must be lower than your current weight",
@@ -211,3 +213,59 @@ export function hasMedicalCondition(intake: Pick<Intake, "conditions">): boolean
 export function wantsWeightLoss(intake: Pick<Intake, "goal">): boolean {
   return intake.goal === "afvallen" || intake.goal === "afvallen_strakker";
 }
+
+/**
+ * Korte route: wat we vóór het betalen vragen. Genoeg voor de volledige
+ * veiligheidscheck (src/lib/safety.ts): 18+, lengte, gewicht, eventueel het
+ * streefgewicht, zwangerschap, eetstoornis en medische aandoeningen. De rest
+ * (geslacht, leeftijd, activiteit, eten en training) volgt na het betalen.
+ */
+export const shortIntakeSchema = z.object({
+  product: z.enum(PRODUCT_IDS),
+  goal: z.enum(keys(goalOptions)),
+  adult: z.literal(true, { message: m.adult }),
+  heightCm: z.coerce.number().min(130, m.height).max(230, m.height),
+  weightKg: z.coerce.number().min(35, m.weight).max(300, m.weight),
+  targetWeightKg: z.coerce.number().min(35).max(300).optional(),
+  pregnant: z.boolean(),
+  eatingDisorder: z.boolean(),
+  conditions: z.array(z.enum(keys(conditionOptions))).default([]),
+  medication: optionalText(300),
+  doctorApproval: z.boolean().default(false),
+});
+export type ShortIntake = z.infer<typeof shortIntakeSchema>;
+
+/**
+ * Tijdelijke waarden voor wat de klant pas na het betalen invult. Ze worden
+ * nergens voor gebruikt: zolang `details_pending` aanstaat, maken we geen
+ * schema, en het aanvullen overschrijft ze.
+ */
+const PENDING_PLACEHOLDERS = { sex: "vrouw", age: 30, activity: "licht" } as const;
+
+/** Een volledige intake op basis van de korte route (met tijdelijke waarden, zie hierboven). */
+export function intakeFromShort(short: ShortIntake): Intake {
+  const rest: Omit<ShortIntake, "adult"> & { adult?: true } = { ...short };
+  delete rest.adult;
+  return intakeSchema.parse({ ...PENDING_PLACEHOLDERS, ...rest });
+}
+
+/** De vragen die de klant na het betalen beantwoordt (korte route); de rest komt uit de opgeslagen intake. */
+export const DETAIL_FIELDS = [
+  "sex",
+  "age",
+  "pace",
+  "activity",
+  "diet",
+  "allergies",
+  "otherAllergies",
+  "dislikes",
+  "mealsPerDay",
+  "cookingTime",
+  "budget",
+  "location",
+  "experience",
+  "trainingDays",
+  "sessionMinutes",
+  "injuries",
+  "notes",
+] as const satisfies readonly (keyof Intake)[];

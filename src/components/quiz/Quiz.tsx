@@ -21,10 +21,12 @@ import {
   dietOptions,
   experienceOptions,
   goalOptions,
+  intakeFromShort,
   intakeSchema,
   locationOptions,
   paceOptions,
   sexOptions,
+  shortIntakeSchema,
   type Intake,
 } from "@/lib/intake";
 import { nutritionTargets, weightProjection } from "@/lib/calculations";
@@ -38,6 +40,7 @@ import { discountedAmount, discountedPayments, type DiscountTerms } from "@/lib/
 import { campaignFromParams, type Campaign } from "@/lib/campaign";
 import { PricingTable } from "@/components/pricing/PricingTable";
 import { checkDiscountCode, startCheckout, type CheckoutState } from "@/app/[lang]/(site)/start/actions";
+import { completeDetails, type DetailsState } from "@/app/[lang]/(site)/schema-aanvullen/actions";
 import { site } from "@/config/site";
 import { resultDisclaimer } from "@/content/disclaimers";
 import { defineCopy, intlLocale, type Locale } from "@/i18n/config";
@@ -87,7 +90,16 @@ type Answers = {
   conditions: Intake["conditions"];
   medication: string;
   doctorApproval: boolean;
+  /** Korte route: bevestiging dat je 18 jaar of ouder bent (de leeftijd zelf vragen we na het betalen). */
+  adult?: boolean;
 };
+
+/**
+ * "volledig": de hele vragenlijst vóór het betalen. "kort": alleen doel, keuze,
+ * lengte/gewicht en de gezondheidscheck, dan betalen. "aanvullen": na het
+ * betalen (korte route) de rest van de vragen. Zie README → Korte route.
+ */
+export type QuizFlow = "volledig" | "kort" | "aanvullen";
 
 interface QuizState {
   product: ProductId | null;
@@ -110,6 +122,7 @@ const copy = defineCopy({
       sex: "Kies je geslacht",
       age: "Vul je leeftijd in",
       adultsOnly: "Onze schema's zijn alleen voor volwassenen (18+).",
+      adult: "Bevestig dat je 18 jaar of ouder bent",
       validAge: "Vul een geldige leeftijd in",
       height: "Vul je lengte in centimeters in (bijv. 172)",
       weight: "Vul je gewicht in kilo's in (bijv. 78)",
@@ -123,6 +136,22 @@ const copy = defineCopy({
       eatingDisorder: "Beantwoord de vraag over eetstoornissen",
       name: "Vul je voornaam in",
       email: "Vul een geldig e-mailadres in",
+    },
+    short: {
+      healthTitle: "Korte gezondheidscheck",
+      healthSubtitle:
+        "Voor je veiligheid, vóór je betaalt. Daarna zie je de prijzen; de rest van de vragen (eten en training) beantwoord je na het betalen, in ± 2 minuten.",
+      adult: "Ik ben 18 jaar of ouder",
+      healthSubmit: "Bekijk de prijzen",
+      planBack: "Terug naar de gezondheidscheck",
+      planIntro:
+        "Na het betalen beantwoord je nog een paar vragen over wat je lekker vindt, je maaltijden en je training (± 2 minuten). Daarna staat je schema binnen 2 uur klaar.",
+      contactTitle: "Waar sturen we je schema naartoe?",
+    },
+    details: {
+      submit: "Maak mijn schema",
+      submitting: "Even geduld…",
+      note: "Je schema staat binnen 2 uur klaar. Je krijgt een e-mail met een persoonlijke link zodra het klaar is.",
     },
     previous: "Vorige",
     progress: (n: number) => `${n}% klaar`,
@@ -306,6 +335,7 @@ const copy = defineCopy({
       sex: "Choose your sex",
       age: "Please enter your age",
       adultsOnly: "Our plans are for adults only (18+).",
+      adult: "Please confirm that you're 18 or older",
       validAge: "Please enter a valid age",
       height: "Please enter your height in centimetres (e.g. 172)",
       weight: "Please enter your weight in kilos (e.g. 78)",
@@ -319,6 +349,22 @@ const copy = defineCopy({
       eatingDisorder: "Please answer the question about eating disorders",
       name: "Please enter your first name",
       email: "Please enter a valid email address",
+    },
+    short: {
+      healthTitle: "Quick health check",
+      healthSubtitle:
+        "For your safety, before you pay. Then you'll see the prices; you'll answer the rest of the questions (food and workouts) after paying, in about 2 minutes.",
+      adult: "I'm 18 or older",
+      healthSubmit: "See the prices",
+      planBack: "Back to the health check",
+      planIntro:
+        "After paying, you'll answer a few more questions about what you like to eat, your meals and your workouts (about 2 minutes). Your plan will then be ready within 2 hours.",
+      contactTitle: "Where should we send your plan?",
+    },
+    details: {
+      submit: "Create my plan",
+      submitting: "One moment…",
+      note: "Your plan will be ready within 2 hours. We'll email you a personal link as soon as it's ready.",
     },
     previous: "Back",
     progress: (n: number) => `${n}% done`,
@@ -556,7 +602,23 @@ function answersFromIntake(i: Intake): Answers {
 }
 const hasTraining = (p: ProductId | null) => p === "training" || p === "bundel";
 
-function visibleSteps(s: QuizState, presetProduct: boolean): StepId[] {
+function visibleSteps(s: QuizState, presetProduct: boolean, flow: QuizFlow = "volledig"): StepId[] {
+  if (flow === "kort") {
+    // Alleen wat nodig is voor de veiligheidscheck; de rest na het betalen.
+    const short: StepId[] = ["doel"];
+    if (!presetProduct || !s.product) short.push("hulp");
+    short.push("lichaam", "gezondheid", "plan");
+    return short;
+  }
+  if (flow === "aanvullen") {
+    const rest: StepId[] = ["over-jou"];
+    if (losing(s.answers)) rest.push("tempo");
+    rest.push("activiteit");
+    if (hasNutrition(s.product)) rest.push("eetstijl", "maaltijden");
+    if (hasTraining(s.product)) rest.push("training-plek", "training-tijd");
+    rest.push("resultaat");
+    return rest;
+  }
   const steps: StepId[] = ["doel"];
   if (!presetProduct || !s.product) steps.push("hulp");
   steps.push("over-jou", "lichaam");
@@ -600,7 +662,7 @@ function toIntakeInput(s: QuizState) {
   };
 }
 
-function validateStep(step: StepId, s: QuizState, l: Locale): string | null {
+function validateStep(step: StepId, s: QuizState, l: Locale, flow: QuizFlow = "volledig"): string | null {
   const a = s.answers;
   const v = copy[l].validation;
   switch (step) {
@@ -635,6 +697,7 @@ function validateStep(step: StepId, s: QuizState, l: Locale): string | null {
       if (!a.location) return v.location;
       return a.experience ? null : v.experience;
     case "gezondheid":
+      if (flow === "kort" && !a.adult) return v.adult;
       if (a.pregnant === undefined) return v.pregnant;
       if (a.eatingDisorder === undefined) return v.eatingDisorder;
       return null;
@@ -661,6 +724,8 @@ export function Quiz({
   durationPreset = false,
   initialCode = null,
   resume = null,
+  flow = "volledig",
+  details = null,
 }: {
   initialProduct: ProductId | null;
   initialDuration: DurationId;
@@ -675,6 +740,10 @@ export function Quiz({
   initialCode?: string | null;
   /** Verder met een eerder begonnen bestelling (?hervat=). */
   resume?: QuizResume | null;
+  /** Welke vragen nu: de hele vragenlijst, de korte route, of het aanvullen na het betalen. */
+  flow?: QuizFlow;
+  /** Bij "aanvullen": de betaalde bestelling en wat al bekend is (doel, lengte, gewicht, gezondheid). */
+  details?: { intakeId: string; product: ProductId; intake: Intake } | null;
 }) {
   const l = useLocale();
   const c = copy[l];
@@ -691,14 +760,32 @@ export function Quiz({
       email: "",
       consents: { healthData: false, terms: false, immediateDelivery: false, marketing: false },
     };
+    if (flow === "aanvullen" && details) {
+      // Wat al bekend is, staat klaar; geslacht, leeftijd, activiteit, eten en training vraagt de klant nu.
+      const known = answersFromIntake(details.intake);
+      return {
+        ...start,
+        product: details.product,
+        step: "over-jou",
+        answers: {
+          ...known,
+          sex: undefined,
+          age: undefined,
+          activity: undefined,
+          pace: initialAnswers.pace,
+          location: undefined,
+          experience: undefined,
+        },
+      };
+    }
     if (resume) {
       // Alles was al ingevuld: meteen naar de plankeuze. De vinkjes zet de klant opnieuw.
       return {
         ...start,
         product: resume.intake.product,
         duration: resume.duration ?? initialDuration,
-        answers: answersFromIntake(resume.intake),
-        answered: visibleSteps({ ...start, product: resume.intake.product, answers: answersFromIntake(resume.intake) }, false).filter(
+        answers: { ...answersFromIntake(resume.intake), adult: flow === "kort" ? true : undefined },
+        answered: visibleSteps({ ...start, product: resume.intake.product, answers: answersFromIntake(resume.intake) }, false, flow).filter(
           (st) => st !== "plan",
         ),
         step: "plan",
@@ -708,7 +795,7 @@ export function Quiz({
     }
     if (!initialGoal) return start;
     const withGoal = { ...start, answers: { ...initialAnswers, goal: initialGoal }, answered: ["doel" as StepId] };
-    return { ...withGoal, step: visibleSteps(withGoal, presetProduct)[1] ?? "doel" };
+    return { ...withGoal, step: visibleSteps(withGoal, presetProduct, flow)[1] ?? "doel" };
   });
   // Campagnebron uit de advertentielink (utm), alleen in het geheugen; gaat mee met de bestelling.
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -724,6 +811,9 @@ export function Quiz({
   const restored = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
   const [checkoutState, formAction, pending] = useActionState<CheckoutState, FormData>(startCheckout, {});
+  const [detailsState, detailsAction, detailsPending] = useActionState<DetailsState, FormData>(completeDetails, {});
+  // Elke route bewaart zijn eigen voortgang (zodat de korte route en het aanvullen elkaar niet in de weg zitten).
+  const storageKey = flow === "volledig" ? STORAGE_KEY : flow === "kort" ? `${STORAGE_KEY}_kort` : `${STORAGE_KEY}_aanvullen_${details?.intakeId ?? ""}`;
 
   // Herstel een eerder ingevulde vragenlijst (bijv. na annuleren van de betaling).
   useEffect(() => {
@@ -731,8 +821,9 @@ export function Quiz({
     restored.current = true;
     if (resume) return;
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
+      const saved = sessionStorage.getItem(storageKey);
       if (!saved) {
+        if (flow === "aanvullen") return;
         // Net de rekenhulp ingevuld? Dan staan geslacht, leeftijd, lengte, gewicht en activiteit al klaar.
         const pre = readPrefill();
         if (pre) {
@@ -766,18 +857,20 @@ export function Quiz({
     } catch {
       /* geen opgeslagen voortgang */
     }
-  }, [initialProduct, initialDuration, initialGoal, presetProduct, startAtPlan, resume]);
+  }, [initialProduct, initialDuration, initialGoal, presetProduct, startAtPlan, resume, flow, storageKey]);
 
   // Funnel: elke stap die de bezoeker te zien krijgt (anoniem, zie src/lib/track.ts).
   const trackedStep = useRef<string | null>(null);
   useEffect(() => {
     if (trackedStep.current === s.step) return;
+    // Het aanvullen na het betalen hoort niet in de funnel van de vragenlijst (die meet tot de betaling).
+    if (flow === "aanvullen") return;
     const opened = trackedStep.current === null;
     trackedStep.current = s.step;
     track("quiz_step", { step: s.step, product: s.product });
     // Meta (alleen na toestemming): de vragenlijst is geopend, ook als nog geen vraag is beantwoord.
     if (opened) trackEventOnce("quiz_open");
-  }, [s.step, s.product]);
+  }, [s.step, s.product, flow]);
 
   useEffect(() => {
     if (checkoutState.error) track("checkout_error", { step: "plan" });
@@ -794,13 +887,13 @@ export function Quiz({
   useEffect(() => {
     if (!restored.current) return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      sessionStorage.setItem(storageKey, JSON.stringify(s));
     } catch {
       /* opslag niet beschikbaar */
     }
-  }, [s]);
+  }, [s, storageKey]);
 
-  const steps = visibleSteps(s, presetProduct);
+  const steps = visibleSteps(s, presetProduct, flow);
   const index = Math.max(0, steps.indexOf(s.step));
   const progress = Math.round((index / (steps.length - 1)) * 100);
 
@@ -809,7 +902,14 @@ export function Quiz({
   const targets = intake ? nutritionTargets(intake) : null;
   const projection = intake && targets ? weightProjection(intake, targets) : null;
   const recommended = recommendedDuration(projection?.weeks ?? null);
-  const safety = intake ? checkSafety(intake, l) : null;
+  // Korte route: de veiligheidscheck op wat al bekend is (lengte, gewicht, gezondheid); de rest volgt na het betalen.
+  const shortIntake = useMemo(() => {
+    if (flow !== "kort") return null;
+    const p = shortIntakeSchema.safeParse({ ...toIntakeInput(s), adult: s.answers.adult, product: s.product ?? "bundel" });
+    return p.success ? intakeFromShort(p.data) : null;
+  }, [s, flow]);
+  const safetyIntake = flow === "kort" ? shortIntake : intake;
+  const safety = safetyIntake ? checkSafety(safetyIntake, l) : null;
 
   function update(patch: Partial<Answers>) {
     setError(null);
@@ -824,13 +924,13 @@ export function Quiz({
 
   function next(override?: QuizState) {
     const state = override ?? s;
-    const problem = validateStep(state.step, state, l);
+    const problem = validateStep(state.step, state, l, flow);
     if (problem) {
       setError(problem);
       return;
     }
     if (state.step === "doel" && state.answered.length === 0) trackEvent("quiz_start");
-    const list = visibleSteps(state, presetProduct);
+    const list = visibleSteps(state, presetProduct, flow);
     const nextStep = list[list.indexOf(state.step) + 1] ?? "plan";
     const answered = state.answered.includes(state.step) ? state.answered : [...state.answered, state.step];
     if (nextStep === "resultaat") {
@@ -863,7 +963,8 @@ export function Quiz({
     track("plan_select", { product, duration });
     const state = { ...s, product, duration };
     // Kiest de klant een plan met onderdelen waarvoor nog geen vragen zijn beantwoord? Stel die eerst.
-    const missing = visibleSteps(state, false).find(
+    // (Niet bij de korte route: die vragen komen na het betalen.)
+    const missing = flow === "kort" ? undefined : visibleSteps(state, false).find(
       (st) => ["eetstijl", "maaltijden", "training-plek", "training-tijd"].includes(st) && !state.answered.includes(st),
     );
     setS(missing ? { ...state, step: missing } : state);
@@ -925,13 +1026,15 @@ export function Quiz({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.product, orderState.duration]);
   const payload = JSON.stringify({
-    intake: toIntakeInput(s),
+    intake: { ...toIntakeInput(s), adult: s.answers.adult },
     customer: { name: s.name, email: s.email },
     consents: s.consents,
     product: s.product,
     duration: orderState.duration,
     campaign,
+    flow: flow === "kort" ? "kort" : "volledig",
   });
+  const detailsPayload = details ? JSON.stringify({ intakeId: details.intakeId, intake: toIntakeInput(s) }) : "";
 
   const a = s.answers;
 
@@ -1215,7 +1318,8 @@ export function Quiz({
         )}
 
         {s.step === "gezondheid" && (
-          <Step title={c.health.title} subtitle={c.health.subtitle}>
+          <Step title={flow === "kort" ? c.short.healthTitle : c.health.title} subtitle={flow === "kort" ? c.short.healthSubtitle : c.health.subtitle}>
+            {flow === "kort" && <Checkbox checked={Boolean(a.adult)} onChange={(v) => update({ adult: v })} label={c.short.adult} />}
             <YesNo label={c.health.pregnant} value={a.pregnant} onChange={(v) => update({ pregnant: v })} />
             <YesNo
               label={c.health.eatingDisorder}
@@ -1261,7 +1365,7 @@ export function Quiz({
                 />
               </>
             )}
-            <NextButton onClick={() => next()} label={c.health.submit} />
+            <NextButton onClick={() => next()} label={flow === "kort" ? c.short.healthSubmit : c.health.submit} />
           </Step>
         )}
 
@@ -1316,6 +1420,28 @@ export function Quiz({
                 </div>
               )}
 
+              {flow === "aanvullen" ? (
+                <form action={detailsAction} className="card space-y-3 p-6">
+                  <input type="hidden" name="payload" value={detailsPayload} />
+                  <button type="submit" disabled={detailsPending} className="btn-primary w-full text-lg">
+                    {detailsPending ? (
+                      <>
+                        <Loader2 className="size-5 animate-spin" aria-hidden /> {c.details.submitting}
+                      </>
+                    ) : (
+                      <>
+                        {c.details.submit} <ArrowRight className="size-5" aria-hidden />
+                      </>
+                    )}
+                  </button>
+                  <p className="text-center text-sm text-muted">{c.details.note}</p>
+                  {detailsState.error && (
+                    <p role="alert" className="rounded-2xl bg-accent-50 px-4 py-3 text-sm font-semibold text-accent-600">
+                      {detailsState.error}
+                    </p>
+                  )}
+                </form>
+              ) : (
               <div className="card space-y-4 p-6">
                 <h3 className="text-lg font-bold">{c.result.sendTo}</h3>
                 <TextField
@@ -1342,19 +1468,42 @@ export function Quiz({
                   }}
                 />
               </div>
+              )}
             </Step>
           ))}
 
-        {s.step === "plan" && (
+        {s.step === "plan" && flow === "kort" && safety && !safety.ok && (
+          <div className="card mx-auto max-w-2xl p-7">
+            <TriangleAlert className="size-10 text-accent-500" aria-hidden />
+            <h2 className="heading-md mt-4">{c.unsafe.title}</h2>
+            <p className="mt-3 leading-relaxed text-muted">{safety.reason}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button type="button" onClick={() => goTo("lichaam")} className="btn-secondary">
+                {c.unsafe.change}
+              </button>
+              <Link href="/contact" className="btn-secondary">
+                {c.unsafe.contact}
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {s.step === "plan" && !(flow === "kort" && safety && !safety.ok) && (
           <div>
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <button type="button" onClick={back} className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-                <ArrowLeft className="size-4" aria-hidden /> {c.plan.back}
+                <ArrowLeft className="size-4" aria-hidden /> {flow === "kort" ? c.short.planBack : c.plan.back}
               </button>
               <h1 className="heading-lg">{c.plan.title(s.name)}</h1>
               <p className="mt-3 text-lg text-muted">
-                {targets ? c.plan.basis(formatNumber(targets.calories, 0, l), targets.proteinG) : ""}
-                {c.plan.ready}
+                {flow === "kort" ? (
+                  c.short.planIntro
+                ) : (
+                  <>
+                    {targets ? c.plan.basis(formatNumber(targets.calories, 0, l), targets.proteinG) : ""}
+                    {c.plan.ready}
+                  </>
+                )}
               </p>
               <div className="mt-6 flex gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4 text-left sm:p-5">
                 <Lightbulb className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
@@ -1386,6 +1535,7 @@ export function Quiz({
               <CheckoutBox
                 state={orderState}
                 setConsents={(c) => setS({ ...s, consents: { ...s.consents, ...c } })}
+                contact={flow === "kort" ? { set: (patch) => setS((prev) => ({ ...prev, ...patch })) } : undefined}
                 promo={promo}
                 payload={payload}
                 formAction={formAction}
@@ -1433,9 +1583,12 @@ function CheckoutBox({
   serverError,
   discount,
   code,
+  contact,
 }: {
   state: QuizState;
   setConsents: (c: Partial<QuizState["consents"]>) => void;
+  /** Korte route: naam en e-mail vragen we hier (er is geen resultaatstap vóór het betalen). */
+  contact?: { set: (patch: Partial<Pick<QuizState, "name" | "email">>) => void };
   promo: PromoView | null;
   payload: string;
   formAction: (fd: FormData) => void;
@@ -1466,7 +1619,9 @@ function CheckoutBox({
   // Een actie kan op meer dan één maand gelden (bijv. Black Friday: de eerste 2 maanden).
   const promoMonths = !discount && promo && promoPercent > 0 && subscription ? promo.months : 1;
   const c = state.consents;
-  const ready = c.healthData && c.terms && c.immediateDelivery;
+  const v = copy[l].validation;
+  const contactProblem = !contact ? null : state.name.trim().length < 2 ? v.name : !/^\S+@\S+\.\S+$/.test(state.email.trim()) ? v.email : null;
+  const ready = c.healthData && c.terms && c.immediateDelivery && !contactProblem;
   const [touched, setTouched] = useState(false);
   const [codeOpen, setCodeOpen] = useState(code.initiallyOpen);
   // Startdatum: vandaag t/m 7 dagen later (Nederlandse kalenderdagen).
@@ -1594,6 +1749,32 @@ function CheckoutBox({
         )}
       </div>
 
+      {contact && (
+        <div className="mt-6 space-y-3">
+          <p className="font-semibold">{copy[l].short.contactTitle}</p>
+          <TextField
+            label={copy[l].result.name}
+            value={state.name}
+            onChange={(val) => contact.set({ name: val })}
+            placeholder={copy[l].result.namePlaceholder}
+            autoComplete="given-name"
+          />
+          <TextField
+            label={copy[l].result.email}
+            type="email"
+            value={state.email}
+            onChange={(val) => contact.set({ email: val })}
+            placeholder={copy[l].result.emailPlaceholder}
+            autoComplete="email"
+          />
+          {touched && contactProblem && (
+            <p role="alert" className="text-sm font-semibold text-accent-600">
+              {contactProblem}
+            </p>
+          )}
+        </div>
+      )}
+
       <fieldset className="mt-6">
         <legend className="font-semibold">{t.startTitle}</legend>
         <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -1670,7 +1851,7 @@ function CheckoutBox({
         />
       </div>
 
-      {touched && !ready && (
+      {touched && !(c.healthData && c.terms && c.immediateDelivery) && (
         <p role="alert" className="mt-4 text-sm font-semibold text-accent-600">
           {t.required}
         </p>

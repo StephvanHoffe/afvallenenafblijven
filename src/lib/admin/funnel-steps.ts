@@ -21,7 +21,7 @@ export const STAGE_DEFS: { key: string; label: string; hint: string }[] = [
   { key: "visits", label: "Bezoeken", hint: "Bezoeken aan de website (per tabblad)" },
   { key: "quiz", label: "Vragenlijst geopend", hint: "Kwam op /start" },
   { key: "started", label: "Eerste vraag beantwoord", hint: "Ging verder dan de eerste vraag" },
-  { key: "result", label: "Resultaat gezien", hint: "Zag het persoonlijke calorie- en eiwitdoel" },
+  { key: "result", label: "Resultaat gezien", hint: "Zag het persoonlijke calorie- en eiwitdoel (korte route: telt mee bij het zien van de prijzen)" },
   { key: "plan", label: "Plannen bekeken", hint: "Kwam bij de plankeuze" },
   { key: "selected", label: "Plan gekozen", hint: "Koos een plan en looptijd" },
   { key: "submitted", label: "Op betalen geklikt", hint: "Vinkjes gezet en op betalen geklikt" },

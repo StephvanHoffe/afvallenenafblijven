@@ -289,6 +289,13 @@ alter table orders add column if not exists failed_payment_id text;
 -- De Mollie-betaling en -klant bij een gestarte betaling (voor de bedankpagina).
 alter table intakes add column if not exists payment_id text;
 alter table intakes add column if not exists mollie_customer_id text;
+-- Korte route: alleen doel, keuze, lengte/gewicht en gezondheidscheck vóór het betalen; de rest vult de klant
+-- daarna in. Zolang details_pending aan staat, maken we nog geen schema. start_day = de gekozen startdatum.
+alter table intakes add column if not exists details_pending boolean not null default false;
+alter table intakes add column if not exists start_day text;
+alter table intakes add column if not exists details_reminders integer not null default 0;
+alter table intakes add column if not exists details_reminded_at timestamptz;
+alter table intakes add column if not exists details_completed_at timestamptz;
 
 -- Facturen en creditnota's: de website maakt ze zelf, met een doorlopend nummer per jaar.
 -- Naam en e-mail staan op de factuur zelf, zodat facturen de fiscale bewaartermijn van

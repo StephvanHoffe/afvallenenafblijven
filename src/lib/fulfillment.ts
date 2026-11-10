@@ -1,10 +1,10 @@
 import "server-only";
-import { durationFor, isDurationId, isProductId, isSubscription, monthlyPrice, productFor, products } from "@/config/pricing";
+import { durationFor, isDurationId, isProductId, isSubscription, monthlyPrice, productFor } from "@/config/pricing";
 import { site } from "@/config/site";
 import { chargeDay } from "@/lib/billing";
 import { addDaysToDay, amsterdamStartOfDay } from "@/lib/dates";
+import { createFirstPeriodPlans, detailsUrl } from "@/lib/details";
 import { firstPeriodStart } from "@/lib/schedule";
-import { scheduledDelivery } from "@/lib/settings";
 import { recordFunnelEvent } from "@/lib/funnel";
 import { createInvoice } from "@/lib/invoices";
 import { isPaymentRecorded, paidPaymentCount, recordPayment } from "@/lib/payments";
@@ -13,7 +13,6 @@ import { euro, formatDayDate } from "@/lib/format";
 import { createRefund, getPayment, toCents, type MolliePayment } from "@/lib/mollie";
 import {
   createOrder,
-  createPlans,
   getCustomer,
   getIntake,
   getOrder,
@@ -189,8 +188,10 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
 
   // Het schema wordt direct gemaakt en staat op een willekeurig moment binnen 2 uur voor de klant klaar.
   // De eerste periode begint op de startdatum die de klant koos (of nu).
-  const startsAt = firstPeriodStart(metaString(payment, "start_day"));
-  await createPlans(order.id, customer.id, products[product].includes, 1, startsAt, await scheduledDelivery("purchase"));
+  // Korte route: eerst vult de klant de rest van de vragenlijst in; dan pas maken we het schema (src/lib/details.ts).
+  const startDay = metaString(payment, "start_day") ?? intake.start_day ?? null;
+  const detailsPending = intake.details_pending;
+  const startsAt = detailsPending ? firstPeriodStart(startDay) : await createFirstPeriodPlans(order, startDay);
 
   if (subscription) {
     // Lukt dit nu niet, dan maakt de geplande taak het abonnement alsnog aan.
@@ -221,6 +222,7 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
       incassoNote: subscription ? c.incasso(monthly) + (intro ? c.introIncasso(promoLabel, order.intro_months, introAmount) : "") : undefined,
       paidAt: payment.paidAt ? new Date(payment.paidAt) : new Date(),
       startsAt,
+      detailsLink: detailsPending ? detailsUrl(intakeId, l) : undefined,
       locale: l,
     }),
   ).catch((err) => console.error("Orderbevestiging versturen mislukt", err));
@@ -244,6 +246,7 @@ export async function fulfillCheckoutPayment(payment: MolliePayment): Promise<{ 
             (!intro ? "" : order.intro_months === 2 ? ` (2e maand: ${euro(order.intro_cents!)})` : ` (maand 2 t/m ${order.intro_months}: ${euro(order.intro_cents!)} per maand)`)
           : undefined,
         Korting: discountCode ? `Kortingscode ${discountCode}` : promo ? promo.label : undefined,
+        Vragenlijst: detailsPending ? "Korte route: de klant vult de rest na het betalen in; daarna wordt het schema gemaakt" : undefined,
         Bestelnummer: order.id.slice(0, 8).toUpperCase(),
         Taal: l === "en" ? "Engels" : undefined,
         Bekijken: `${site.url}/beheer/klanten/${customer.id}`,
